@@ -52,6 +52,6 @@ tests. Test TLS negotiation, topology paging, grouped reads, scaled writes, sche
 round trips, and Home Assistant entity migration before changing that pin.
 
 The manifest currently assumes the repository will be published as
-`https://github.com/valtt/huawei-modbus-server` with `@valtt` as code owner. Change the
+`https://github.com/valexi7/Huawei-Modbus-TLS-Server` with `@valexi7` as code owner. Change the
 documentation, issue tracker, code owner, README HACS URL, and systemd documentation URL
 together if the final GitHub owner or repository name differs.

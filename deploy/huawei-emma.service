@@ -1,6 +1,6 @@
 [Unit]
 Description=Huawei EMMA reverse Modbus/TLS management connector
-Documentation=https://github.com/valtt/huawei-modbus-server
+Documentation=https://github.com/valexi7/Huawei-Modbus-TLS-Server
 After=network-online.target
 Wants=network-online.target
 ConditionPathExists=/opt/huawei-emma/modbus-server.py

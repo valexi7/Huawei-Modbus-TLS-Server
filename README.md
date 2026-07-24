@@ -22,7 +22,7 @@ inside `custom_components/huawei_emma_management`. Until the repository is accep
 a HACS default, add it as a custom repository:
 
 1. Open **HACS > Integrations > three-dot menu > Custom repositories**.
-2. Add `https://github.com/valtt/huawei-modbus-server` with category **Integration**.
+2. Add `https://github.com/valexi7/Huawei-Modbus-TLS-Server` with category **Integration**.
 3. Install **Huawei EMMA Management** and restart Home Assistant.
 4. Open **Settings > Devices & services > Add integration > Huawei EMMA Management**.
 
@@ -346,6 +346,10 @@ optional `days` fields when the JSON remains within the same Home Assistant limi
 Home Assistant 2026.3 and newer loads the integration logo and icon locally from the
 integration's `brand/` directory. Both PNG assets are rendered from the provided
 `custom_components/huawei_emma_management/brand/Huawei_Standard_logo.svg` source.
+The HACS repository list can show its generic placeholder before the integration is
+downloaded, because the local brand files do not exist in Home Assistant yet. After the
+HACS download and a Home Assistant restart, the integration picker and integration page
+use the bundled icon automatically; no manifest setting is required.
 
 The older optional `HA_URL`/`HA_TOKEN` REST publisher remains available for compatibility,
 but Home Assistant's REST state endpoint only creates state-machine representations. The
