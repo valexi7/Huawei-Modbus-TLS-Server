@@ -1,0 +1,33 @@
+[Unit]
+Description=Huawei EMMA reverse Modbus/TLS management connector
+Documentation=https://github.com/valtt/huawei-modbus-server
+After=network-online.target
+Wants=network-online.target
+ConditionPathExists=/opt/huawei-emma/modbus-server.py
+ConditionPathExists=/opt/huawei-emma/.venv/bin/python
+
+[Service]
+Type=simple
+User=huawei-emma
+Group=huawei-emma
+WorkingDirectory=/opt/huawei-emma
+EnvironmentFile=-/opt/huawei-emma/.env
+ExecStart=/opt/huawei-emma/.venv/bin/python /opt/huawei-emma/modbus-server.py
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=15
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/huawei-emma
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+RestrictRealtime=true
+
+[Install]
+WantedBy=multi-user.target

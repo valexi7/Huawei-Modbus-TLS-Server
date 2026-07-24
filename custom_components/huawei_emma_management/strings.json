@@ -1,0 +1,84 @@
+{
+  "title": "Huawei EMMA Management",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Choose the connector location",
+        "description": "Run the reverse Modbus/TLS listener inside Home Assistant, or connect to a separately hosted connector.",
+        "data": {
+          "mode": "Connector mode"
+        },
+        "data_description": {
+          "mode": "embedded runs the EMMA TLS listener in Home Assistant; external connects to the standalone Python server."
+        }
+      },
+      "embedded": {
+        "title": "Run the EMMA TLS server in Home Assistant",
+        "description": "Choose the TLS port EMMA will connect to. Automatic mode creates a private local CA and server certificate under /config/huawei_emma_management. For custom mode, enter paths relative to /config or absolute paths such as /ssl/fullchain.pem.",
+        "data": {
+          "tls_port": "EMMA TLS port",
+          "certificate_mode": "Certificate source",
+          "certificate_name": "Certificate DNS name or IP address",
+          "certificate_path": "Custom certificate path",
+          "private_key_path": "Custom private-key path",
+          "private_key_password": "Private-key password"
+        },
+        "data_description": {
+          "certificate_name": "Use the exact fixed IP address or DNS name configured as the management server in EMMA.",
+          "certificate_path": "Required only when Certificate source is custom.",
+          "private_key_path": "Required only when Certificate source is custom.",
+          "private_key_password": "Leave empty for an unencrypted key."
+        }
+      },
+      "external": {
+        "title": "Connect to an external EMMA connector",
+        "description": "A new random API key is suggested. Put exactly this value in the external server's .env as EMMA_API_TOKEN, restart that server, then submit this form.",
+        "data": {
+          "host": "Connector host",
+          "port": "Connector API port",
+          "token": "EMMA API key"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Cannot reach a connected EMMA through the connector. Check its address, API key, service, and firewall.",
+      "invalid_auth": "The external connector rejected the API key.",
+      "certificate_paths_required": "Custom certificate mode requires both certificate and private-key paths.",
+      "invalid_certificate": "The custom certificate or private key is missing, invalid, expired, or does not match."
+    },
+    "abort": {
+      "already_configured": "This EMMA connector is already configured."
+    }
+  },
+  "options": {
+    "error": {
+      "certificate_paths_required": "Custom certificate mode requires both certificate and private-key paths.",
+      "invalid_certificate": "The custom certificate or private key is missing, invalid, expired, does not match, or does not cover the configured name."
+    },
+    "step": {
+      "init": {
+        "title": "Huawei EMMA connector settings",
+        "description": "Changes restart this integration entry. Embedded mode can change its listener port and certificate name; external mode can update its server address and API key.",
+        "data": {
+          "accept_external_growatt_controls": "Accept External Growatt Controls",
+          "tls_port": "EMMA TLS port",
+          "certificate_mode": "Certificate source",
+          "certificate_name": "Certificate DNS name or IP address",
+          "certificate_path": "Custom certificate path",
+          "private_key_path": "Custom private-key path",
+          "private_key_password": "Private-key password",
+          "host": "Connector host",
+          "port": "Connector API port",
+          "token": "EMMA API key"
+        },
+        "data_description": {
+          "accept_external_growatt_controls": "When disabled, growatt_server.update_time_segment is rejected. Reading and native Huawei controls remain available.",
+          "certificate_name": "Changing this automatically renews an integration-managed leaf certificate while retaining the same local CA.",
+          "certificate_path": "Required only when Certificate source is custom.",
+          "private_key_path": "Required only when Certificate source is custom.",
+          "private_key_password": "Leave empty for an unencrypted key."
+        }
+      }
+    }
+  }
+}

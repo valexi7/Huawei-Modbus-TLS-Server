@@ -1,0 +1,224 @@
+# Huawei EMMA external control API
+
+The Home Assistant integration registers two actions intended for authenticated external
+controllers:
+
+- `huawei_emma.read_controls` discovers controls currently exposed as safe and writable.
+- `huawei_emma.set_value` writes one exposed control and returns the value read back by
+  the connector.
+
+These actions are available through Home Assistant automations and its REST action API.
+They are separate from the connector's port `8088` API and use Home Assistant
+authentication.
+
+## Requirements and security
+
+1. Install Huawei EMMA Management `0.8.0` or newer and restart Home Assistant.
+2. Use a Home Assistant administrator's long-lived access token. An add-on can instead
+   use its Supervisor token if the add-on has Home Assistant API access.
+3. Keep Home Assistant behind HTTPS when requests cross an untrusted network.
+4. Never put a token in a URL, log, source repository, or screenshot.
+
+The API rejects non-administrator user tokens. It only exposes catalog entries already
+represented as writable selects, switches, bounded numbers, datetimes, or the validated
+TOU schedule. Read-only sensors and arbitrary Modbus addresses cannot be written.
+
+Every successful write creates a Home Assistant log entry containing the register name
+and EMMA serial number. The connector independently validates the type, enum, numeric
+range, target device, and Modbus response.
+
+For full request and validation tracing, enable:
+
+```yaml
+logger:
+  logs:
+    custom_components.huawei_emma_management: debug
+```
+
+DEBUG logging includes requested and normalized control values, register names, device
+IDs, TOU schedules, translations, validation decisions, connector readback, and rejection
+reasons. It deliberately excludes API tokens and authorization headers.
+
+## Device ID
+
+Use the Home Assistant Device Registry ID. Open the Huawei EMMA device page and copy the
+last component of its URL:
+
+```text
+/config/devices/device/0123456789abcdef0123456789abcdef
+                       └──────────── device_id ────────────┘
+```
+
+The ID can also be found in **Developer tools > Template**:
+
+```jinja
+{{ device_id('sensor.huawei_emma_pv_output_power') }}
+```
+
+## Discover writable controls
+
+Use `return_response` because `read_controls` always returns data:
+
+```bash
+curl --request POST \
+  --header "Authorization: Bearer $HA_TOKEN" \
+  --header "Content-Type: application/json" \
+  --data '{"device_id":"0123456789abcdef0123456789abcdef"}' \
+  'https://HOME_ASSISTANT/api/services/huawei_emma/read_controls?return_response'
+```
+
+Home Assistant wraps the result in `service_response`:
+
+```json
+{
+  "changed_states": [],
+  "service_response": {
+    "device": {
+      "model": "EMMA-A02",
+      "serial_number": "TESTEMMA0001"
+    },
+    "accept_external_growatt_controls": true,
+    "controls": [
+      {
+        "register_name": "storage_maximum_charging_power",
+        "name": "Storage Maximum Charging Power",
+        "platform": "number",
+        "device_role": "inverter",
+        "value": 10000,
+        "available": true,
+        "unit": "W",
+        "minimum": 200,
+        "maximum": 10000,
+        "step": 1,
+        "options": []
+      }
+    ]
+  }
+}
+```
+
+Use the returned `register_name` in write requests. Limits and options reflect the live
+catalog and should be preferred over hard-coded values.
+
+## Write a value
+
+Add `return_response` to receive the normalized value returned by the connector:
+
+```bash
+curl --request POST \
+  --header "Authorization: Bearer $HA_TOKEN" \
+  --header "Content-Type: application/json" \
+  --data '{
+    "device_id": "0123456789abcdef0123456789abcdef",
+    "register_name": "storage_maximum_charging_power",
+    "value": 5000
+  }' \
+  'https://HOME_ASSISTANT/api/services/huawei_emma/set_value?return_response'
+```
+
+Example response:
+
+```json
+{
+  "changed_states": [],
+  "service_response": {
+    "register_name": "storage_maximum_charging_power",
+    "value": 5000
+  }
+}
+```
+
+Without `return_response`, the write still executes and Home Assistant returns its normal
+list of changed states.
+
+### Value types
+
+| Control platform | JSON value |
+| --- | --- |
+| `number` | Number within the returned minimum/maximum and step |
+| `switch` | `true` or `false` |
+| `select` | Returned option key or human-readable label |
+| `datetime` | Unix epoch seconds |
+| `sensor` with `format: tou_periods` | Complete validated TOU period list |
+
+## TOU schedule write
+
+`emma_tou_periods` replaces the complete active schedule. Disabled/draft periods are not
+part of this representation.
+
+```bash
+curl --request POST \
+  --header "Authorization: Bearer $HA_TOKEN" \
+  --header "Content-Type: application/json" \
+  --data '{
+    "device_id": "0123456789abcdef0123456789abcdef",
+    "register_name": "emma_tou_periods",
+    "value": [
+      {
+        "start_time": "00:00",
+        "end_time": "06:00",
+        "action": "charge",
+        "days": [true, true, true, true, true, true, true]
+      },
+      {
+        "start_time": "06:00",
+        "end_time": "23:59",
+        "action": "discharge",
+        "days": [true, true, true, true, true, true, true]
+      }
+    ]
+  }' \
+  'https://HOME_ASSISTANT/api/services/huawei_emma/set_value?return_response'
+```
+
+An empty list clears the schedule. EMMA accepts a maximum of 14 periods. Each enabled
+period must have `start_time < end_time`, a `charge` or `discharge` action, and exactly
+seven Monday-to-Sunday booleans.
+
+## Home Assistant action examples
+
+Discover controls:
+
+```yaml
+action: huawei_emma.read_controls
+data:
+  device_id: 0123456789abcdef0123456789abcdef
+response_variable: emma_controls
+```
+
+Set a switch or select:
+
+```yaml
+action: huawei_emma.set_value
+data:
+  device_id: 0123456789abcdef0123456789abcdef
+  register_name: storage_charge_from_grid_function
+  value: true
+response_variable: emma_result
+```
+
+## Growatt/BESS emergency stop
+
+The **Accept External Growatt Controls** option applies only to
+`growatt_server.update_time_segment`. To disable BESS schedule writes:
+
+1. Open **Settings > Devices & services**.
+2. Find **Huawei EMMA Management**.
+3. Select **Configure**.
+4. Turn off **Accept External Growatt Controls** and submit.
+
+Home Assistant reloads the config entry. Growatt schedule reads remain available, while
+external Growatt update calls are rejected. Native Home Assistant controls and the
+administrator-only `huawei_emma` API remain available for recovery.
+
+## Errors
+
+- `400`: malformed JSON/service data or a missing response query.
+- `401`: missing or invalid Home Assistant token.
+- Service validation error: token is not an administrator, a value/register is rejected,
+  or Growatt controls are disabled.
+- `500`: connector communication, Modbus write, or EMMA readback failed. Check the Home
+  Assistant and connector logs before retrying.
+
+Do not retry unsafe writes indefinitely. Read the controls again after an uncertain
+response and compare the returned value before issuing another command.
