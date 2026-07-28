@@ -520,6 +520,8 @@ class DecoderTests(unittest.TestCase):
         ):
             self.assertIn(str(register_name), catalog)
         self.assertEqual(catalog[str(rn.EMMA_SYSTEM_TIME)].platform, "datetime")
+        self.assertTrue(catalog[str(rn.EMMA_TOU_PERIODS)].writeable)
+        self.assertEqual(catalog[str(rn.EMMA_TOU_PERIODS)].format, "tou_periods")
         self.assertEqual(
             catalog[str(rn.STORAGE_MAXIMUM_CHARGING_POWER)].device_role,
             "inverter",

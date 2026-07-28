@@ -260,19 +260,37 @@ read and written through the inverter unit ID reported by the device list. Keepi
 ownership separate from Modbus routing prevents plausible-looking but invalid energy
 values from being decoded from the wrong unit.
 
-Example TOU service data:
+There are two supported ways to replace the complete TOU schedule. The native integration
+service uses the Home Assistant config-entry ID:
 
 ```yaml
-config_entry_id: "YOUR_CONFIG_ENTRY_ID"
-periods:
-  - start_time: "00:00"
-    end_time: "06:00"
-    action: charge
-    days: [true, true, true, true, true, true, true]
-  - start_time: "06:00"
-    end_time: "23:59"
-    action: discharge
-    days: [true, true, true, true, true, true, true]
+action: huawei_emma_management.set_tou_periods
+data:
+  config_entry_id: "YOUR_CONFIG_ENTRY_ID"
+  periods:
+    - start_time: "00:00"
+      end_time: "06:00"
+      action: charge
+      days: [true, true, true, true, true, true, true]
+    - start_time: "06:00"
+      end_time: "23:59"
+      action: discharge
+      days: [true, true, true, true, true, true, true]
+```
+
+The administrator-only generic API uses the Home Assistant device ID and is convenient
+for external automations:
+
+```yaml
+action: huawei_emma.set_value
+data:
+  device_id: 1ef2da1cca18dcec9ee5a4db36ac9800
+  register_name: emma_tou_periods
+  value:
+    - start_time: "00:00"
+      end_time: "23:59"
+      action: discharge
+      days: [true, true, true, true, true, true, true]
 ```
 
 Huawei accepts at most 14 periods. The connector validates time order, action, weekday

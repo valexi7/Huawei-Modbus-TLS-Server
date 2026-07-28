@@ -137,8 +137,10 @@ def build_entity_catalog() -> dict[str, EntityDescription]:
 
         # Never guess limits for an upstream writeable register. Unknown
         # controls remain useful as disabled readback sensors, but cannot be
-        # written until an explicit safe schema is added above.
-        writeable = source_writeable and platform != "sensor"
+        # written until an explicit safe schema is added above. The structured
+        # TOU sensor is the exception: its complete value is validated by the
+        # dedicated schedule parser before it is written.
+        writeable = source_writeable and (platform != "sensor" or structured)
 
         unit_text = unit if isinstance(unit, str) else None
         device_class, state_class = _ha_classes(register_name, unit_text)

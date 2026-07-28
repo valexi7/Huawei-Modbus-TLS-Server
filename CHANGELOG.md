@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.9.1
+
+- Preserve structured `emma_tou_periods` as a validated writable value for the
+  `huawei_emma.set_value` service.
+- Document the native config-entry service and generic device-ID service as distinct,
+  complete Home Assistant action examples.
+
 ## 0.9.0
 
 - Publish all 740 readable register definitions from the pinned `huawei-solar` catalog
