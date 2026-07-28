@@ -11,6 +11,7 @@ import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.const import CONF_HOST, CONF_PORT
 from homeassistant.core import callback
+from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .api import (
@@ -42,10 +43,6 @@ from .embedded_runtime_setup import ensure_certificates
 
 
 _LOGGER = logging.getLogger(__name__)
-
-
-def _port(value: Any) -> int:
-    return vol.All(vol.Coerce(int), vol.Range(min=1, max=65535))(value)
 
 
 def _config_path(hass: Any, value: str) -> Path:
@@ -130,7 +127,7 @@ class HuaweiEmmaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         schema = vol.Schema(
             {
-                    vol.Required(CONF_TLS_PORT, default=DEFAULT_TLS_PORT): _port,
+                    vol.Required(CONF_TLS_PORT, default=DEFAULT_TLS_PORT): cv.port,
                     vol.Required(
                         CONF_CERTIFICATE_MODE, default=CERTIFICATE_AUTOMATIC
                     ): vol.In((CERTIFICATE_AUTOMATIC, CERTIFICATE_CUSTOM)),
@@ -185,7 +182,7 @@ class HuaweiEmmaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         schema = vol.Schema(
             {
                     vol.Required(CONF_HOST): str,
-                    vol.Required(CONF_PORT, default=DEFAULT_PORT): _port,
+                    vol.Required(CONF_PORT, default=DEFAULT_PORT): cv.port,
                     vol.Required(CONF_TOKEN, default=self._external_token): str,
             }
         )
@@ -280,7 +277,7 @@ class HuaweiEmmaOptionsFlow(config_entries.OptionsFlowWithReload):
                         default=self.config_entry.data.get(
                             CONF_TLS_PORT, DEFAULT_TLS_PORT
                         ),
-                    ): _port,
+                    ): cv.port,
                     vol.Optional(
                         CONF_CERTIFICATE_NAME,
                         default=self.config_entry.data.get(
@@ -322,7 +319,7 @@ class HuaweiEmmaOptionsFlow(config_entries.OptionsFlowWithReload):
                     vol.Required(
                         CONF_PORT,
                         default=self.config_entry.data.get(CONF_PORT, DEFAULT_PORT),
-                    ): _port,
+                    ): cv.port,
                     vol.Required(
                         CONF_TOKEN,
                         default=self.config_entry.data.get(CONF_TOKEN, ""),

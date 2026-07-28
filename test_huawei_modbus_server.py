@@ -1,3 +1,4 @@
+import ast
 import asyncio
 import os
 import struct
@@ -40,6 +41,31 @@ from runtime_setup import ensure_certificates, load_or_create_environment
 
 
 CORE_REGISTER_COUNT = 20
+
+
+class RepositoryContractTests(unittest.TestCase):
+    def test_config_flow_port_fields_use_serializable_ha_validator(self):
+        source = Path(
+            "custom_components/huawei_emma_management/config_flow.py"
+        ).read_text(encoding="utf-8")
+        tree = ast.parse(source)
+
+        defined_functions = {
+            node.name
+            for node in ast.walk(tree)
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+        }
+        self.assertNotIn("_port", defined_functions)
+
+        cv_port_references = [
+            node
+            for node in ast.walk(tree)
+            if isinstance(node, ast.Attribute)
+            and isinstance(node.value, ast.Name)
+            and node.value.id == "cv"
+            and node.attr == "port"
+        ]
+        self.assertEqual(len(cv_port_references), 4)
 
 
 class FakeWriter:

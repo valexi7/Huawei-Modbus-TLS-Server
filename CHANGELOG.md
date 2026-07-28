@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.8.1
+
+- Fix the Home Assistant configuration and options forms by using the serializable
+  native port validator instead of a plain Python callback.
+- Add AGPL-3.0 licensing and complete the repository metadata required by HACS.
+- Correct manifest key ordering for Hassfest validation.
+
 ## 0.8.0
 
 - Make the integration self-contained and ready for installation as a HACS custom

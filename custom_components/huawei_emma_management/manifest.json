@@ -4,14 +4,14 @@
   "codeowners": ["@valexi7"],
   "config_flow": true,
   "documentation": "https://github.com/valexi7/Huawei-Modbus-TLS-Server",
-  "issue_tracker": "https://github.com/valexi7/Huawei-Modbus-TLS-Server/issues",
   "integration_type": "hub",
   "iot_class": "local_polling",
+  "issue_tracker": "https://github.com/valexi7/Huawei-Modbus-TLS-Server/issues",
   "loggers": ["huawei_solar", "tmodbus"],
   "requirements": [
     "cryptography>=42",
     "huawei-solar==3.0.6",
     "tmodbus==0.4.1"
   ],
-  "version": "0.8.0"
+  "version": "0.8.1"
 }

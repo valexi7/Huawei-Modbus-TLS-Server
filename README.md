@@ -532,6 +532,6 @@ GitHub-owner assumption are documented in [Repository maintenance](docs/maintena
 The deliberately deferred LilyGO T-ETH-Elite/ESPHome architecture and hardware bring-up
 checklist are in [ESPHome roadmap](docs/esphome-roadmap.md).
 
-`huawei-solar` is AGPL-3.0 licensed. Review its license before distributing a combined
-service or appliance. Control writes can change grid and battery behavior; confirm local
-grid-code and installer requirements before enabling automations.
+This project and `huawei-solar` are licensed under AGPL-3.0; see [`LICENSE`](LICENSE).
+Control writes can change grid and battery behavior; confirm local grid-code and
+installer requirements before enabling automations.
