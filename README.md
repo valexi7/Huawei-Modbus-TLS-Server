@@ -396,10 +396,17 @@ optional `days` fields when the JSON remains within the same Home Assistant limi
 Home Assistant 2026.3 and newer loads the integration logo and icon locally from the
 integration's `brand/` directory. Both PNG assets are rendered from the provided
 `custom_components/huawei_emma_management/brand/Huawei_Standard_logo.svg` source.
-The HACS repository list can show its generic placeholder before the integration is
-downloaded, because the local brand files do not exist in Home Assistant yet. After the
-HACS download and a Home Assistant restart, the integration picker and integration page
-use the bundled icon automatically; no manifest setting is required.
+The integration picker and integration page use these bundled files automatically; no
+manifest setting is required.
+
+The released HACS 2.0.5 repository list is a separate exception. Its dashboard predates
+Home Assistant's local-brand proxy and still requests
+`https://brands.home-assistant.io/_/huawei_emma_management/icon.png`. New custom
+integration domains are no longer accepted into that legacy CDN, so HACS displays its
+generic placeholder even though the installed integration branding is correct. The
+current unreleased HACS frontend uses Home Assistant's local brand API and will resolve
+the bundled icon after HACS publishes that frontend. Restarts and browser-cache clearing
+cannot change this HACS 2.0.5 limitation.
 
 The older optional `HA_URL`/`HA_TOKEN` REST publisher remains available for compatibility,
 but Home Assistant's REST state endpoint only creates state-machine representations. The
