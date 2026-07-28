@@ -186,7 +186,7 @@ The key authenticates only Home Assistant-to-connector HTTP commands; it is unre
 the TLS certificate EMMA uses. If the external server already generated a secure token,
 you may replace the suggested value with the existing `.env` value instead.
 
-Home Assistant creates one Huawei device and entities from the connector catalog:
+Home Assistant creates Huawei devices and entities from the connector catalog:
 
 - Rapidly changing power, current, voltage, frequency, SOC, and power-factor sensors
 - Cumulative yield, import/export, charge/discharge, and consumption sensors
@@ -207,12 +207,44 @@ Home Assistant creates one Huawei device and entities from the connector catalog
 
 The connector also parses every paged device description and creates subordinate Huawei
 devices linked through EMMA. For example, the captured installation produces EMMA,
-SmartGuard, and SUN2000 inverter devices. Register families for absent optional hardware,
-such as `emma_external_meter_*`, are omitted instead of breaking the complete polling
-cycle.
+SmartGuard, and SUN2000 inverter devices.
+
+### Optional register catalog and polling
+
+The integration publishes all 740 readable definitions in the pinned `huawei-solar`
+catalog: EMMA, SUN2000 inverter/LUNA, SmartLogger, SDongle, and SCharger register
+families. The original core EMMA entities keep their existing defaults; every newly
+added optional entity starts disabled. Open the device's **Entities** page, include
+disabled entities, and enable only the measurements relevant to the installation.
+
+Enabling an entity updates the connector's polling subscription on the config-entry
+reload performed by Home Assistant. The register is then grouped by address and read at
+its assigned interval:
+
+- **fast (30 seconds):** live power, voltage, current, frequency, and similar telemetry
+- **medium (5 minutes):** energy counters, operating state, configuration, schedules,
+  and temperatures
+- **slow (30 minutes):** identity, firmware, capabilities, and other static diagnostics
+
+Disabling the entity removes it from the next connector subscription, so it no longer
+uses Modbus bandwidth. The raw `EMMA_TOU_PERIODS` register is the sole exception: it is
+kept internally subscribed because the TOU editor and scheduling services depend on it.
+The Home Assistant coordinator still fetches the connector's cached state every ten
+seconds; those requests do not cause additional Modbus reads.
+
+Catalog entries are attached to the discovered device role and include the upstream
+address, decoded unit, category, polling group, and an appropriate icon. If an enabled
+register belongs to hardware that is not present, it remains unavailable and is not
+repeatedly queried. Registers marked writeable upstream are exposed as controls only
+when this project has an explicit safe enum, boolean, datetime, or numeric-range schema;
+the remaining definitions are read-only diagnostic sensors.
+
+`huawei-solar` 3.0.6 does not publish a SmartGuard-specific Modbus register table.
+SmartGuard is therefore represented by its discovered model, serial number, firmware,
+and topology relationship; the connector does not invent undocumented addresses.
 
 Built-in EMMA meter entities are enabled by default. External-meter entities are disabled
-by default and omitted entirely when the EMMA device list reports no external meter. On
+by default and remain unavailable when the EMMA device list reports no external meter. On
 upgrade, the integration also disables old external-meter registry entries that were
 previously enabled by the integration; it does not override entities explicitly disabled
 by the user. The integration fetches the connector's cached state every 10 seconds; that
@@ -376,6 +408,7 @@ Every endpoint requires `Authorization: Bearer $EMMA_API_TOKEN`.
 | GET | `/api/v1/device` | Model, serial, firmware, and topology |
 | GET | `/api/v1/entities` | Complete entity/register metadata catalog |
 | GET | `/api/v1/states` | Cached decoded values and update timestamps |
+| POST | `/api/v1/subscriptions` | Replace the active poll set with `register_names` |
 | POST | `/api/v1/entities/{register}/value` | Validated write to an exposed writable register |
 | POST | `/api/v1/tou-periods` | Validated structured TOU schedule write |
 
@@ -417,12 +450,12 @@ Raw arbitrary-address writes are deliberately not exposed. The original allowlis
 
 ## Polling and batching
 
-The register catalog is built at runtime from the installed, pinned `huawei-solar`
-`REGISTERS` table and filtered for `TargetDevice.EMMA`. The connector asks
-`HuaweiSolarDevice.batch_update()` for all groups currently due. That library combines
-nearby definitions into reads up to 64 registers with gaps below 16 registers. For
-example, the phase voltage/current/power definitions from 31639 through 31669 fit in one
-request instead of one request per entity.
+The register catalog is built at runtime from every readable definition in the installed,
+pinned `huawei-solar` `REGISTERS` table. Only the active subscription is passed to
+`HuaweiSolarDevice.batch_update()` when each poll group is due. That library combines
+nearby definitions for the same Modbus unit into reads up to 64 registers with gaps below
+16 registers. For example, the phase voltage/current/power definitions from 31639 through
+31669 fit in one request instead of one request per entity.
 
 If a firmware revision rejects a block, the connector recursively isolates the failing
 definition for Modbus exception codes 2 or 3, marks that register unsupported for the

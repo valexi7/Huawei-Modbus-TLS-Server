@@ -45,6 +45,18 @@ UNIT_OVERRIDES = {
     str(rn.STORAGE_FORCIBLE_DISCHARGE_POWER): "W",
 }
 
+UNIT_NORMALIZATION = {
+    "kW h": "kWh",
+    "kVa r": "kVar",
+    "kvar h": "kvarh",
+    "kg/k Wh": "kg/kWh",
+    "mins": "min",
+    "minutes": "min",
+    "seconds": "s",
+    "hour": "h",
+    "MOhm": "MΩ",
+}
+
 
 @dataclass(frozen=True, slots=True)
 class EntityDescription:
@@ -55,6 +67,7 @@ class EntityDescription:
     platform: str
     poll_group: str
     device_role: str = "emma"
+    client_role: str = "emma"
     unit: str | None = None
     device_class: str | None = None
     state_class: str | None = None
@@ -93,43 +106,53 @@ SAFE_NUMBER_RANGES: dict[str, tuple[float, float, float]] = {
 def build_entity_catalog() -> dict[str, EntityDescription]:
     catalog: dict[str, EntityDescription] = {}
     for key, register in REGISTERS.items():
+        if not register.readable:
+            continue
+        register_name = str(key)
         is_emma = TargetDevice.EMMA in register.target_device
         is_exposed_sun2000 = (
             TargetDevice.SUN2000 in register.target_device
-            and str(key) in SUN2000_EXPOSED_REGISTERS
+            and register_name in SUN2000_EXPOSED_REGISTERS
         )
-        if not register.readable or not (is_emma or is_exposed_sun2000):
-            continue
-        register_name = str(key)
-        writeable = bool(register.writeable)
+        legacy_exposed = is_emma or is_exposed_sun2000
+        source_writeable = bool(register.writeable)
         structured = register.__class__.__name__ == "HUAWEI_LUNA2000_TimeOfUseRegisters"
         unit = UNIT_OVERRIDES.get(register_name, register.unit)
+        if isinstance(unit, str):
+            unit = UNIT_NORMALIZATION.get(unit, unit)
         options = _enum_options(unit)
 
         if register_name == str(rn.EMMA_SYSTEM_TIME):
             platform = "datetime"
         elif structured:
             platform = "sensor"
-        elif writeable and options:
+        elif source_writeable and options:
             platform = "select"
-        elif writeable and unit is bool:
+        elif source_writeable and unit is bool:
             platform = "switch"
-        elif writeable and register_name in SAFE_NUMBER_RANGES:
+        elif source_writeable and register_name in SAFE_NUMBER_RANGES:
             platform = "number"
         else:
             platform = "sensor"
+
+        # Never guess limits for an upstream writeable register. Unknown
+        # controls remain useful as disabled readback sensors, but cannot be
+        # written until an explicit safe schema is added above.
+        writeable = source_writeable and platform != "sensor"
 
         unit_text = unit if isinstance(unit, str) else None
         device_class, state_class = _ha_classes(register_name, unit_text)
         if register_name in (str(rn.EMMA_SYSTEM_TIME), str(rn.EMMA_LOCAL_TIME)):
             device_class, state_class, unit_text = "timestamp", None, None
-        poll_group = _poll_group(register_name, register.__class__.__name__, writeable)
+        poll_group = _poll_group(
+            register_name, register.__class__.__name__, source_writeable
+        )
         # Home Assistant only permits diagnostic entity categories for sensors.
         # TOU remains writable through the integration service, while its sensor
         # is the diagnostic readback of the configured schedule.
         category = (
             "diagnostic"
-            if structured
+            if structured or (source_writeable and not writeable)
             else "config"
             if writeable
             else _entity_category(register_name, register.__class__.__name__)
@@ -146,6 +169,7 @@ def build_entity_catalog() -> dict[str, EntityDescription]:
             platform=platform,
             poll_group=poll_group,
             device_role=register_device_role(register_name),
+            client_role=register_client_role(register_name),
             unit=unit_text,
             device_class=device_class,
             state_class=state_class,
@@ -153,8 +177,8 @@ def build_entity_catalog() -> dict[str, EntityDescription]:
             icon=_icon(register_name, device_class, structured),
             enabled_default=(
                 False
-                if structured
-                else _enabled_default(register_name, poll_group, writeable)
+                if structured or not legacy_exposed
+                else _enabled_default(register_name, poll_group, source_writeable)
             ),
             writeable=writeable,
             options=options,
@@ -168,7 +192,10 @@ def build_entity_catalog() -> dict[str, EntityDescription]:
 
 def register_device_role(register_name: str) -> str:
     """Map EMMA aggregate registers to the physical device that owns the data."""
-    if register_name.startswith("emma_external_meter_"):
+    definition = REGISTERS[register_name]
+    if TargetDevice.EMMA not in definition.target_device:
+        return _target_client_role(definition.target_device)
+    if register_name.startswith("emma_external_meter_") or "external_energy" in register_name:
         return "external_meter"
     if "backup_power" in register_name or "smartguard" in register_name:
         return "smartguard"
@@ -187,7 +214,23 @@ def register_client_role(register_name: str) -> str:
     device. Only the explicitly exposed native SUN2000 controls are read from
     the inverter's unit ID.
     """
-    return "inverter" if register_name in SUN2000_EXPOSED_REGISTERS else "emma"
+    definition = REGISTERS[register_name]
+    if TargetDevice.EMMA in definition.target_device:
+        return "emma"
+    return _target_client_role(definition.target_device)
+
+
+def _target_client_role(targets: TargetDevice) -> str:
+    """Choose the Modbus unit role for a non-EMMA register definition."""
+    for target, role in (
+        (TargetDevice.SUN2000, "inverter"),
+        (TargetDevice.SCHARGER, "charger"),
+        (TargetDevice.SDONGLE, "sdongle"),
+        (TargetDevice.SMARTLOGGER, "smartlogger"),
+    ):
+        if target in targets:
+            return role
+    return "emma"
 
 
 def grouped_register_names(
@@ -233,13 +276,27 @@ def _enum_options(unit: Any) -> tuple[dict[str, Any], ...]:
 
 def _poll_group(name: str, class_name: str, writeable: bool) -> str:
     if "String" in class_name or any(
-        word in name for word in ("model", "serial", "software_version")
+        word in name
+        for word in (
+            "model",
+            "serial",
+            "software_version",
+            "firmware_version",
+            "protocol_version",
+            "product_",
+            "rated_",
+            "feature_mask",
+            "support_flag",
+            "nb_",
+            "number_of_",
+        )
     ):
         return "slow"
     if writeable or any(
         word in name
         for word in (
             "energy",
+            "electricity",
             "yield",
             "consumption",
             "capacity",
@@ -248,6 +305,9 @@ def _poll_group(name: str, class_name: str, writeable: bool) -> str:
             "limitation",
             "number_of",
             "time",
+            "alarm",
+            "status",
+            "temperature",
         )
     ):
         return "medium"
@@ -257,14 +317,27 @@ def _poll_group(name: str, class_name: str, writeable: bool) -> str:
 def _entity_category(name: str, class_name: str) -> str | None:
     if "String" in class_name or any(
         word in name
-        for word in ("model", "serial", "software", "version", "status", "alarm")
+        for word in (
+            "model",
+            "serial",
+            "software",
+            "version",
+            "status",
+            "alarm",
+            "fault",
+            "feature_mask",
+            "support_flag",
+            "product_",
+            "number_of_",
+            "nb_",
+        )
     ):
         return "diagnostic"
     return None
 
 
 def _enabled_default(name: str, poll_group: str, writeable: bool) -> bool:
-    if name.startswith("emma_external_meter_"):
+    if name.startswith("emma_external_meter_") or "external_energy" in name:
         return False
     if "built_in_energy" in name:
         return True
@@ -284,9 +357,9 @@ def _enabled_default(name: str, poll_group: str, writeable: bool) -> bool:
 
 
 def _ha_classes(name: str, unit: str | None) -> tuple[str | None, str | None]:
-    if unit == "W":
+    if unit in ("W", "kW"):
         return "power", "measurement"
-    if unit == "VA":
+    if unit in ("VA", "kVA"):
         return "apparent_power", "measurement"
     if unit == "V":
         return "voltage", "measurement"
@@ -298,7 +371,7 @@ def _ha_classes(name: str, unit: str | None) -> tuple[str | None, str | None]:
         return "temperature", "measurement"
     if unit == "%":
         return ("battery" if "state_of" in name else None), "measurement"
-    if unit == "kWh":
+    if unit in ("Wh", "kWh", "MWh"):
         if any(word in name for word in ("capacity", "chargeable", "dischargeable")):
             return "energy_storage", "measurement"
         state = "total_increasing" if "total" in name else "total"
@@ -317,15 +390,49 @@ def _icon(name: str, device_class: str | None, structured: bool) -> str | None:
         return "mdi:transmission-tower"
     if "load" in name or "consumption" in name:
         return "mdi:home-lightning-bolt"
-    if "model" in name or "serial" in name or "software" in name:
+    if "model" in name or "serial" in name or "software" in name or "firmware" in name:
         return "mdi:information-outline"
+    if "alarm" in name or "fault" in name:
+        return "mdi:alert-circle-outline"
+    if "status" in name or "state" in name:
+        return "mdi:list-status"
+    if "temperature" in name:
+        return "mdi:thermometer"
+    if "frequency" in name:
+        return "mdi:sine-wave"
+    if "current" in name:
+        return "mdi:current-ac"
+    if "voltage" in name:
+        return "mdi:flash-triangle-outline"
+    if "power_factor" in name:
+        return "mdi:angle-acute"
+    if "optimizer" in name:
+        return "mdi:solar-panel"
+    if "charger" in name:
+        return "mdi:ev-station"
+    if "meter" in name:
+        return "mdi:meter-electric-outline"
+    if "time" in name or "date" in name:
+        return "mdi:clock-outline"
     if device_class:
         return None
     return "mdi:chip"
 
 
 def _friendly_name(value: str) -> str:
-    replacements = {"Pv": "PV", "Ess": "ESS", "Tou": "TOU", "Emma": "EMMA"}
+    replacements = {
+        "Pv": "PV",
+        "Ess": "ESS",
+        "Tou": "TOU",
+        "Emma": "EMMA",
+        "Soc": "SOC",
+        "Soh": "SOH",
+        "Soe": "SOE",
+        "Mpp": "MPP",
+        "Pn": "PN",
+        "Ac": "AC",
+        "Dc": "DC",
+    }
     text = value.replace("_", " ").title()
     for original, replacement in replacements.items():
         text = text.replace(original, replacement)

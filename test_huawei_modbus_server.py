@@ -122,9 +122,12 @@ class FrameTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_versioned_api_requires_token_and_serves_catalog(self):
         state = RuntimeState()
+        subscription_updates = []
         state.active_session = SimpleNamespace(
             topology_complete=True,
             available_device_roles={"emma", "smartguard", "inverter"},
+            closed=False,
+            set_subscriptions=lambda names: subscription_updates.append(names),
         )
         api = CommandApi(state, "test-token")
         server = await asyncio.start_server(api.handle, "127.0.0.1", 0)
@@ -140,7 +143,25 @@ class FrameTests(unittest.IsolatedAsyncioTestCase):
             response = await reader.read()
             self.assertIn(b"HTTP/1.1 200 OK", response)
             self.assertIn(b'"register_name":"model_name"', response)
-            self.assertNotIn(b"emma_external_meter_running_status", response)
+            self.assertIn(b'"register_name":"emma_external_meter_running_status"', response)
+            self.assertIn(b'"enabled_default":false', response)
+            writer.close()
+            await writer.wait_closed()
+
+            body = b'{"register_names":["pv_output_power"]}'
+            reader, writer = await asyncio.open_connection("127.0.0.1", port)
+            writer.write(
+                b"POST /api/v1/subscriptions HTTP/1.1\r\n"
+                b"Host: localhost\r\n"
+                b"Authorization: Bearer test-token\r\n"
+                + f"Content-Length: {len(body)}\r\n\r\n".encode()
+                + body
+            )
+            await writer.drain()
+            response = await reader.read()
+            self.assertIn(b"HTTP/1.1 200 OK", response)
+            self.assertEqual(state.subscribed_registers, {"pv_output_power"})
+            self.assertEqual(subscription_updates, [{"pv_output_power"}])
             writer.close()
             await writer.wait_closed()
 
@@ -451,6 +472,17 @@ class DecoderTests(unittest.TestCase):
 
     def test_catalog_covers_emma_registers_and_control_types(self):
         catalog = build_entity_catalog()
+        self.assertEqual(
+            len(catalog), sum(register.readable for register in REGISTERS.values())
+        )
+        self.assertFalse(catalog[str(rn.PN)].enabled_default)
+        self.assertEqual(catalog[str(rn.PN)].client_role, "inverter")
+        self.assertTrue(
+            all(
+                description.icon or description.device_class
+                for description in catalog.values()
+            )
+        )
         self.assertGreaterEqual(len(catalog), 100)
         self.assertEqual(catalog[str(rn.EMMA_ESS_CONTROL_MODE)].platform, "select")
         self.assertEqual(catalog[str(rn.EMMA_TOU_PERIODS)].format, "tou_periods")

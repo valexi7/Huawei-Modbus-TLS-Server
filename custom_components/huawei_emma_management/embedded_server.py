@@ -48,7 +48,6 @@ try:
         build_entity_catalog,
         grouped_register_names,
         json_value,
-        register_client_role,
     )
     from .embedded_runtime_setup import (
         CertificateStatus,
@@ -63,7 +62,6 @@ except ImportError:  # Standalone external-server launcher.
         build_entity_catalog,
         grouped_register_names,
         json_value,
-        register_client_role,
     )
     from embedded_runtime_setup import (
         CertificateStatus,
@@ -285,6 +283,10 @@ def _topology_device_role(model: str, product_type: str | None) -> str:
         return "smartguard"
     if "sun2000" in text or "inverter" in text:
         return "inverter"
+    if "smartlogger" in text:
+        return "smartlogger"
+    if "sdongle" in text or "smart dongle" in text:
+        return "sdongle"
     if any(word in text for word in ("meter", "dtsu", "ddsu", "yds", "energy sensor")):
         return "external_meter"
     if "charger" in text or "wallbox" in text:
@@ -564,6 +566,7 @@ class ReverseModbusSession:
         poll_intervals: dict[str, float] | None = None,
         publisher: HomeAssistantPublisher | None,
         state_callback: Callable[["ReverseModbusSession", dict[str, dict[str, Any]]], Awaitable[None]],
+        subscribed_registers: set[str] | None = None,
         log_raw: bool = False,
         once: bool = False,
     ):
@@ -590,6 +593,15 @@ class ReverseModbusSession:
         self.latest_values: dict[str, Any] = {}
         self.latest_updated_at: dict[str, str] = {}
         self.unsupported_registers: set[str] = set()
+        self.subscribed_registers = set(
+            subscribed_registers
+            if subscribed_registers is not None
+            else {
+                name
+                for name, description in ENTITY_CATALOG.items()
+                if description.enabled_default
+            }
+        )
         self.last_poll_success: str | None = None
         self.last_poll_error: str | None = None
         self.device: Any | None = None
@@ -598,6 +610,7 @@ class ReverseModbusSession:
         self._next_transaction_id = 1
         self._request_lock = asyncio.Lock()
         self._startup_frame = asyncio.Event()
+        self._subscriptions_changed = asyncio.Event()
         self._closed = False
         self.transport = ReverseConnectionTransport(self)
         self.huawei_client = AsyncHuaweiSolarClient(self.transport, unit_id=0)
@@ -605,6 +618,25 @@ class ReverseModbusSession:
             "emma": self.huawei_client
         }
         self.devices_by_role: dict[str, Any] = {}
+
+    def set_subscriptions(self, register_names: set[str]) -> None:
+        """Replace the active poll set and wake the scheduler immediately."""
+        added = register_names - self.subscribed_registers
+        removed = self.subscribed_registers - register_names
+        self.subscribed_registers = set(register_names)
+        self.unsupported_registers.intersection_update(register_names)
+        self.unsupported_registers.difference_update(added)
+        for register_name in removed:
+            self.latest_states.pop(register_name, None)
+            self.latest_values.pop(register_name, None)
+            self.latest_updated_at.pop(register_name, None)
+        self._subscriptions_changed.set()
+        log.info(
+            "Polling subscriptions updated total=%d added=%d removed=%d",
+            len(register_names),
+            len(added),
+            len(removed),
+        )
 
     @property
     def closed(self) -> bool:
@@ -782,7 +814,7 @@ class ReverseModbusSession:
                 raise ValueError(
                     f"Value cannot exceed the inverter rated power ({rated_power} W)"
                 )
-        role = register_client_role(register_name)
+        role = description.client_role
         client = self.clients_by_role.get(role)
         device = self.devices_by_role.get(role)
         if client is None:
@@ -893,7 +925,12 @@ class ReverseModbusSession:
         for topology_device in self.topology_devices:
             role = topology_device["role"]
             unit_id = topology_device.get("unit_id")
-            if role not in ("inverter",) or not isinstance(unit_id, int):
+            if role not in (
+                "inverter",
+                "charger",
+                "sdongle",
+                "smartlogger",
+            ) or not isinstance(unit_id, int):
                 continue
             client = AsyncHuaweiSolarClient(self.transport, unit_id=unit_id)
             self.clients_by_role[role] = client
@@ -927,6 +964,7 @@ class ReverseModbusSession:
                 names = [
                     register_name
                     for register_name in POLL_GROUPS[group]
+                    if register_name in self.subscribed_registers
                     if register_name not in self.unsupported_registers
                     and self._register_available_by_topology(register_name)
                 ]
@@ -935,7 +973,7 @@ class ReverseModbusSession:
                     names_by_role: dict[str, list[str]] = {}
                     for register_name in names:
                         names_by_role.setdefault(
-                            register_client_role(register_name), []
+                            ENTITY_CATALOG[register_name].client_role, []
                         ).append(register_name)
                     for role_names in names_by_role.values():
                         decoded.update(
@@ -979,7 +1017,13 @@ class ReverseModbusSession:
                 self.writer.close()
                 return
             delay = max(0.1, min(next_due.values()) - asyncio.get_running_loop().time())
-            await asyncio.sleep(delay)
+            try:
+                await asyncio.wait_for(self._subscriptions_changed.wait(), timeout=delay)
+            except TimeoutError:
+                pass
+            else:
+                self._subscriptions_changed.clear()
+                next_due = {name: 0.0 for name in POLL_GROUPS}
 
     async def _read_registers_with_fallback(
         self, names: list[str]
@@ -998,7 +1042,7 @@ class ReverseModbusSession:
                     await self._read_registers_with_fallback([register_name])
                 )
             return result
-        role = register_client_role(names[0])
+        role = ENTITY_CATALOG[names[0]].client_role
         client = self.clients_by_role.get(role)
         device = self.devices_by_role.get(role)
         if client is None:
@@ -1054,7 +1098,12 @@ class ReverseModbusSession:
     def _register_available_by_topology(self, register_name: str) -> bool:
         if not self.topology_complete:
             return True
-        role = ENTITY_CATALOG[register_name].device_role
+        description = ENTITY_CATALOG[register_name]
+        role = (
+            description.device_role
+            if description.device_role == "external_meter"
+            else description.client_role
+        )
         if role != "emma" and role not in self.available_device_roles:
             if register_name not in self.unsupported_registers:
                 self.unsupported_registers.add(register_name)
@@ -1210,6 +1259,13 @@ class RuntimeState:
     last_success: str | None = None
     last_error: str | None = None
     reconnect_count: int = 0
+    subscribed_registers: set[str] = field(
+        default_factory=lambda: {
+            name
+            for name, description in ENTITY_CATALOG.items()
+            if description.enabled_default
+        }
+    )
 
     async def update_states(
         self,
@@ -1234,6 +1290,7 @@ class RuntimeState:
             "reconnect_count": self.reconnect_count,
             "registers_available": len(self.latest_values),
             "registers_unsupported": len(session.unsupported_registers) if session else 0,
+            "registers_subscribed": len(self.subscribed_registers),
         }
 
     def device(self) -> dict[str, Any]:
@@ -1257,17 +1314,9 @@ class RuntimeState:
         }
 
     def entities(self) -> list[dict[str, Any]]:
-        """Return the entity catalog filtered for the discovered topology."""
-        session = self.active_session
+        """Return every known entity; unsupported devices remain unavailable."""
         descriptions: list[dict[str, Any]] = []
         for description in ENTITY_CATALOG.values():
-            if (
-                session is not None
-                and session.topology_complete
-                and description.device_role != "emma"
-                and description.device_role not in session.available_device_roles
-            ):
-                continue
             payload = description.to_dict()
             if description.register_name in INVERTER_RATED_LIMITED_REGISTERS:
                 rated_power = self.latest_values.get(str(rn.INVERTER_RATED_POWER))
@@ -1275,6 +1324,27 @@ class RuntimeState:
                     payload["maximum"] = float(rated_power)
             descriptions.append(payload)
         return descriptions
+
+    def set_subscriptions(self, register_names: list[str]) -> list[str]:
+        """Validate and replace the set of registers polled by the connector."""
+        if not isinstance(register_names, list) or any(
+            not isinstance(name, str) for name in register_names
+        ):
+            raise ValueError("register_names must be a list of strings")
+        unknown = sorted(set(register_names) - set(ENTITY_CATALOG))
+        if unknown:
+            raise ValueError(f"Unknown register names: {', '.join(unknown[:10])}")
+        subscriptions = set(register_names)
+        removed = self.subscribed_registers - subscriptions
+        self.subscribed_registers = subscriptions
+        for register_name in removed:
+            self.latest_states.pop(register_name, None)
+            self.latest_values.pop(register_name, None)
+            self.updated_at.pop(register_name, None)
+        session = self.active_session
+        if session is not None and not session.closed:
+            session.set_subscriptions(subscriptions)
+        return sorted(subscriptions)
 
     def states(self) -> dict[str, Any]:
         """Return a serializable snapshot matching the external connector API."""
@@ -1425,6 +1495,7 @@ class ReverseModbusTlsServer:
                 },
                 publisher=None,
                 state_callback=self.state.update_states,
+                subscribed_registers=self.state.subscribed_registers,
                 log_raw=self.config.log_raw,
                 once=self.config.once,
             )
@@ -1561,6 +1632,24 @@ class CommandApi:
                         "updated_at": self.state.updated_at,
                         "unsupported": unsupported,
                     },
+                )
+            elif method == "POST" and path == "/api/v1/subscriptions":
+                payload = _decode_json_object(body)
+                try:
+                    register_names = self.state.set_subscriptions(
+                        payload.get("register_names")
+                    )
+                except ValueError as error:
+                    raise HttpError(400, str(error)) from error
+                log.info(
+                    "API polling subscription accepted peer=%s registers=%d",
+                    peer,
+                    len(register_names),
+                )
+                await _send_json(
+                    writer,
+                    200,
+                    {"ok": True, "register_names": register_names},
                 )
             elif method == "POST" and path.startswith("/api/v1/entities/") and path.endswith("/value"):
                 register_name = urllib.parse.unquote(
@@ -1836,6 +1925,7 @@ async def async_main(args: argparse.Namespace) -> None:
             },
             publisher=publisher,
             state_callback=state.update_states,
+            subscribed_registers=state.subscribed_registers,
             log_raw=args.log_raw,
             once=args.once,
         )

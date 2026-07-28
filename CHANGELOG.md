@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.9.0
+
+- Publish all 740 readable register definitions from the pinned `huawei-solar` catalog
+  for EMMA, SUN2000/LUNA, SmartLogger, SDongle, and SCharger devices.
+- Keep newly added catalog entities disabled by default and synchronize the enabled Home
+  Assistant entity registry with the connector's active Modbus polling subscription.
+- Route enabled registers to their discovered Modbus unit, skip absent optional hardware,
+  and wake the scheduler immediately when subscriptions change.
+- Classify entities into live sensors, safe configuration controls, and diagnostics;
+  normalize units and expand device-specific icons and fast/medium/slow grouping.
+- Preserve unknown upstream writeable registers as read-only diagnostics unless an
+  explicit safe control schema is defined.
+
 ## 0.8.1
 
 - Fix the Home Assistant configuration and options forms by using the serializable

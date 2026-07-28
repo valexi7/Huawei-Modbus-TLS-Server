@@ -6,6 +6,7 @@ import logging
 from typing import Any
 
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .api import EmmaApiClient, EmmaApiError
@@ -81,7 +82,49 @@ class EmmaCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         if discovered.get("serial_number") or not self.device_data:
             self.device_data = discovered
         self.entity_descriptions = await self.api.entities()
+        await self._async_sync_polling_subscriptions()
         await self.async_config_entry_first_refresh()
+
+    async def _async_sync_polling_subscriptions(self) -> None:
+        """Make the connector poll exactly the entities enabled in HA."""
+        registry = er.async_get(self.hass)
+        enabled: set[str] = set()
+        for description in self.entity_descriptions:
+            register_name = description["register_name"]
+            unique_id = f"{self.unique_id_prefix}_{register_name}"
+            entity_id = registry.async_get_entity_id(
+                description["platform"], DOMAIN, unique_id
+            )
+            registry_entry = registry.async_get(entity_id) if entity_id else None
+            if (
+                registry_entry is not None
+                and registry_entry.disabled_by is None
+            ) or (
+                registry_entry is None
+                and description.get("enabled_default", True)
+            ):
+                enabled.add(
+                    description.get("source_register_name", register_name)
+                )
+
+        # TOU powers the two schedule sensors, editor, Growatt compatibility,
+        # and native services, so it remains an internal required subscription.
+        enabled.add(TOU_REGISTER_NAME)
+        try:
+            accepted = await self.api.set_subscriptions(sorted(enabled))
+        except EmmaApiError as error:
+            # Keep compatibility with a connector that has not yet been updated;
+            # it will continue using its own default poll set.
+            _LOGGER.warning(
+                "Connector does not support dynamic polling subscriptions yet: %s",
+                error,
+            )
+            return
+        _LOGGER.info(
+            "Synchronized Home Assistant polling subscriptions enabled=%d catalog=%d",
+            len(accepted),
+            len(self.entity_descriptions),
+        )
 
     async def _async_update_data(self) -> dict[str, Any]:
         try:

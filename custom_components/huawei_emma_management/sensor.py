@@ -115,5 +115,7 @@ class EmmaSensor(EmmaEntity, SensorEntity):
             }
         return {
             "register_address": self.description["address"],
+            "register_count": self.description.get("length", 1),
+            "modbus_device_role": self.description.get("client_role", "emma"),
             "poll_group": self.description["poll_group"],
         }

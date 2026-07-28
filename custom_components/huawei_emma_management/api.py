@@ -77,6 +77,12 @@ class EmmaApiClient:
     async def states(self) -> dict[str, Any]:
         return await self._request("GET", "/states")
 
+    async def set_subscriptions(self, register_names: list[str]) -> list[str]:
+        payload = await self._request(
+            "POST", "/subscriptions", {"register_names": register_names}
+        )
+        return payload.get("register_names", [])
+
     async def set_value(self, register_name: str, value: Any) -> Any:
         _LOGGER.debug(
             "Connector command POST register=%s value=%r", register_name, value
@@ -115,6 +121,12 @@ class EmbeddedEmmaApiClient:
 
     async def states(self) -> dict[str, Any]:
         return self._state.states()
+
+    async def set_subscriptions(self, register_names: list[str]) -> list[str]:
+        try:
+            return self._state.set_subscriptions(register_names)
+        except ValueError as error:
+            raise EmmaApiError(str(error)) from error
 
     async def set_value(self, register_name: str, value: Any) -> Any:
         _LOGGER.debug(
