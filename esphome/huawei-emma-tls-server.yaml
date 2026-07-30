@@ -1,0 +1,37 @@
+# Minimal local device configuration. Keep Wi-Fi/API secrets in ESPHome and
+# pull the board/network implementation from this repository.
+
+substitutions:
+  emma_eth_ip: !secret emma_eth_ip
+  emma_eth_gateway: !secret emma_eth_gateway
+  emma_eth_subnet: "255.255.255.0"
+
+packages:
+  huawei_emma_board: github://valexi7/Huawei-Modbus-TLS-Server/esphome/packages/lilygo-t-eth-elite-dual-network.yaml@main
+
+external_components:
+  - source: github://valexi7/Huawei-Modbus-TLS-Server@main
+    components:
+      - emma_w5500
+    refresh: 1h
+
+esphome:
+  name: huawei-emma-tls-server
+  friendly_name: Huawei EMMA TLS Server
+  name_add_mac_suffix: false
+
+logger:
+
+api:
+  encryption:
+    key: !secret huawei_emma_api_key
+
+ota:
+  - platform: esphome
+    password: !secret huawei_emma_ota_password
+
+# Home Assistant/native API/OTA interface. The packaged W5500 interface is
+# independent and uses the EMMA management-network address above.
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password

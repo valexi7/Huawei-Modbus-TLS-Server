@@ -1,5 +1,7 @@
 .env
 .venv/
+.esphome-venv/
+/esphome/.esphome/
 __pycache__/
 *.py[cod]
 .coverage

@@ -10,8 +10,11 @@ requests as master.
 
 1. Create an ESPHome external component named `huawei_emma_reverse` in a separate
    `esphome/components/huawei_emma_reverse` tree.
-2. Use ESP-IDF on ESP32-S3 and ESPHome's built-in W5500 Ethernet component. Wi-Fi is not
-   part of the production configuration.
+2. Use ESP-IDF on ESP32-S3 with ESPHome Wi-Fi plus the repository's `emma_w5500`
+   compatibility component. Wi-Fi carries the Home Assistant native API and OTA; the
+   fixed-address W5500 is isolated on the EMMA management network. Released ESPHome
+   2026.7.3 still rejects its two built-in interfaces together, although upstream support
+   has merged for a future release. The TLS listener must bind only to ETH1.
 3. Implement a bounded single-client TLS 1.2 server using ESP-IDF/mbedTLS. Reject a
    second EMMA connection and apply handshake, frame-size, and request timeouts.
 4. Port only the MBAP transport, Huawei `0x41` startup parsing, paged `0x2B` topology,
@@ -56,9 +59,10 @@ requests as master.
 - Measure flash, internal RAM, PSRAM use, task stack high-water marks, poll latency, and
   reconnect recovery before declaring the Armbian service replaceable.
 
-## Repository tasks deferred until hardware validation
+## Repository status and remaining tasks
 
-- Pin the board YAML and confirmed W5500 pins.
+- [x] Confirm and package the LilyGO W5500 pins and dual-network base YAML.
+- [x] Add a minimal local YAML that imports the maintained package from GitHub.
 - Add the external-component C++ skeleton and code generator.
 - Add captured-frame unit tests runnable on the host plus an ESP-IDF test target.
 - Define ESPHome entity names/IDs and migration mapping from this HACS integration.

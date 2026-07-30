@@ -1,0 +1,64 @@
+# Huawei EMMA dual-network base for the LilyGO T-ETH-Elite ESP32-S3.
+#
+# Wi-Fi is intentionally not declared here. The consuming device YAML supplies
+# wifi credentials so ESPHome's native API and OTA remain on the Home Assistant
+# network. This package owns the W5500 interface connected to the EMMA network.
+
+substitutions:
+  emma_eth_ip: "192.168.88.20"
+  emma_eth_gateway: "192.168.88.1"
+  emma_eth_subnet: "255.255.255.0"
+
+esphome:
+  min_version: 2026.4.0
+  on_boot:
+    - priority: 200
+      then:
+        - light.turn_on:
+            id: board_led
+            effect: "Slow Flash"
+
+esp32:
+  board: esp32-s3-devkitc-1
+  variant: esp32s3
+  flash_size: 16MB
+  framework:
+    type: esp-idf
+
+psram:
+  mode: octal
+  speed: 80MHz
+
+# LilyGO's official T-ETH-Elite pin assignment for the onboard W5500. This
+# external component deliberately does not register as ESPHome's primary
+# network interface, allowing stock ESPHome Wi-Fi to remain enabled.
+emma_w5500:
+  id: emma_ethernet
+  clk_pin: GPIO48
+  mosi_pin: GPIO21
+  miso_pin: GPIO47
+  cs_pin: GPIO45
+  interrupt_pin: GPIO14
+  manual_ip:
+    static_ip: ${emma_eth_ip}
+    gateway: ${emma_eth_gateway}
+    subnet: ${emma_eth_subnet}
+
+output:
+  - platform: gpio
+    pin: GPIO38
+    id: led_output
+
+light:
+  - platform: binary
+    name: "Onboard LED"
+    id: board_led
+    output: led_output
+    effects:
+      - strobe:
+          name: "Slow Flash"
+          colors:
+            - state: true
+              duration: 1s
+            - state: false
+              duration: 1s
