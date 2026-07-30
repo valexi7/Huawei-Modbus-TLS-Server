@@ -372,6 +372,40 @@ class DecoderTests(unittest.TestCase):
             )
             with self.assertRaisesRegex(ValueError, "start < end"):
                 tou.decode_tou_plan_json('[[270,0,"d"]]')
+
+            luna_text = (
+                "00:00-03:59/1234567/+\n"
+                "07:00-09:59/1234567/-\n"
+                "17:00-20:59/135/-"
+            )
+            self.assertEqual(
+                tou.decode_luna_tou_periods(luna_text),
+                [
+                    {
+                        "start_time": 0,
+                        "end_time": 239,
+                        "action": "charge",
+                        "days": [True] * 7,
+                    },
+                    {
+                        "start_time": 420,
+                        "end_time": 599,
+                        "action": "discharge",
+                        "days": [True] * 7,
+                    },
+                    {
+                        "start_time": 1020,
+                        "end_time": 1259,
+                        "action": "discharge",
+                        "days": [True, False, True, False, True, False, False],
+                    },
+                ],
+            )
+            self.assertEqual(tou.decode_luna_tou_periods(""), [])
+            with self.assertRaisesRegex(ValueError, "line 1"):
+                tou.decode_luna_tou_periods("00:00-03:59/1234567/x")
+            with self.assertRaisesRegex(ValueError, "unique and ordered"):
+                tou.decode_luna_tou_periods("00:00-03:59/113/+")
             slots = [
                 {
                     "enabled": True,

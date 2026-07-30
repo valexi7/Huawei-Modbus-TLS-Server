@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.10.0
+
+- Add a LUNA-format-compatible `huawei_emma.set_tou_periods` service accepting
+  newline-separated `HH:MM-HH:MM/DAYS/+|-` schedules while preserving the existing
+  structured service.
+- Parse the compatibility format into the same validated EMMA TOU write/readback path;
+  an empty string clears the schedule.
+
 ## 0.9.1
 
 - Preserve structured `emma_tou_periods` as a validated writable value for the

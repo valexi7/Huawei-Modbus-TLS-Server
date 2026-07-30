@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from typing import Any
 
 from .const import (
@@ -109,6 +110,53 @@ def decode_tou_plan_json(value: str) -> list[dict[str, Any]]:
                 "end_time": end,
                 "action": mode,
                 "days": list(days),
+            }
+        )
+    return periods
+
+
+_LUNA_TOU_LINE = re.compile(
+    r"^(?P<start>\d{2}:\d{2})-(?P<end>\d{2}:\d{2})/"
+    r"(?P<days>[1-7]+)/(?P<flag>[+-])$"
+)
+
+
+def decode_luna_tou_periods(value: str) -> list[dict[str, Any]]:
+    """Decode the newline-separated LUNA schedule accepted by the external API."""
+    if not isinstance(value, str):
+        raise ValueError("LUNA TOU periods must be a string")
+    if not value.strip():
+        return []
+
+    lines = value.splitlines()
+    if len(lines) > TOU_MAX_PERIODS:
+        raise ValueError(f"LUNA TOU schedule accepts at most {TOU_MAX_PERIODS} periods")
+
+    periods: list[dict[str, Any]] = []
+    for index, raw_line in enumerate(lines, start=1):
+        line = raw_line.strip()
+        match = _LUNA_TOU_LINE.fullmatch(line)
+        if match is None:
+            raise ValueError(
+                f"LUNA TOU line {index} must use HH:MM-HH:MM/DAYS/+ or -"
+            )
+        start = parse_time_minutes(match.group("start"), f"line {index} start")
+        end = parse_time_minutes(match.group("end"), f"line {index} end")
+        if not 0 <= start < end <= 1440:
+            raise ValueError(f"LUNA TOU line {index} must have start before end")
+
+        day_text = match.group("days")
+        if len(set(day_text)) != len(day_text) or day_text != "".join(sorted(day_text)):
+            raise ValueError(
+                f"LUNA TOU line {index} days must be unique and ordered from 1 to 7"
+            )
+        selected_days = set(day_text)
+        periods.append(
+            {
+                "start_time": start,
+                "end_time": end,
+                "action": "charge" if match.group("flag") == "+" else "discharge",
+                "days": [str(day) in selected_days for day in range(1, 8)],
             }
         )
     return periods

@@ -1,11 +1,13 @@
 # Huawei EMMA external control API
 
-The Home Assistant integration registers two actions intended for authenticated external
+The Home Assistant integration registers three actions intended for authenticated external
 controllers:
 
 - `huawei_emma.read_controls` discovers controls currently exposed as safe and writable.
 - `huawei_emma.set_value` writes one exposed control and returns the value read back by
   the connector.
+- `huawei_emma.set_tou_periods` replaces the TOU schedule from newline-separated LUNA
+  text.
 
 These actions are available through Home Assistant automations and its REST action API.
 They are separate from the connector's port `8088` API and use Home Assistant
@@ -13,7 +15,7 @@ authentication.
 
 ## Requirements and security
 
-1. Install Huawei EMMA Management `0.8.0` or newer and restart Home Assistant.
+1. Install Huawei EMMA Management `0.10.0` or newer and restart Home Assistant.
 2. Use a Home Assistant administrator's long-lived access token. An add-on can instead
    use its Supervisor token if the add-on has Home Assistant API access.
 3. Keep Home Assistant behind HTTPS when requests cross an untrusted network.
@@ -174,6 +176,36 @@ curl --request POST \
 An empty list clears the schedule. EMMA accepts a maximum of 14 periods. Each enabled
 period must have `start_time < end_time`, a `charge` or `discharge` action, and exactly
 seven Monday-to-Sunday booleans.
+
+### LUNA text-format compatibility
+
+Consumers using the LUNA text format can call the administrator-only
+`huawei_emma.set_tou_periods` API:
+
+```yaml
+action: huawei_emma.set_tou_periods
+data:
+  device_id: 0123456789abcdef0123456789abcdef
+  periods: |-
+    00:00-03:59/1234567/+
+    07:00-09:59/1234567/-
+    17:00-20:59/1234567/-
+```
+
+Each line uses `HH:MM-HH:MM/DAYS/FLAG`. Weekdays are numbered `1` through `7`
+(Monday-Sunday), `+` means charge, and `-` means discharge. Digits must be unique and in
+ascending order; `1234567` selects every day. At most 14 non-empty periods are accepted.
+An empty string clears the schedule:
+
+```yaml
+action: huawei_emma.set_tou_periods
+data:
+  device_id: 0123456789abcdef0123456789abcdef
+  periods: ""
+```
+
+The text is decoded before any connector call and then follows the same range, action,
+weekday, Modbus-write, and readback validation as the structured API.
 
 ## Home Assistant action examples
 

@@ -42,13 +42,14 @@ from .const import (
 )
 from .coordinator import EmmaCoordinator
 from .embedded_server import ReverseModbusTlsServer, ServerConfig
+from .tou import decode_luna_tou_periods
 
 
 _LOGGER = logging.getLogger(__name__)
 _GROWATT_ALIAS_OWNER = f"{DOMAIN}_owns_growatt_aliases"
 _HUAWEI_API_OWNER = f"{DOMAIN}_owns_huawei_api"
 _SERVICE_NAMES = ("set_tou_periods", "read_time_segments", "update_time_segment")
-_HUAWEI_API_SERVICE_NAMES = ("read_controls", "set_value")
+_HUAWEI_API_SERVICE_NAMES = ("read_controls", "set_value", "set_tou_periods")
 _SAFE_CONTROL_PLATFORMS = {"select", "switch", "number", "datetime"}
 
 
@@ -534,6 +535,47 @@ def _async_register_services(hass: HomeAssistant) -> None:
         )
         return {"register_name": register_name, "value": value}
 
+    async def set_luna_tou_periods(call: ServiceCall) -> None:
+        _LOGGER.debug(
+            "SERVICE received domain=%s service=%s user_id=%s device_id=%s "
+            "format=luna_text periods=%r",
+            call.domain,
+            call.service,
+            call.context.user_id,
+            call.data["device_id"],
+            call.data["periods"],
+        )
+        if call.domain == HUAWEI_EXTERNAL_API_DOMAIN:
+            await _require_external_api_admin(hass, call)
+        target = _coordinator_for_call(hass, call)
+        try:
+            periods = decode_luna_tou_periods(call.data["periods"])
+            _LOGGER.debug(
+                "SERVICE validation=accepted domain=%s service=%s "
+                "format=luna_text decoded_periods=%r action=write_tou",
+                call.domain,
+                call.service,
+                periods,
+            )
+            await target.async_set_tou_schedule(
+                periods, source=f"{call.domain}.{call.service}"
+            )
+        except ValueError as error:
+            _LOGGER.debug(
+                "SERVICE validation=rejected domain=%s service=%s "
+                "format=luna_text reason=%s",
+                call.domain,
+                call.service,
+                error,
+            )
+            raise ServiceValidationError(str(error)) from error
+        _LOGGER.info(
+            "LUNA-compatible TOU schedule wrote periods=%s device=%s source=%s",
+            len(periods),
+            target.device_data.get("serial_number"),
+            call.domain,
+        )
+
     read_schema = _debug_schema(
         "read_time_segments_or_controls",
         vol.Schema({vol.Required("device_id"): cv.string}),
@@ -560,6 +602,15 @@ def _async_register_services(hass: HomeAssistant) -> None:
                 vol.Required("device_id"): cv.string,
                 vol.Required("register_name"): cv.string,
                 vol.Required("value"): object,
+            }
+        ),
+    )
+    luna_tou_schema = _debug_schema(
+        "set_tou_periods_luna_text",
+        vol.Schema(
+            {
+                vol.Required("device_id"): cv.string,
+                vol.Required("periods"): cv.string,
             }
         ),
     )
@@ -653,11 +704,17 @@ def _async_register_services(hass: HomeAssistant) -> None:
                 schema=external_set_schema,
                 supports_response=SupportsResponse.OPTIONAL,
             )
+            hass.services.async_register(
+                HUAWEI_EXTERNAL_API_DOMAIN,
+                "set_tou_periods",
+                set_luna_tou_periods,
+                schema=luna_tou_schema,
+            )
             hass.data[_HUAWEI_API_OWNER] = True
             _LOGGER.info(
-                "Registered authenticated huawei_emma read_controls/set_value API"
+                "Registered authenticated huawei_emma read_controls/set_value/"
+                "set_tou_periods API"
             )
-
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     unloaded = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
