@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.10.1
+
+- Add native Home Assistant action metadata for the dynamic
+  `huawei_emma.set_tou_periods` API, including its device selector and multiline
+  LUNA-format example.
+- Return the verified EMMA schedule in both LUNA text and structured forms when
+  action response data is requested.
+
 ## 0.10.0
 
 - Add a LUNA-format-compatible `huawei_emma.set_tou_periods` service accepting

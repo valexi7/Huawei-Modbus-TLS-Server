@@ -387,7 +387,7 @@ class EmmaCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         periods: list[dict[str, Any]],
         *,
         source: str = "home_assistant_service",
-    ) -> None:
+    ) -> list[dict[str, Any]]:
         _LOGGER.debug(
             "TOU WRITE received source=%s periods=%r validation=connector_pending",
             source,
@@ -424,6 +424,12 @@ class EmmaCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             if self.data
             else None,
         )
+        active_periods = (
+            self.data.get("values", {}).get(TOU_REGISTER_NAME) if self.data else None
+        )
+        if isinstance(active_periods, list):
+            return active_periods
+        return value if isinstance(value, list) else periods
 
     def growatt_time_segments(self) -> list[dict[str, Any]]:
         """Return the nine fixed slots expected by the Growatt action contract."""

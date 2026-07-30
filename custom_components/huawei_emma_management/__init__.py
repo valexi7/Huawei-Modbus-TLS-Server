@@ -10,7 +10,7 @@ from homeassistant.exceptions import ConfigEntryNotReady, ServiceValidationError
 from homeassistant.helpers.update_coordinator import UpdateFailed
 from homeassistant.const import CONF_HOST, CONF_PORT
 from homeassistant.core import HomeAssistant, ServiceCall, SupportsResponse
-from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers import config_validation as cv, service as service_helper
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
@@ -42,7 +42,7 @@ from .const import (
 )
 from .coordinator import EmmaCoordinator
 from .embedded_server import ReverseModbusTlsServer, ServerConfig
-from .tou import decode_luna_tou_periods
+from .tou import decode_luna_tou_periods, encode_luna_tou_periods
 
 
 _LOGGER = logging.getLogger(__name__)
@@ -535,7 +535,7 @@ def _async_register_services(hass: HomeAssistant) -> None:
         )
         return {"register_name": register_name, "value": value}
 
-    async def set_luna_tou_periods(call: ServiceCall) -> None:
+    async def set_luna_tou_periods(call: ServiceCall) -> dict[str, Any]:
         _LOGGER.debug(
             "SERVICE received domain=%s service=%s user_id=%s device_id=%s "
             "format=luna_text periods=%r",
@@ -557,7 +557,7 @@ def _async_register_services(hass: HomeAssistant) -> None:
                 call.service,
                 periods,
             )
-            await target.async_set_tou_schedule(
+            readback = await target.async_set_tou_schedule(
                 periods, source=f"{call.domain}.{call.service}"
             )
         except ValueError as error:
@@ -575,6 +575,11 @@ def _async_register_services(hass: HomeAssistant) -> None:
             target.device_data.get("serial_number"),
             call.domain,
         )
+        return {
+            "device_id": call.data["device_id"],
+            "periods": encode_luna_tou_periods(readback),
+            "structured_periods": readback,
+        }
 
     read_schema = _debug_schema(
         "read_time_segments_or_controls",
@@ -709,6 +714,43 @@ def _async_register_services(hass: HomeAssistant) -> None:
                 "set_tou_periods",
                 set_luna_tou_periods,
                 schema=luna_tou_schema,
+                supports_response=SupportsResponse.OPTIONAL,
+            )
+            service_helper.async_set_service_schema(
+                hass,
+                HUAWEI_EXTERNAL_API_DOMAIN,
+                "set_tou_periods",
+                {
+                    "name": "Set EMMA TOU periods",
+                    "description": (
+                        "Replace the EMMA TOU schedule using newline-separated "
+                        "LUNA text. The response contains the schedule read back "
+                        "from EMMA. An empty value clears the schedule."
+                    ),
+                    "fields": {
+                        "device_id": {
+                            "name": "Device",
+                            "description": "The Huawei EMMA device to control.",
+                            "required": True,
+                            "selector": {
+                                "device": {"integration": DOMAIN},
+                            },
+                        },
+                        "periods": {
+                            "name": "TOU periods",
+                            "description": (
+                                "One HH:MM-HH:MM/DAYS/+|- period per line; "
+                                "+ charges and - discharges."
+                            ),
+                            "required": True,
+                            "example": (
+                                "00:00-03:59/1234567/+\n"
+                                "07:00-09:59/1234567/-"
+                            ),
+                            "selector": {"text": {"multiline": True}},
+                        },
+                    },
+                },
             )
             hass.data[_HUAWEI_API_OWNER] = True
             _LOGGER.info(

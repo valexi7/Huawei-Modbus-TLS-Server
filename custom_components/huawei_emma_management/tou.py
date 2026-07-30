@@ -162,6 +162,39 @@ def decode_luna_tou_periods(value: str) -> list[dict[str, Any]]:
     return periods
 
 
+def encode_luna_tou_periods(periods: Any) -> str:
+    """Encode an EMMA TOU readback using the LUNA text service format."""
+    if not isinstance(periods, list):
+        return ""
+
+    lines: list[str] = []
+    for index, period in enumerate(periods, start=1):
+        if not isinstance(period, dict):
+            continue
+        start = parse_time_minutes(period.get("start_time"), f"period {index} start")
+        end = parse_time_minutes(period.get("end_time"), f"period {index} end")
+        days = period.get("days", period.get("days_effective", [True] * 7))
+        if (
+            not isinstance(days, list)
+            or len(days) != 7
+            or any(not isinstance(day, bool) for day in days)
+        ):
+            raise ValueError(f"TOU period {index} days must contain seven booleans")
+        day_text = "".join(
+            str(day_number)
+            for day_number, enabled in enumerate(days, start=1)
+            if enabled
+        )
+        if not day_text:
+            continue
+        mode = str(period.get("action", period.get("charge_flag", "discharge"))).lower()
+        flag = "+" if mode in ("charge", "c", "0") else "-"
+        lines.append(
+            f"{format_time_minutes(start)}-{format_time_minutes(end)}/{day_text}/{flag}"
+        )
+    return "\n".join(lines)
+
+
 def parse_time_minutes(value: Any, field: str = "time") -> int:
     if isinstance(value, str) and ":" in value:
         try:

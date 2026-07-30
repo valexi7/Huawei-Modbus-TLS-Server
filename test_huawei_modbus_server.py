@@ -402,6 +402,9 @@ class DecoderTests(unittest.TestCase):
                 ],
             )
             self.assertEqual(tou.decode_luna_tou_periods(""), [])
+            decoded_luna = tou.decode_luna_tou_periods(luna_text)
+            self.assertEqual(tou.encode_luna_tou_periods(decoded_luna), luna_text)
+            self.assertEqual(tou.encode_luna_tou_periods([]), "")
             with self.assertRaisesRegex(ValueError, "line 1"):
                 tou.decode_luna_tou_periods("00:00-03:59/1234567/x")
             with self.assertRaisesRegex(ValueError, "unique and ordered"):
