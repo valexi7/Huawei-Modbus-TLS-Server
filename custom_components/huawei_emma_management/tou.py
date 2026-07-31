@@ -9,26 +9,13 @@ from .const import (
     GROWATT_MAX_SEGMENTS,
     TOU_MAX_PERIODS,
     TOU_MODES,
-    TOU_REGISTER_NAME,
 )
+from .embedded_catalog import VIRTUAL_ENTITY_DESCRIPTIONS
 
 
-def editor_description(
-    field: str,
-    name: str,
-    icon: str,
-) -> dict[str, Any]:
-    return {
-        "register_name": f"tou_{field}",
-        "source_register_name": TOU_REGISTER_NAME,
-        "name": name,
-        "device_role": "emma",
-        "entity_category": "config",
-        "enabled_default": True,
-        "icon": icon,
-        "address": 40004,
-        "poll_group": "medium",
-    }
+def editor_description(field: str) -> dict[str, Any]:
+    """Return a mutable copy of canonical TOU editor metadata."""
+    return dict(VIRTUAL_ENTITY_DESCRIPTIONS[f"tou_{field}"])
 
 
 def format_tou_schedule(periods: Any) -> tuple[str, list[str]]:

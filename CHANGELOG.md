@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.13.0
+
+- Generate the ESPHome firmware register table and a complete entity migration manifest
+  from the same canonical Python/HACS catalog.
+- Define stable firmware IDs and preserve HACS unique IDs by keeping the integration as
+  entity owner when changing from the Python connector to ESPHome.
+- Centralize metadata for the ten virtual TOU editor entities and enforce generated-file
+  freshness in tests and GitHub validation.
+- Drive ESP32 core decoding and `/api/v1/entities` metadata from the generated table.
+
 ## 0.12.0
 
 - Add a compiled ESPHome/ESP-IDF reverse Modbus/TLS connector for the LilyGO

@@ -25,11 +25,7 @@ class TouApplyButton(EmmaEntity, ButtonEntity):
     def __init__(self, coordinator: Any) -> None:
         super().__init__(
             coordinator,
-            editor_description(
-                "apply_schedule",
-                "TOU 9. Apply Schedule",
-                "mdi:content-save-check",
-            ),
+            editor_description("apply_schedule"),
         )
 
     async def async_press(self) -> None:
@@ -40,11 +36,7 @@ class TouClearPeriodButton(EmmaEntity, ButtonEntity):
     def __init__(self, coordinator: Any) -> None:
         super().__init__(
             coordinator,
-            editor_description(
-                "clear_period",
-                "TOU 8. Clear Period",
-                "mdi:calendar-remove",
-            ),
+            editor_description("clear_period"),
         )
 
     async def async_press(self) -> None:

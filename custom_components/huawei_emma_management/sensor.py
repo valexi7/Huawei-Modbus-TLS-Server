@@ -9,37 +9,15 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import DOMAIN
+from .embedded_catalog import VIRTUAL_ENTITY_DESCRIPTIONS
 from .entity import EmmaEntity
 from .tou import format_tou_schedule
 
 
-TOU_ACTIVE_DESCRIPTION = {
-    "register_name": "emma_tou_schedule_text",
-    "source_register_name": "emma_tou_periods",
-    "name": "TOU 1. Active Schedule",
-    "platform": "sensor",
-    "poll_group": "medium",
-    "device_role": "emma",
-    "entity_category": "diagnostic",
-    "icon": "mdi:calendar-clock",
-    "enabled_default": True,
-    "address": 40004,
-    "format": "tou_active_schedule_text",
-}
-
-TOU_PLANNED_DESCRIPTION = {
-    "register_name": "emma_tou_planned_schedule_text",
-    "source_register_name": "emma_tou_periods",
-    "name": "TOU 2. Planned Schedule",
-    "platform": "sensor",
-    "poll_group": "medium",
-    "device_role": "emma",
-    "entity_category": "diagnostic",
-    "icon": "mdi:calendar-edit",
-    "enabled_default": True,
-    "address": 40004,
-    "format": "tou_planned_schedule_text",
-}
+TOU_ACTIVE_DESCRIPTION = VIRTUAL_ENTITY_DESCRIPTIONS["emma_tou_schedule_text"]
+TOU_PLANNED_DESCRIPTION = VIRTUAL_ENTITY_DESCRIPTIONS[
+    "emma_tou_planned_schedule_text"
+]
 
 
 async def async_setup_entry(

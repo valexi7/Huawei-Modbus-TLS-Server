@@ -4,6 +4,7 @@
 #include "esphome/components/output/binary_output.h"
 #include "esphome/core/component.h"
 #include "esphome/components/emma_w5500/emma_w5500.h"
+#include "generated_register_catalog.h"
 
 #include <esp_http_server.h>
 #include <freertos/FreeRTOS.h>
@@ -149,8 +150,8 @@ class HuaweiEmmaReverse : public Component {
 
   TopologyDevice emma_;
   std::vector<TopologyDevice> topology_;
-  std::array<double, 10> core_values_{};
-  std::array<bool, 10> core_valid_{};
+  std::array<double, GENERATED_CORE_ENTITY_COUNT> core_values_{};
+  std::array<bool, GENERATED_CORE_ENTITY_COUNT> core_valid_{};
   std::vector<TouPeriod> tou_periods_;
   bool tou_valid_{false};
   std::string last_error_;

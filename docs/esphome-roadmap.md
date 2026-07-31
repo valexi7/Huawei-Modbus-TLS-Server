@@ -65,9 +65,10 @@ requests as master.
 - [x] Add a minimal local YAML that imports the maintained package from GitHub.
 - [x] Add the external-component C++ protocol/TLS/API implementation.
 - [x] Compile the component against ESPHome/ESP-IDF 5.5 with bounded protocol buffers.
-- Generate the complete compact C++ register table from the pinned Python catalog.
+- [x] Generate the ESPHome C++ register table and complete entity migration manifest
+  from the pinned Python catalog, with CI rejecting stale generated artifacts.
 - Add captured-frame unit tests runnable on the host plus an ESP-IDF test target.
-- Define ESPHome entity names/IDs and migration mapping from this HACS integration.
+- [x] Define stable firmware IDs and the migration policy from the HACS integration.
 - [x] Add OTA, native API encryption, watchdog-compatible tasks, connection diagnostics,
   and a timing-coded activity LED.
 - [x] Write initial provisioning and certificate-generation instructions.

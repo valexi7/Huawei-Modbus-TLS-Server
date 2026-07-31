@@ -1,7 +1,9 @@
 import ast
 import asyncio
+import json
 import os
 import struct
+import subprocess
 import tempfile
 import unittest
 import ipaddress
@@ -47,20 +49,39 @@ class RepositoryContractTests(unittest.TestCase):
     def test_esphome_reverse_connector_contract(self):
         component = Path("esphome/components/huawei_emma_reverse")
         source = (component / "huawei_emma_reverse.cpp").read_text(encoding="utf-8")
+        generated = (component / "generated_register_catalog.h").read_text(
+            encoding="utf-8"
+        )
         schema = (component / "__init__.py").read_text(encoding="utf-8")
         device_yaml = Path("esphome/huawei-emma-tls-server.yaml").read_text(
             encoding="utf-8"
         )
 
         self.assertIn("mbedtls_net_bind", source)
-        self.assertIn("CORE_ADDRESS = 30354", source)
-        self.assertIn("TOU_ADDRESS = 40004", source)
+        self.assertIn('generated_register_catalog.h', (component / "huawei_emma_reverse.h").read_text(encoding="utf-8"))
+        self.assertIn("GENERATED_CORE_ADDRESS = 30354", generated)
+        self.assertIn('"emma_tou_periods"', generated)
+        self.assertIn("GENERATED_CATALOG_SHA256", source)
         self.assertIn('"/api/v1/tou-periods"', source)
         self.assertIn("ActivityKind::MODBUS_RX", source)
         self.assertIn("ActivityKind::API_TX", source)
         self.assertIn("CONF_CERTIFICATE", schema)
         self.assertIn("CONF_PRIVATE_KEY", schema)
         self.assertIn("huawei_emma_reverse:", device_yaml)
+
+        migration = json.loads(
+            Path("esphome/entity-migration-map.json").read_text(encoding="utf-8")
+        )
+        self.assertEqual(migration["physical_entity_count"], 740)
+        self.assertEqual(migration["virtual_entity_count"], 10)
+        self.assertEqual(migration["firmware_supported_count"], 11)
+        check = subprocess.run(
+            [sys.executable, "tools/generate_esphome_catalog.py", "--check"],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(check.returncode, 0, check.stdout + check.stderr)
 
     def test_public_actions_are_consolidated_under_huawei_emma(self):
         source = Path(
@@ -375,7 +396,7 @@ class DecoderTests(unittest.TestCase):
         sys.modules[package_name] = package
         component_root = Path(__file__).parent / "custom_components" / "huawei_emma_management"
         try:
-            for module_name in ("const", "tou"):
+            for module_name in ("const", "embedded_catalog", "tou"):
                 spec = importlib.util.spec_from_file_location(
                     f"{package_name}.{module_name}", component_root / f"{module_name}.py"
                 )

@@ -140,6 +140,37 @@ writes, and subdevice polling are the next parity stage. Keep the Armbian connec
 available until the TLS handshake, readings, TOU readback, reconnect behavior, and at
 least a 24-hour soak test pass on the real installation.
 
+## Entity IDs and generated mapping
+
+Home Assistant remains the owner of measurement and control entities through the HACS
+integration. ESPHome supplies the transport and register values rather than creating a
+second set of native entities. Consequently, migrating from Python to ESPHome only
+changes the integration's external connector host; existing entity-registry IDs and
+automations remain intact.
+
+The canonical logical ID is the Huawei register name. The generated mapping defines:
+
+- HACS unique ID: `{emma_serial}_{register_name}`;
+- firmware/ESPHome build ID: `emma_{register_name}`;
+- display name, platform, device ownership, poll group, unit, classes, category, icon,
+  address, length, and whether the current firmware supports the register.
+
+[`esphome/entity-migration-map.json`](../esphome/entity-migration-map.json) contains all
+740 physical catalog entities and the ten virtual TOU editor entities. The compact C++
+table currently includes the eleven registers implemented by the ESP32 protocol engine.
+
+Both artifacts are generated from the same `embedded_catalog.py` used by the Python
+connector:
+
+```bash
+python tools/generate_esphome_catalog.py
+```
+
+Run this command whenever the Python catalog or the pinned `huawei-solar` version changes.
+CI executes the generator with `--check` and rejects a commit if either generated file is
+stale. ESPHome Device Builder then compiles the checked-in generated header, so it does
+not need Python or `huawei-solar` on the ESP32 build host.
+
 ## Activity LED
 
 LilyGO's official T-ETH-Elite definition exposes GPIO38 as a plain `LED_PIN`; it is not

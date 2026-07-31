@@ -53,11 +53,7 @@ class TouPeriodSelect(EmmaEntity, SelectEntity):
     def __init__(self, coordinator: Any) -> None:
         super().__init__(
             coordinator,
-            editor_description(
-                "selected_period",
-                "TOU 3. Select Period",
-                "mdi:format-list-numbered",
-            ),
+            editor_description("selected_period"),
         )
 
     @property
@@ -74,11 +70,7 @@ class TouPeriodModeSelect(EmmaEntity, SelectEntity):
     def __init__(self, coordinator: Any) -> None:
         super().__init__(
             coordinator,
-            editor_description(
-                "mode",
-                "TOU 6. Period Mode",
-                "mdi:battery-sync",
-            ),
+            editor_description("mode"),
         )
 
     @property

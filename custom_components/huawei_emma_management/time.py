@@ -27,15 +27,9 @@ async def async_setup_entry(
 
 class TouPeriodTime(EmmaEntity, TimeEntity):
     def __init__(self, coordinator: Any, field: str) -> None:
-        number = 4 if field == "start_time" else 5
-        label = "Start Time" if field == "start_time" else "End Time"
         super().__init__(
             coordinator,
-            editor_description(
-                field,
-                f"TOU {number}. Period {label}",
-                "mdi:clock-outline",
-            ),
+            editor_description(field),
         )
         self.field = field
 

@@ -15,23 +15,9 @@
 namespace esphome::huawei_emma_reverse {
 
 static const char *const TAG = "huawei_emma_reverse";
-static constexpr uint16_t CORE_ADDRESS = 30354;
-static constexpr uint16_t CORE_COUNT = 20;
-static constexpr uint16_t TOU_ADDRESS = 40004;
-static constexpr uint16_t TOU_COUNT = 43;
 static constexpr uint32_t FAST_POLL_MS = 30000;
 static constexpr uint32_t TOU_POLL_MS = 300000;
 static constexpr size_t MAX_MBAP_LENGTH = 512;
-
-static const std::array<const char *, 10> CORE_NAMES{{
-    "pv_output_power", "load_power", "feed_in_power", "battery_charge_discharge_power",
-    "inverter_rated_power", "inverter_active_power", "state_of_capacity", "ess_chargeable_capacity",
-    "ess_dischargeable_capacity", "backup_power_state_of_charge",
-}};
-
-static const std::array<uint16_t, 10> CORE_OFFSETS{{0, 2, 4, 6, 8, 10, 14, 15, 17, 19}};
-static const std::array<bool, 10> CORE_SIGNED{{false, false, true, true, false, true, false, false, false, false}};
-static const std::array<double, 10> CORE_GAINS{{1, 1, 1, 1, 1, 1, 100, 1000, 1000, 100}};
 
 void HuaweiEmmaReverse::setup() {
   ESP_LOGI(TAG, "Starting ESP32 Huawei EMMA reverse connector");
@@ -431,34 +417,35 @@ void HuaweiEmmaReverse::discover_topology_() {
 void HuaweiEmmaReverse::poll_core_() {
   std::vector<uint16_t> registers;
   xSemaphoreTake(this->tls_mutex_, portMAX_DELAY);
-  const bool ok = this->read_registers_(0, CORE_ADDRESS, CORE_COUNT, registers);
+  const bool ok = this->read_registers_(0, GENERATED_CORE_ADDRESS, GENERATED_CORE_COUNT, registers);
   xSemaphoreGive(this->tls_mutex_);
   if (!ok)
     return;
   xSemaphoreTake(this->data_mutex_, portMAX_DELAY);
-  for (size_t index = 0; index < CORE_NAMES.size(); index++) {
-    const size_t offset = CORE_OFFSETS[index];
-    int64_t raw;
-    if (index < 6)
-      raw = CORE_SIGNED[index] ? i32_(registers[offset], registers[offset + 1])
-                               : u32_(registers[offset], registers[offset + 1]);
-    else if (index == 6 || index == 9)
+  for (size_t index = 0; index < GENERATED_CORE_ENTITY_COUNT; index++) {
+    const auto &metadata = GENERATED_ENTITIES[index];
+    const size_t offset = metadata.address - GENERATED_CORE_ADDRESS;
+    int64_t raw = 0;
+    if (metadata.value_type == GeneratedValueType::U16)
       raw = registers[offset];
-    else
+    else if (metadata.value_type == GeneratedValueType::U32)
       raw = u32_(registers[offset], registers[offset + 1]);
-    this->core_values_[index] = static_cast<double>(raw) / CORE_GAINS[index];
+    else if (metadata.value_type == GeneratedValueType::I32)
+      raw = i32_(registers[offset], registers[offset + 1]);
+    this->core_values_[index] = static_cast<double>(raw) / metadata.gain;
     this->core_valid_[index] = true;
   }
   this->last_poll_ms_ = millis();
   this->last_error_.clear();
   xSemaphoreGive(this->data_mutex_);
-  ESP_LOGI(TAG, "EMMA core poll updated %u registers", static_cast<unsigned>(CORE_NAMES.size()));
+  ESP_LOGI(TAG, "EMMA core poll updated %u entities", static_cast<unsigned>(GENERATED_CORE_ENTITY_COUNT));
 }
 
 void HuaweiEmmaReverse::poll_tou_() {
+  const auto &metadata = GENERATED_ENTITIES[GENERATED_CORE_ENTITY_COUNT];
   std::vector<uint16_t> registers;
   xSemaphoreTake(this->tls_mutex_, portMAX_DELAY);
-  const bool ok = this->read_registers_(0, TOU_ADDRESS, TOU_COUNT, registers);
+  const bool ok = this->read_registers_(0, metadata.address, metadata.length, registers);
   xSemaphoreGive(this->tls_mutex_);
   if (!ok)
     return;
@@ -471,7 +458,8 @@ void HuaweiEmmaReverse::poll_tou_() {
 }
 
 std::vector<uint16_t> HuaweiEmmaReverse::encode_tou_(const std::vector<TouPeriod> &periods) {
-  std::vector<uint16_t> result(TOU_COUNT, 0);
+  const auto &metadata = GENERATED_ENTITIES[GENERATED_CORE_ENTITY_COUNT];
+  std::vector<uint16_t> result(metadata.length, 0);
   result[0] = periods.size();
   for (size_t index = 0; index < periods.size() && index < 14; index++) {
     result[1 + index * 3] = periods[index].start;
@@ -482,8 +470,9 @@ std::vector<uint16_t> HuaweiEmmaReverse::encode_tou_(const std::vector<TouPeriod
 }
 
 std::vector<TouPeriod> HuaweiEmmaReverse::decode_tou_(const std::vector<uint16_t> &registers) {
+  const auto &metadata = GENERATED_ENTITIES[GENERATED_CORE_ENTITY_COUNT];
   std::vector<TouPeriod> periods;
-  if (registers.size() != TOU_COUNT || registers[0] > 14)
+  if (registers.size() != metadata.length || registers[0] > 14)
     return periods;
   for (size_t index = 0; index < registers[0]; index++) {
     TouPeriod period;
@@ -497,11 +486,12 @@ std::vector<TouPeriod> HuaweiEmmaReverse::decode_tou_(const std::vector<uint16_t
 }
 
 bool HuaweiEmmaReverse::write_tou_(const std::vector<TouPeriod> &periods, std::vector<TouPeriod> &readback) {
+  const auto &metadata = GENERATED_ENTITIES[GENERATED_CORE_ENTITY_COUNT];
   xSemaphoreTake(this->tls_mutex_, portMAX_DELAY);
-  bool ok = this->write_registers_(0, TOU_ADDRESS, encode_tou_(periods));
+  bool ok = this->write_registers_(0, metadata.address, encode_tou_(periods));
   std::vector<uint16_t> values;
   if (ok)
-    ok = this->read_registers_(0, TOU_ADDRESS, TOU_COUNT, values);
+    ok = this->read_registers_(0, metadata.address, metadata.length, values);
   xSemaphoreGive(this->tls_mutex_);
   if (!ok)
     return false;
@@ -660,20 +650,40 @@ std::string HuaweiEmmaReverse::device_json_() {
 }
 
 std::string HuaweiEmmaReverse::entities_json_() {
-  static const char *const JSON = R"json({"entities":[
-{"register_name":"pv_output_power","name":"PV Output Power","address":30354,"length":2,"platform":"sensor","poll_group":"fast","device_role":"emma","client_role":"emma","unit":"W","device_class":"power","state_class":"measurement","icon":"mdi:solar-power","enabled_default":true,"writeable":false},
-{"register_name":"load_power","name":"Load Power","address":30356,"length":2,"platform":"sensor","poll_group":"fast","device_role":"emma","client_role":"emma","unit":"W","device_class":"power","state_class":"measurement","icon":"mdi:home-lightning-bolt","enabled_default":true,"writeable":false},
-{"register_name":"feed_in_power","name":"Feed-in Power","address":30358,"length":2,"platform":"sensor","poll_group":"fast","device_role":"emma","client_role":"emma","unit":"W","device_class":"power","state_class":"measurement","icon":"mdi:transmission-tower-export","enabled_default":true,"writeable":false},
-{"register_name":"battery_charge_discharge_power","name":"Battery Charge/Discharge Power","address":30360,"length":2,"platform":"sensor","poll_group":"fast","device_role":"emma","client_role":"emma","unit":"W","device_class":"power","state_class":"measurement","icon":"mdi:battery-charging","enabled_default":true,"writeable":false},
-{"register_name":"inverter_rated_power","name":"Inverter Rated Power","address":30362,"length":2,"platform":"sensor","poll_group":"slow","device_role":"inverter","client_role":"emma","unit":"W","device_class":"power","state_class":"measurement","icon":"mdi:solar-power-variant","enabled_default":true,"writeable":false},
-{"register_name":"inverter_active_power","name":"Inverter Active Power","address":30364,"length":2,"platform":"sensor","poll_group":"fast","device_role":"inverter","client_role":"emma","unit":"W","device_class":"power","state_class":"measurement","icon":"mdi:solar-power","enabled_default":true,"writeable":false},
-{"register_name":"state_of_capacity","name":"Battery State of Capacity","address":30368,"length":1,"platform":"sensor","poll_group":"fast","device_role":"emma","client_role":"emma","unit":"%","device_class":"battery","state_class":"measurement","icon":"mdi:battery","enabled_default":true,"writeable":false},
-{"register_name":"ess_chargeable_capacity","name":"ESS Chargeable Capacity","address":30369,"length":2,"platform":"sensor","poll_group":"medium","device_role":"emma","client_role":"emma","unit":"kWh","device_class":"energy_storage","state_class":"measurement","icon":"mdi:battery-plus","enabled_default":true,"writeable":false},
-{"register_name":"ess_dischargeable_capacity","name":"ESS Dischargeable Capacity","address":30371,"length":2,"platform":"sensor","poll_group":"medium","device_role":"emma","client_role":"emma","unit":"kWh","device_class":"energy_storage","state_class":"measurement","icon":"mdi:battery-minus","enabled_default":true,"writeable":false},
-{"register_name":"backup_power_state_of_charge","name":"Backup Power State of Charge","address":30373,"length":1,"platform":"sensor","poll_group":"medium","device_role":"smartguard","client_role":"emma","unit":"%","device_class":"battery","state_class":"measurement","icon":"mdi:battery-heart","enabled_default":true,"writeable":false},
-{"register_name":"emma_tou_periods","name":"EMMA TOU Periods","address":40004,"length":43,"platform":"sensor","poll_group":"medium","device_role":"emma","client_role":"emma","entity_category":"diagnostic","icon":"mdi:calendar-clock","enabled_default":false,"writeable":true,"format":"tou_periods"}
-]})json";
-  return JSON;
+  std::ostringstream out;
+  out << "{\"catalog_sha256\":\"" << GENERATED_CATALOG_SHA256 << "\",\"entities\":[";
+  for (size_t index = 0; index < GENERATED_ENTITIES.size(); index++) {
+    const auto &metadata = GENERATED_ENTITIES[index];
+    if (index)
+      out << ',';
+    auto nullable = [&out](const char *value) {
+      if (value == nullptr || value[0] == '\0')
+        out << "null";
+      else
+        out << '\"' << HuaweiEmmaReverse::json_escape_(value) << '\"';
+    };
+    out << "{\"register_name\":\"" << metadata.register_name << "\",\"esphome_id\":\""
+        << metadata.esphome_id << "\",\"name\":\"" << json_escape_(metadata.name)
+        << "\",\"address\":" << metadata.address << ",\"length\":" << metadata.length
+        << ",\"platform\":\"" << metadata.platform << "\",\"poll_group\":\""
+        << metadata.poll_group << "\",\"device_role\":\"" << metadata.device_role
+        << "\",\"client_role\":\"" << metadata.client_role << "\",\"unit\":";
+    nullable(metadata.unit);
+    out << ",\"device_class\":";
+    nullable(metadata.device_class);
+    out << ",\"state_class\":";
+    nullable(metadata.state_class);
+    out << ",\"entity_category\":";
+    nullable(metadata.entity_category);
+    out << ",\"icon\":";
+    nullable(metadata.icon);
+    out << ",\"enabled_default\":" << (metadata.enabled_default ? "true" : "false")
+        << ",\"writeable\":" << (metadata.writeable ? "true" : "false") << ",\"format\":";
+    nullable(metadata.format);
+    out << '}';
+  }
+  out << "]}";
+  return out.str();
 }
 
 std::string HuaweiEmmaReverse::states_json_() {
@@ -681,11 +691,11 @@ std::string HuaweiEmmaReverse::states_json_() {
   std::ostringstream out;
   out << "{\"values\":{";
   bool first = true;
-  for (size_t index = 0; index < CORE_NAMES.size(); index++) {
+  for (size_t index = 0; index < GENERATED_CORE_ENTITY_COUNT; index++) {
     if (!this->core_valid_[index]) continue;
     if (!first) out << ',';
     first = false;
-    out << '\"' << CORE_NAMES[index] << "\":" << number_(this->core_values_[index]);
+    out << '\"' << GENERATED_ENTITIES[index].register_name << "\":" << number_(this->core_values_[index]);
   }
   if (this->tou_valid_) {
     if (!first) out << ',';

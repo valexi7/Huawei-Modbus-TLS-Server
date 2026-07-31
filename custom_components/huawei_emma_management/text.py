@@ -29,12 +29,7 @@ class TouPlanJsonText(EmmaEntity, TextEntity):
     _attr_native_max = 255
 
     def __init__(self, coordinator: Any) -> None:
-        description = editor_description(
-            "plan_json",
-            "TOU 10. Plan JSON",
-            "mdi:code-json",
-        )
-        description["entity_category"] = "diagnostic"
+        description = editor_description("plan_json")
         super().__init__(coordinator, description)
 
     @property

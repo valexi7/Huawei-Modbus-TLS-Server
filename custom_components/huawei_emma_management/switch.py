@@ -50,11 +50,7 @@ class TouPeriodEnabledSwitch(EmmaEntity, SwitchEntity):
     def __init__(self, coordinator: Any) -> None:
         super().__init__(
             coordinator,
-            editor_description(
-                "enabled",
-                "TOU 7. Enabled",
-                "mdi:calendar-check",
-            ),
+            editor_description("enabled"),
         )
 
     @property
