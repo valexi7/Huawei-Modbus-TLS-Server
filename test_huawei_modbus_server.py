@@ -52,9 +52,12 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertIn('"read_time_segments"', source)
         self.assertIn('"update_time_segment"', source)
         self.assertIn("_set_huawei_service_schemas(hass)", source)
-        self.assertFalse(
-            Path("custom_components/huawei_emma_management/services.yaml").exists()
-        )
+        services = Path(
+            "custom_components/huawei_emma_management/services.yaml"
+        ).read_text(encoding="utf-8")
+        self.assertNotIn("set_tou_periods:", services)
+        self.assertNotIn("read_time_segments:", services)
+        self.assertNotIn("update_time_segment:", services)
 
     def test_config_flow_port_fields_use_serializable_ha_validator(self):
         source = Path(
