@@ -195,8 +195,8 @@ Home Assistant creates Huawei devices and entities from the connector catalog:
 - Boolean configuration registers as switches
 - Bounded numeric configuration registers as number entities
 - EMMA epoch values as native human-readable timestamp/datetime entities
-- `EMMA_TOU_PERIODS` as a diagnostic schedule sensor plus the
-  `huawei_emma_management.set_tou_periods` service
+- `EMMA_TOU_PERIODS` as a diagnostic schedule sensor plus the unified
+  `huawei_emma.set_tou_periods` action
 - Consecutively named active and planned schedule diagnostic sensors
 - One period selector for slots 1-14, followed by shared Start Time, End Time,
   Charge/Discharge, and Enabled controls
@@ -260,47 +260,42 @@ read and written through the inverter unit ID reported by the device list. Keepi
 ownership separate from Modbus routing prevents plausible-looking but invalid energy
 values from being decoded from the wrong unit.
 
-There are two supported ways to replace the complete TOU schedule. The native integration
-service uses the Home Assistant config-entry ID:
+The administrator-only `huawei_emma.set_tou_periods` action replaces the complete TOU
+schedule using the Home Assistant device ID. It accepts either structured periods:
 
 ```yaml
-action: huawei_emma_management.set_tou_periods
-data:
-  config_entry_id: "YOUR_CONFIG_ENTRY_ID"
-  periods:
-    - start_time: "00:00"
-      end_time: "06:00"
-      action: charge
-      days: [true, true, true, true, true, true, true]
-    - start_time: "06:00"
-      end_time: "23:59"
-      action: discharge
-      days: [true, true, true, true, true, true, true]
-```
-
-The administrator-only generic API uses the Home Assistant device ID and is convenient
-for external automations:
-
-```yaml
-action: huawei_emma.set_value
+action: huawei_emma.set_tou_periods
 data:
   device_id: 1ef2da1cca18dcec9ee5a4db36ac9800
-  register_name: emma_tou_periods
-  value:
+  structured_periods:
     - start_time: "00:00"
       end_time: "23:59"
-      action: discharge
-      days: [true, true, true, true, true, true, true]
+      charge_flag: discharge
+      days_effective: [true, true, true, true, true, true, true]
+response_variable: emma_tou_readback
 ```
 
-Huawei accepts at most 14 periods. The connector validates time order, action, weekday
-count, enum values, boolean types, and numeric ranges before writing, then reads the
-register back.
+or newline-separated LUNA text:
+
+```yaml
+action: huawei_emma.set_tou_periods
+data:
+  device_id: 1ef2da1cca18dcec9ee5a4db36ac9800
+  periods: |-
+    00:00-03:59/1234567/+
+    07:00-09:59/1234567/-
+response_variable: emma_tou_readback
+```
+
+Specify exactly one of `periods` or `structured_periods`; an empty string or empty list
+clears the schedule. Huawei accepts at most 14 periods. The connector validates time
+order, action, weekday count, enum values, boolean types, and numeric ranges before
+writing, then returns both textual and structured readback when requested.
 
 ### BESS / Growatt time-segment compatibility
 
-The integration exposes `huawei_emma_management.read_time_segments` and
-`huawei_emma_management.update_time_segment` with the same request and response shape as
+The integration exposes `huawei_emma.read_time_segments` and
+`huawei_emma.update_time_segment` with the same request and response shape as
 Home Assistant's Growatt time-segment actions. If no real Growatt integration or Growatt
 actions are present, it also registers the exact aliases BESS expects:
 
@@ -332,8 +327,8 @@ compatibility slot is updated, while BESS controls slots 1-9.
 
 If an actual Growatt integration is configured, the connector does not claim or replace
 its `growatt_server` actions. Use the always-available
-`huawei_emma_management.read_time_segments` and
-`huawei_emma_management.update_time_segment` actions in that case.
+`huawei_emma.read_time_segments` and `huawei_emma.update_time_segment` actions in that
+case.
 
 To stop BESS from changing the schedule, open **Settings > Devices & services > Huawei
 EMMA Management > Configure** and turn off **Accept External Growatt Controls**. The
@@ -341,11 +336,11 @@ EMMA Management > Configure** and turn off **Accept External Growatt Controls**.
 reading and the native Huawei controls remain available. The option defaults to enabled
 for compatibility with existing installations and reloads the entry when changed.
 
-The integration also provides an authenticated, write-whitelisted Home Assistant action
-API under the `huawei_emma` domain. External systems can discover the currently exposed
-controls with `huawei_emma.read_controls` and write one with
-`huawei_emma.set_value`. See the [Huawei EMMA external API guide](docs/huawei-emma-api.md)
-for REST calls, response formats, value types, TOU examples, and security guidance.
+All native public actions live under the authenticated, write-whitelisted `huawei_emma`
+domain: `read_controls`, `set_value`, `set_tou_periods`, `read_time_segments`, and
+`update_time_segment`. They include Home Assistant UI-mode field descriptions and
+examples. See the [Huawei EMMA external API guide](docs/huawei-emma-api.md) for REST
+calls, response formats, value types, TOU examples, and security guidance.
 
 ### Control debug logging
 

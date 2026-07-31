@@ -44,6 +44,18 @@ CORE_REGISTER_COUNT = 20
 
 
 class RepositoryContractTests(unittest.TestCase):
+    def test_public_actions_are_consolidated_under_huawei_emma(self):
+        source = Path(
+            "custom_components/huawei_emma_management/__init__.py"
+        ).read_text(encoding="utf-8")
+        self.assertIn('"structured_periods"', source)
+        self.assertIn('"read_time_segments"', source)
+        self.assertIn('"update_time_segment"', source)
+        self.assertIn("_set_huawei_service_schemas(hass)", source)
+        self.assertFalse(
+            Path("custom_components/huawei_emma_management/services.yaml").exists()
+        )
+
     def test_config_flow_port_fields_use_serializable_ha_validator(self):
         source = Path(
             "custom_components/huawei_emma_management/config_flow.py"

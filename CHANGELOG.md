@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.11.0
+
+- Consolidate all public Home Assistant actions under `huawei_emma`; remove the
+  duplicate `huawei_emma_management` action surface while retaining that domain for
+  installed integration config entries.
+- Merge structured and LUNA-text schedule writes into
+  `huawei_emma.set_tou_periods`, with mutually exclusive `structured_periods` and
+  `periods` inputs.
+- Add UI-mode descriptions, selectors, and examples for `read_controls`,
+  `set_value`, `set_tou_periods`, `read_time_segments`, and
+  `update_time_segment`.
+
 ## 0.10.1
 
 - Add native Home Assistant action metadata for the dynamic

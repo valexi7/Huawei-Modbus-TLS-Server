@@ -1,13 +1,15 @@
 # Huawei EMMA external control API
 
-The Home Assistant integration registers three actions intended for authenticated external
+The Home Assistant integration registers five actions intended for authenticated external
 controllers:
 
 - `huawei_emma.read_controls` discovers controls currently exposed as safe and writable.
 - `huawei_emma.set_value` writes one exposed control and returns the value read back by
   the connector.
-- `huawei_emma.set_tou_periods` replaces the TOU schedule from newline-separated LUNA
-  text.
+- `huawei_emma.set_tou_periods` replaces the TOU schedule from LUNA text or structured
+  periods.
+- `huawei_emma.read_time_segments` returns the nine-slot BESS-compatible schedule.
+- `huawei_emma.update_time_segment` updates one BESS-compatible schedule slot.
 
 These actions are available through Home Assistant automations and its REST action API.
 They are separate from the connector's port `8088` API and use Home Assistant
@@ -15,7 +17,7 @@ authentication.
 
 ## Requirements and security
 
-1. Install Huawei EMMA Management `0.10.0` or newer and restart Home Assistant.
+1. Install Huawei EMMA Management `0.11.0` or newer and restart Home Assistant.
 2. Use a Home Assistant administrator's long-lived access token. An add-on can instead
    use its Supervisor token if the add-on has Home Assistant API access.
 3. Keep Home Assistant behind HTTPS when requests cross an untrusted network.
@@ -141,12 +143,13 @@ list of changed states.
 | `switch` | `true` or `false` |
 | `select` | Returned option key or human-readable label |
 | `datetime` | Unix epoch seconds |
-| `sensor` with `format: tou_periods` | Complete validated TOU period list |
+| `sensor` with `format: tou_periods` | Prefer `huawei_emma.set_tou_periods` |
 
 ## TOU schedule write
 
-`emma_tou_periods` replaces the complete active schedule. Disabled/draft periods are not
-part of this representation.
+`huawei_emma.set_tou_periods` replaces the complete active schedule. Specify exactly one
+of `structured_periods` or `periods`. Disabled/draft periods are not part of this
+representation.
 
 ```bash
 curl --request POST \
@@ -154,28 +157,27 @@ curl --request POST \
   --header "Content-Type: application/json" \
   --data '{
     "device_id": "0123456789abcdef0123456789abcdef",
-    "register_name": "emma_tou_periods",
-    "value": [
+    "structured_periods": [
       {
         "start_time": "00:00",
         "end_time": "06:00",
-        "action": "charge",
-        "days": [true, true, true, true, true, true, true]
+        "charge_flag": "charge",
+        "days_effective": [true, true, true, true, true, true, true]
       },
       {
         "start_time": "06:00",
         "end_time": "23:59",
-        "action": "discharge",
-        "days": [true, true, true, true, true, true, true]
+        "charge_flag": "discharge",
+        "days_effective": [true, true, true, true, true, true, true]
       }
     ]
   }' \
-  'https://HOME_ASSISTANT/api/services/huawei_emma/set_value?return_response'
+  'https://HOME_ASSISTANT/api/services/huawei_emma/set_tou_periods?return_response'
 ```
 
 An empty list clears the schedule. EMMA accepts a maximum of 14 periods. Each enabled
-period must have `start_time < end_time`, a `charge` or `discharge` action, and exactly
-seven Monday-to-Sunday booleans.
+period must have `start_time < end_time`, a `charge_flag`/`action` of `charge` or
+`discharge`, and exactly seven `days_effective`/`days` Monday-to-Sunday booleans.
 
 ### LUNA text-format compatibility
 
@@ -227,6 +229,28 @@ data:
   register_name: storage_charge_from_grid_function
   value: true
 response_variable: emma_result
+```
+
+Read the BESS-compatible schedule:
+
+```yaml
+action: huawei_emma.read_time_segments
+data:
+  device_id: 0123456789abcdef0123456789abcdef
+response_variable: emma_time_segments
+```
+
+Update one BESS-compatible slot:
+
+```yaml
+action: huawei_emma.update_time_segment
+data:
+  device_id: 0123456789abcdef0123456789abcdef
+  segment_id: 1
+  batt_mode: battery_first
+  start_time: "00:00"
+  end_time: "06:00"
+  enabled: true
 ```
 
 ## Growatt/BESS emergency stop

@@ -48,8 +48,18 @@ from .tou import decode_luna_tou_periods, encode_luna_tou_periods
 _LOGGER = logging.getLogger(__name__)
 _GROWATT_ALIAS_OWNER = f"{DOMAIN}_owns_growatt_aliases"
 _HUAWEI_API_OWNER = f"{DOMAIN}_owns_huawei_api"
-_SERVICE_NAMES = ("set_tou_periods", "read_time_segments", "update_time_segment")
-_HUAWEI_API_SERVICE_NAMES = ("read_controls", "set_value", "set_tou_periods")
+_HUAWEI_API_SERVICE_NAMES = (
+    "read_controls",
+    "set_value",
+    "set_tou_periods",
+    "read_time_segments",
+    "update_time_segment",
+)
+_LEGACY_MANAGEMENT_SERVICE_NAMES = (
+    "set_tou_periods",
+    "read_time_segments",
+    "update_time_segment",
+)
 _SAFE_CONTROL_PLATFORMS = {"select", "switch", "number", "datetime"}
 
 
@@ -67,6 +77,148 @@ def _debug_schema(label: str, schema: vol.Schema):
             raise
 
     return validate
+
+
+def _require_tou_input(data: dict[str, Any]) -> dict[str, Any]:
+    if "periods" not in data and "structured_periods" not in data:
+        raise vol.Invalid("either periods or structured_periods is required")
+    return data
+
+
+def _set_huawei_service_schemas(hass: HomeAssistant) -> None:
+    """Describe the dynamically registered public huawei_emma actions."""
+    device_field = {
+        "name": "Device",
+        "description": "The Huawei EMMA device to use.",
+        "required": True,
+        "selector": {"device": {"integration": DOMAIN}},
+    }
+    schemas = {
+        "read_controls": {
+            "name": "Read EMMA controls",
+            "description": (
+                "Return all currently exposed writable controls, values, and limits."
+            ),
+            "fields": {"device_id": device_field},
+        },
+        "set_value": {
+            "name": "Set EMMA value",
+            "description": (
+                "Validate and write one exposed control and optionally return its readback."
+            ),
+            "fields": {
+                "device_id": device_field,
+                "register_name": {
+                    "name": "Register name",
+                    "required": True,
+                    "example": "storage_maximum_charging_power",
+                    "selector": {"text": {}},
+                },
+                "value": {
+                    "name": "Value",
+                    "description": (
+                        "Number, boolean, enum key, timestamp, or structured value "
+                        "accepted by the selected control."
+                    ),
+                    "required": True,
+                    "example": 5000,
+                    "selector": {"object": {}},
+                },
+            },
+        },
+        "set_tou_periods": {
+            "name": "Set EMMA TOU periods",
+            "description": (
+                "Replace the complete TOU schedule using either LUNA text or a "
+                "structured period list. Specify exactly one format. The optional "
+                "response contains the schedule read back from EMMA."
+            ),
+            "fields": {
+                "device_id": device_field,
+                "periods": {
+                    "name": "LUNA text periods",
+                    "description": (
+                        "One HH:MM-HH:MM/DAYS/+|- period per line; + charges and "
+                        "- discharges. Leave this out when using structured periods."
+                    ),
+                    "example": (
+                        "00:00-03:59/1234567/+\n"
+                        "07:00-09:59/1234567/-"
+                    ),
+                    "selector": {"text": {"multiline": True}},
+                },
+                "structured_periods": {
+                    "name": "Structured periods",
+                    "description": (
+                        "List of periods with start_time, end_time, charge_flag, "
+                        "and seven days_effective booleans. Leave this out when "
+                        "using LUNA text."
+                    ),
+                    "example": [
+                        {
+                            "start_time": "00:00",
+                            "end_time": "23:59",
+                            "charge_flag": "discharge",
+                            "days_effective": [True] * 7,
+                        }
+                    ],
+                    "selector": {"object": {}},
+                },
+            },
+        },
+        "read_time_segments": {
+            "name": "Read EMMA time segments",
+            "description": "Return the nine-slot BESS-compatible TOU schedule.",
+            "fields": {"device_id": device_field},
+        },
+        "update_time_segment": {
+            "name": "Update EMMA time segment",
+            "description": (
+                "Update one BESS-compatible slot and immediately write the full schedule."
+            ),
+            "fields": {
+                "device_id": device_field,
+                "segment_id": {
+                    "name": "Segment",
+                    "required": True,
+                    "example": 1,
+                    "selector": {
+                        "number": {"min": 1, "max": 9, "step": 1, "mode": "box"}
+                    },
+                },
+                "batt_mode": {
+                    "name": "Battery mode",
+                    "required": True,
+                    "example": "battery_first",
+                    "selector": {
+                        "select": {"options": list(GROWATT_BATTERY_MODES)}
+                    },
+                },
+                "start_time": {
+                    "name": "Start time",
+                    "required": True,
+                    "example": "00:00",
+                    "selector": {"time": {}},
+                },
+                "end_time": {
+                    "name": "End time",
+                    "required": True,
+                    "example": "06:00",
+                    "selector": {"time": {}},
+                },
+                "enabled": {
+                    "name": "Enabled",
+                    "required": True,
+                    "example": True,
+                    "selector": {"boolean": {}},
+                },
+            },
+        },
+    }
+    for service_name, schema in schemas.items():
+        service_helper.async_set_service_schema(
+            hass, HUAWEI_EXTERNAL_API_DOMAIN, service_name, schema
+        )
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -336,29 +488,16 @@ async def _require_external_api_admin(
 
 
 def _async_register_services(hass: HomeAssistant) -> None:
-    async def set_tou_periods(call: ServiceCall) -> None:
-        _LOGGER.debug(
-            "SERVICE received domain=%s service=%s user_id=%s data=%r",
-            call.domain,
-            call.service,
-            call.context.user_id,
-            dict(call.data),
-        )
-        target_id = call.data["config_entry_id"]
-        target = hass.data.get(DOMAIN, {}).get(target_id)
-        if not isinstance(target, EmmaCoordinator):
-            raise ServiceValidationError(
-                f"Unknown Huawei EMMA config entry: {target_id}"
+    for legacy_service in _LEGACY_MANAGEMENT_SERVICE_NAMES:
+        if hass.services.has_service(DOMAIN, legacy_service):
+            hass.services.async_remove(DOMAIN, legacy_service)
+            _LOGGER.info(
+                "Removed legacy %s.%s action; use %s.%s",
+                DOMAIN,
+                legacy_service,
+                HUAWEI_EXTERNAL_API_DOMAIN,
+                legacy_service,
             )
-        _LOGGER.debug(
-            "SERVICE validation=accepted service=%s config_entry_id=%s action=write_tou",
-            call.service,
-            target_id,
-        )
-        await target.async_set_tou_schedule(
-            call.data["periods"], source=f"{call.domain}.{call.service}"
-        )
-        _LOGGER.debug("SERVICE completed domain=%s service=%s", call.domain, call.service)
 
     async def read_time_segments(call: ServiceCall) -> dict[str, Any]:
         _LOGGER.debug(
@@ -369,6 +508,8 @@ def _async_register_services(hass: HomeAssistant) -> None:
             call.context.user_id,
             call.data["device_id"],
         )
+        if call.domain == HUAWEI_EXTERNAL_API_DOMAIN:
+            await _require_external_api_admin(hass, call)
         target = _coordinator_for_call(hass, call)
         segments = target.growatt_time_segments()
         _LOGGER.debug(
@@ -387,6 +528,8 @@ def _async_register_services(hass: HomeAssistant) -> None:
             call.context.user_id,
             dict(call.data),
         )
+        if call.domain == HUAWEI_EXTERNAL_API_DOMAIN:
+            await _require_external_api_admin(hass, call)
         target = _coordinator_for_call(hass, call)
         if (
             call.domain == GROWATT_COMPAT_DOMAIN
@@ -535,26 +678,33 @@ def _async_register_services(hass: HomeAssistant) -> None:
         )
         return {"register_name": register_name, "value": value}
 
-    async def set_luna_tou_periods(call: ServiceCall) -> dict[str, Any]:
+    async def set_tou_periods(call: ServiceCall) -> dict[str, Any]:
         _LOGGER.debug(
             "SERVICE received domain=%s service=%s user_id=%s device_id=%s "
-            "format=luna_text periods=%r",
+            "periods=%r structured_periods=%r",
             call.domain,
             call.service,
             call.context.user_id,
             call.data["device_id"],
-            call.data["periods"],
+            call.data.get("periods"),
+            call.data.get("structured_periods"),
         )
         if call.domain == HUAWEI_EXTERNAL_API_DOMAIN:
             await _require_external_api_admin(hass, call)
         target = _coordinator_for_call(hass, call)
         try:
-            periods = decode_luna_tou_periods(call.data["periods"])
+            if "periods" in call.data:
+                periods = decode_luna_tou_periods(call.data["periods"])
+                input_format = "luna_text"
+            else:
+                periods = call.data["structured_periods"]
+                input_format = "structured"
             _LOGGER.debug(
                 "SERVICE validation=accepted domain=%s service=%s "
-                "format=luna_text decoded_periods=%r action=write_tou",
+                "format=%s decoded_periods=%r action=write_tou",
                 call.domain,
                 call.service,
+                input_format,
                 periods,
             )
             readback = await target.async_set_tou_schedule(
@@ -563,14 +713,15 @@ def _async_register_services(hass: HomeAssistant) -> None:
         except ValueError as error:
             _LOGGER.debug(
                 "SERVICE validation=rejected domain=%s service=%s "
-                "format=luna_text reason=%s",
+                "reason=%s",
                 call.domain,
                 call.service,
                 error,
             )
             raise ServiceValidationError(str(error)) from error
         _LOGGER.info(
-            "LUNA-compatible TOU schedule wrote periods=%s device=%s source=%s",
+            "TOU schedule wrote format=%s periods=%s device=%s source=%s",
+            input_format,
             len(periods),
             target.device_data.get("serial_number"),
             call.domain,
@@ -611,44 +762,18 @@ def _async_register_services(hass: HomeAssistant) -> None:
         ),
     )
     luna_tou_schema = _debug_schema(
-        "set_tou_periods_luna_text",
-        vol.Schema(
-            {
-                vol.Required("device_id"): cv.string,
-                vol.Required("periods"): cv.string,
-            }
+        "huawei_emma.set_tou_periods",
+        vol.All(
+            vol.Schema(
+                {
+                    vol.Required("device_id"): cv.string,
+                    vol.Exclusive("periods", "tou_format"): cv.string,
+                    vol.Exclusive("structured_periods", "tou_format"): [dict],
+                }
+            ),
+            _require_tou_input,
         ),
     )
-    if not hass.services.has_service(DOMAIN, "set_tou_periods"):
-        hass.services.async_register(
-            DOMAIN,
-            "set_tou_periods",
-            set_tou_periods,
-            schema=_debug_schema(
-                "set_tou_periods",
-                vol.Schema(
-                    {
-                        vol.Required("config_entry_id"): str,
-                        vol.Required("periods"): [dict],
-                    }
-                ),
-            ),
-        )
-    if not hass.services.has_service(DOMAIN, "read_time_segments"):
-        hass.services.async_register(
-            DOMAIN,
-            "read_time_segments",
-            read_time_segments,
-            schema=read_schema,
-            supports_response=SupportsResponse.ONLY,
-        )
-    if not hass.services.has_service(DOMAIN, "update_time_segment"):
-        hass.services.async_register(
-            DOMAIN,
-            "update_time_segment",
-            update_time_segment,
-            schema=update_schema,
-        )
 
     if not hass.data.get(_GROWATT_ALIAS_OWNER):
         growatt_configured = bool(
@@ -662,7 +787,7 @@ def _async_register_services(hass: HomeAssistant) -> None:
             _LOGGER.warning(
                 "Not registering growatt_server TOU aliases because the Growatt "
                 "integration or its actions are already present; use %s actions instead",
-                DOMAIN,
+                HUAWEI_EXTERNAL_API_DOMAIN,
             )
         else:
             hass.services.async_register(
@@ -712,50 +837,28 @@ def _async_register_services(hass: HomeAssistant) -> None:
             hass.services.async_register(
                 HUAWEI_EXTERNAL_API_DOMAIN,
                 "set_tou_periods",
-                set_luna_tou_periods,
+                set_tou_periods,
                 schema=luna_tou_schema,
                 supports_response=SupportsResponse.OPTIONAL,
             )
-            service_helper.async_set_service_schema(
-                hass,
+            hass.services.async_register(
                 HUAWEI_EXTERNAL_API_DOMAIN,
-                "set_tou_periods",
-                {
-                    "name": "Set EMMA TOU periods",
-                    "description": (
-                        "Replace the EMMA TOU schedule using newline-separated "
-                        "LUNA text. The response contains the schedule read back "
-                        "from EMMA. An empty value clears the schedule."
-                    ),
-                    "fields": {
-                        "device_id": {
-                            "name": "Device",
-                            "description": "The Huawei EMMA device to control.",
-                            "required": True,
-                            "selector": {
-                                "device": {"integration": DOMAIN},
-                            },
-                        },
-                        "periods": {
-                            "name": "TOU periods",
-                            "description": (
-                                "One HH:MM-HH:MM/DAYS/+|- period per line; "
-                                "+ charges and - discharges."
-                            ),
-                            "required": True,
-                            "example": (
-                                "00:00-03:59/1234567/+\n"
-                                "07:00-09:59/1234567/-"
-                            ),
-                            "selector": {"text": {"multiline": True}},
-                        },
-                    },
-                },
+                "read_time_segments",
+                read_time_segments,
+                schema=read_schema,
+                supports_response=SupportsResponse.ONLY,
             )
+            hass.services.async_register(
+                HUAWEI_EXTERNAL_API_DOMAIN,
+                "update_time_segment",
+                update_time_segment,
+                schema=update_schema,
+            )
+            _set_huawei_service_schemas(hass)
             hass.data[_HUAWEI_API_OWNER] = True
             _LOGGER.info(
                 "Registered authenticated huawei_emma read_controls/set_value/"
-                "set_tou_periods API"
+                "set_tou_periods/read_time_segments/update_time_segment API"
             )
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -769,9 +872,6 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             await coordinator.embedded_server.async_stop()
         hass.data[DOMAIN].pop(entry.entry_id)
         if not hass.data[DOMAIN]:
-            for service_name in _SERVICE_NAMES:
-                if hass.services.has_service(DOMAIN, service_name):
-                    hass.services.async_remove(DOMAIN, service_name)
             owns_aliases = hass.data.pop(_GROWATT_ALIAS_OWNER, False)
             if owns_aliases and not hass.config_entries.async_entries(
                 GROWATT_COMPAT_DOMAIN
