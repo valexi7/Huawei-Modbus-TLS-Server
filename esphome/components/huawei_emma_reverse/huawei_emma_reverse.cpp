@@ -536,8 +536,12 @@ esp_err_t HuaweiEmmaReverse::http_dispatch_(httpd_req_t *request) {
 
 esp_err_t HuaweiEmmaReverse::handle_http_(httpd_req_t *request) {
   this->signal_activity_(ActivityKind::API_RX);
-  if (!this->authenticate_(request))
+  const char *method = request->method == HTTP_GET ? "GET" : request->method == HTTP_POST ? "POST" : "OTHER";
+  if (!this->authenticate_(request)) {
+    ESP_LOGW(TAG, "Connector API authentication rejected method=%s path=%s", method, request->uri);
     return this->send_json_(request, "{\"error\":\"unauthorized\"}", "401 Unauthorized");
+  }
+  ESP_LOGD(TAG, "Connector API request accepted method=%s path=%s", method, request->uri);
   const std::string uri(request->uri);
   if (request->method == HTTP_GET && uri == "/api/v1/health")
     return this->send_json_(request, this->health_json_());
@@ -606,6 +610,8 @@ std::string HuaweiEmmaReverse::read_http_body_(httpd_req_t *request) {
 
 esp_err_t HuaweiEmmaReverse::send_json_(httpd_req_t *request, const std::string &json, const char *status) {
   this->signal_activity_(ActivityKind::API_TX);
+  ESP_LOGD(TAG, "Connector API response path=%s status=%s bytes=%u", request->uri, status,
+           static_cast<unsigned>(json.size()));
   httpd_resp_set_status(request, status);
   httpd_resp_set_type(request, "application/json");
   return httpd_resp_send(request, json.c_str(), json.size());

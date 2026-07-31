@@ -40,6 +40,16 @@ from huawei_modbus_server import (
 from emma_catalog import build_entity_catalog, register_client_role
 from huawei_solar.registers import REGISTERS
 from runtime_setup import ensure_certificates, load_or_create_environment
+from tools.emma_mock_client import (
+    CORE_ADDRESS as MOCK_CORE_ADDRESS,
+    CORE_COUNT as MOCK_CORE_COUNT,
+    TOU_ADDRESS as MOCK_TOU_ADDRESS,
+    TOU_COUNT as MOCK_TOU_COUNT,
+    EmmaMockDevice,
+    build_startup_pdu,
+    decode_tou_periods,
+    encode_tou_periods,
+)
 
 
 CORE_REGISTER_COUNT = 20
@@ -58,7 +68,10 @@ class RepositoryContractTests(unittest.TestCase):
         )
 
         self.assertIn("mbedtls_net_bind", source)
-        self.assertIn('generated_register_catalog.h', (component / "huawei_emma_reverse.h").read_text(encoding="utf-8"))
+        self.assertIn(
+            "generated_register_catalog.h",
+            (component / "huawei_emma_reverse.h").read_text(encoding="utf-8"),
+        )
         self.assertIn("GENERATED_CORE_ADDRESS = 30354", generated)
         self.assertIn('"emma_tou_periods"', generated)
         self.assertIn("GENERATED_CATALOG_SHA256", source)
@@ -121,6 +134,56 @@ class RepositoryContractTests(unittest.TestCase):
         ]
         self.assertEqual(len(cv_port_references), 4)
 
+
+class EmmaMockTests(unittest.TestCase):
+    def test_startup_and_paged_topology_match_esp32_contract(self):
+        startup = build_startup_pdu()
+        self.assertEqual(len(startup), 270)
+        self.assertEqual(startup[0], 0x41)
+        self.assertIn(b"1=EMMA-A02", startup)
+
+        device = EmmaMockDevice()
+        first = device.handle_pdu(bytes((0x2B, 0x0E, 0x03, 0x87)))
+        self.assertEqual(first[:7], bytes((0x2B, 0x0E, 0x03, 0x03, 0xFF, 0x88, 0x01)))
+        emma = device.handle_pdu(bytes((0x2B, 0x0E, 0x03, 0x88)))
+        self.assertIn(b"MOCK-EMMA-0001", emma)
+        inverter = device.handle_pdu(bytes((0x2B, 0x0E, 0x03, 0x8A)))
+        self.assertEqual(inverter[4:7], bytes((0x00, 0x00, 0x01)))
+
+    def test_core_values_change_and_unknown_ranges_are_rejected(self):
+        device = EmmaMockDevice()
+        request = bytes((0x03,)) + struct.pack(">HH", MOCK_CORE_ADDRESS, MOCK_CORE_COUNT)
+        first = device.handle_pdu(request)
+        second = device.handle_pdu(request)
+        self.assertEqual(first[:2], bytes((0x03, MOCK_CORE_COUNT * 2)))
+        self.assertEqual(len(first), 2 + MOCK_CORE_COUNT * 2)
+        self.assertNotEqual(first, second)
+        unknown = device.handle_pdu(bytes((0x03,)) + struct.pack(">HH", 1234, 1))
+        self.assertEqual(unknown, bytes((0x83, 0x02)))
+
+    def test_tou_write_is_retained_for_readback(self):
+        device = EmmaMockDevice()
+        periods = [
+            {"start": 0, "end": 360, "charge_flag": 0, "days": 0x7F},
+            {"start": 1020, "end": 1200, "charge_flag": 1, "days": 0x1F},
+        ]
+        registers = encode_tou_periods(periods)
+        payload = struct.pack(f">{MOCK_TOU_COUNT}H", *registers)
+        write = (
+            bytes((0x10,))
+            + struct.pack(">HHB", MOCK_TOU_ADDRESS, MOCK_TOU_COUNT, len(payload))
+            + payload
+        )
+        response = device.handle_pdu(write)
+        self.assertEqual(
+            response,
+            bytes((0x10,)) + struct.pack(">HH", MOCK_TOU_ADDRESS, MOCK_TOU_COUNT),
+        )
+        read = device.handle_pdu(
+            bytes((0x03,)) + struct.pack(">HH", MOCK_TOU_ADDRESS, MOCK_TOU_COUNT)
+        )
+        values = list(struct.unpack(f">{MOCK_TOU_COUNT}H", read[2:]))
+        self.assertEqual(decode_tou_periods(values), periods)
 
 class FakeWriter:
     def __init__(self):

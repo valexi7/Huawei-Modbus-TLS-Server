@@ -185,3 +185,8 @@ an RGB/addressable LED. The connector therefore uses timing instead of color:
 
 The component keeps the activity event types separate internally so an RGB-capable
 future board can map them to different colors without changing the protocol engine.
+
+Before connecting the real EMMA, use the
+[Armbian EMMA mock and separate curl test](emma-mock-test.md) to validate TLS,
+topology discovery, register polling, TOU write/readback, authentication, and reconnect
+behavior without sending mock measurements to Home Assistant.

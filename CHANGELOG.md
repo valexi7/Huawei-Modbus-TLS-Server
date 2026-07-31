@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.13.1
+
+- Add a networked Armbian EMMA mock that connects outbound to the ESP32 as a TLS
+  client/Modbus slave and emulates startup, paged topology, changing core values, and
+  stateful TOU read/write/readback.
+- Add response-delay, forced-disconnect/reconnect, verified-CA, and raw-frame test modes.
+- Log ESP32 connector API authentication outcomes and response metadata without exposing
+  tokens.
+- Document an isolated two-machine workflow where Armbian supplies mock Modbus data and
+  a separate workstation pulls it from the ESP32 with `curl`.
+
 ## 0.13.0
 
 - Generate the ESPHome firmware register table and a complete entity migration manifest
