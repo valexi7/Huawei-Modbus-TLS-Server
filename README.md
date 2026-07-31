@@ -11,9 +11,11 @@ EMMA uses an unusual connection arrangement:
 - EMMA remains the Modbus slave and answers requests on that socket.
 
 That is why a normal `pymodbus` server rejected the captured private `0x41` startup frame.
-The connector implements only the reverse socket/MBAP transport and delegates register
-addresses, types, scaling, enums, batching, and writes to pinned
-[`huawei-solar` 3.0.6](https://github.com/wlcrs/huawei-solar-lib/tree/v3.0.6).
+The Python connector delegates register metadata and decoding to pinned
+[`huawei-solar` 3.0.6](https://github.com/wlcrs/huawei-solar-lib/tree/v3.0.6). A compiled
+ESPHome implementation is also available for the LilyGO T-ETH-Elite ESP32-S3: Wi-Fi
+carries Home Assistant/API/OTA while an isolated W5500 accepts EMMA's TLS connection.
+See the [ESPHome provisioning and migration guide](docs/esphome-t-eth-elite.md).
 
 ## Install with HACS
 
@@ -30,8 +32,8 @@ Choose one deployment mode in the config flow:
 
 - **embedded** (recommended): Home Assistant itself accepts EMMA's reverse TLS socket.
   No Raspberry Pi, Odroid, HTTP connector, `.env`, or API token is needed.
-- **external**: Home Assistant connects to the standalone Python connector over its
-  authenticated local HTTP API. This preserves the existing Armbian/Raspberry Pi setup.
+- **external**: Home Assistant connects to either the standalone Python connector or the
+  ESPHome/T-ETH-Elite connector over the same authenticated local HTTP API.
 
 The integration's **Configure** dialog can later change the active mode's port,
 certificate settings, external address/key, and Growatt-control safety toggle. Switching

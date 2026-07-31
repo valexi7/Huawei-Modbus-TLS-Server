@@ -3,6 +3,8 @@
 .esphome-venv/
 /esphome/.esphome/
 __pycache__/
+esphome/generated-certs/
+esphome/emma-secrets.generated.yaml
 *.py[cod]
 .coverage
 .pytest_cache/

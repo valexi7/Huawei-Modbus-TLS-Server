@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.12.0
+
+- Add a compiled ESPHome/ESP-IDF reverse Modbus/TLS connector for the LilyGO
+  T-ETH-Elite, retaining Wi-Fi for Home Assistant while binding EMMA to the isolated
+  W5500 network.
+- Implement Huawei startup and topology discovery, grouped core-value polling, and
+  validated TOU schedule read/write/readback through the existing authenticated
+  external-connector API.
+- Drive the board's GPIO38 system LED with distinct timing patterns for Modbus RX/TX
+  and API RX/TX activity.
+- Add certificate/token provisioning tooling, firmware configuration, migration
+  guidance, and an ESP32-S3 compile contract test.
+
 ## 0.11.0
 
 - Consolidate all public Home Assistant actions under `huawei_emma`; remove the

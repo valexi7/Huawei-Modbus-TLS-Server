@@ -13,6 +13,7 @@ external_components:
   - source: github://valexi7/Huawei-Modbus-TLS-Server@main
     components:
       - emma_w5500
+      - huawei_emma_reverse
     refresh: 1h
 
 esphome:
@@ -35,3 +36,17 @@ ota:
 wifi:
   ssid: !secret wifi_ssid
   password: !secret wifi_password
+
+# The API remains compatible with the Home Assistant integration's external
+# connector mode. The PEM certificate and key are compiled into flash and are
+# never exposed as entities or written to logs.
+huawei_emma_reverse:
+  id: emma_connector
+  ethernet_id: emma_ethernet
+  activity_output_id: led_output
+  tls_port: 16100
+  api_port: 8088
+  api_token: !secret emma_connector_api_token
+  certificate: !secret emma_tls_certificate
+  private_key: !secret emma_tls_private_key
+  log_raw: false

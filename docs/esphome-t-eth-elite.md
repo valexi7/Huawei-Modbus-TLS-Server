@@ -34,7 +34,7 @@ packages:
 
 external_components:
   - source: github://valexi7/Huawei-Modbus-TLS-Server@main
-    components: [emma_w5500]
+    components: [emma_w5500, huawei_emma_reverse]
     refresh: 1h
 ```
 
@@ -67,20 +67,90 @@ receives repository fixes automatically.
 5. From a host on the EMMA network, ping the fixed ETH1 address.
 
 Do not connect ETH1 to the Home Assistant LAN. This design deliberately keeps
-the management networks separate. ESPHome's native API may listen on all local
-interfaces, but it is protected by API encryption and the isolated EMMA network
-should permit only the future TLS listener port from EMMA.
+the management networks separate. ESPHome's native and connector APIs may listen
+on all local interfaces, but they are authenticated; the isolated EMMA network
+should permit only the Modbus/TLS listener port from EMMA.
 
-## Next firmware stage
+## Enable the ESP32 connector
 
-The package establishes only dual connectivity. It does **not yet** replace the
-Python connector. The next external component will:
+The maintained example also loads `huawei_emma_reverse`. Add three sensitive values to
+the ESPHome `secrets.yaml` file:
 
-1. bind a TLS 1.2 listener to `${emma_eth_ip}:16100` only;
-2. accept one EMMA client and parse the Huawei `0x41` startup frame;
-3. perform paged device discovery and bounded Modbus reads/writes;
-4. publish values and controls through ESPHome's encrypted native API;
-5. store the dedicated EMMA certificate/key without logging private material.
+```yaml
+emma_connector_api_token: "GENERATE-A-RANDOM-32-BYTE-TOKEN"
+emma_tls_certificate: |-
+  -----BEGIN CERTIFICATE-----
+  ...
+  -----END CERTIFICATE-----
+emma_tls_private_key: |-
+  -----BEGIN PRIVATE KEY-----
+  ...
+  -----END PRIVATE KEY-----
+```
 
-Until that component is implemented and hardware-tested, keep the Armbian/Home
-Assistant connector available for production control.
+The simplest migration is to reuse the existing Python connector's `server-cert.pem`
+and `server-key.pem`. EMMA already trusts their CA, so moving those two PEM values into
+ESPHome secrets does not require replacing the trust certificate in EMMA.
+
+For a new isolated CA, run from the repository root:
+
+```bash
+python tools/generate_esphome_tls.py --server-name 192.168.88.20
+```
+
+The script writes the CA/server files under `esphome/generated-certs`, creates a
+git-ignored `esphome/emma-secrets.generated.yaml` snippet, and prints the CA fingerprint.
+Merge that snippet into the Device Builder's `secrets.yaml` and import only
+`ca-cert.pem` into EMMA. Do not commit the generated snippet, server key, or CA key.
+
+The device YAML configures:
+
+```yaml
+huawei_emma_reverse:
+  ethernet_id: emma_ethernet
+  activity_output_id: led_output
+  tls_port: 16100
+  api_port: 8088
+  api_token: !secret emma_connector_api_token
+  certificate: !secret emma_tls_certificate
+  private_key: !secret emma_tls_private_key
+```
+
+Configure the Home Assistant integration in **external** mode using the ESP32 Wi-Fi IP,
+port `8088`, and `emma_connector_api_token`. Configure EMMA's third-party management
+address as the ESP32 W5500 IP on port `16100`.
+
+## Implemented firmware scope
+
+The first hardware-testable connector version provides:
+
+- a single-client TLS 1.2 listener bound specifically to the W5500 address;
+- Huawei `0x41` startup parsing and paged `0x2B` topology discovery;
+- one grouped function-3 read for the ten core power, SOC, and energy values at
+  addresses 30354-30373;
+- structured 43-register `EMMA_TOU_PERIODS` read, validated write, and readback;
+- the existing authenticated `/api/v1` connector contract over Wi-Fi for Home
+  Assistant external mode;
+- strict MBAP/body/TOU limits, request serialization, reconnect handling, and optional
+  raw-frame summaries;
+- a native ESPHome **EMMA TLS Connected** diagnostic binary sensor.
+
+The complete optional 740-register generated catalog, generic scalar configuration
+writes, and subdevice polling are the next parity stage. Keep the Armbian connector
+available until the TLS handshake, readings, TOU readback, reconnect behavior, and at
+least a 24-hour soak test pass on the real installation.
+
+## Activity LED
+
+LilyGO's official T-ETH-Elite definition exposes GPIO38 as a plain `LED_PIN`; it is not
+an RGB/addressable LED. The connector therefore uses timing instead of color:
+
+| Event | GPIO38 indication |
+| --- | --- |
+| Modbus RX | short pulse |
+| Modbus TX | medium pulse |
+| API RX | double pulse |
+| API TX | long pulse |
+
+The component keeps the activity event types separate internally so an RGB-capable
+future board can map them to different colors without changing the protocol engine.

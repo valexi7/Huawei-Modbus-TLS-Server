@@ -1,6 +1,6 @@
 # ESPHome / LilyGO T-ETH-Elite roadmap
 
-This is a design backlog, not an implementation commitment yet. The target is a LilyGO
+The target is a LilyGO
 T-ETH-Elite ESP32-S3 (16 MB flash, 8 MB PSRAM, W5500 Ethernet and PoE) that replaces the
 Armbian/Python connector while preserving EMMA's unusual role arrangement: EMMA opens a
 TLS socket as TCP client/Modbus slave, and the ESP32 accepts it while issuing Modbus
@@ -63,12 +63,15 @@ requests as master.
 
 - [x] Confirm and package the LilyGO W5500 pins and dual-network base YAML.
 - [x] Add a minimal local YAML that imports the maintained package from GitHub.
-- Add the external-component C++ skeleton and code generator.
+- [x] Add the external-component C++ protocol/TLS/API implementation.
+- [x] Compile the component against ESPHome/ESP-IDF 5.5 with bounded protocol buffers.
+- Generate the complete compact C++ register table from the pinned Python catalog.
 - Add captured-frame unit tests runnable on the host plus an ESP-IDF test target.
 - Define ESPHome entity names/IDs and migration mapping from this HACS integration.
-- Add OTA, API encryption, safe-mode, watchdog, status LED, and optional factory-reset
-  button configuration.
-- Write provisioning, certificate rotation, recovery, and rollback instructions.
+- [x] Add OTA, native API encryption, watchdog-compatible tasks, connection diagnostics,
+  and a timing-coded activity LED.
+- [x] Write initial provisioning and certificate-generation instructions.
+- Complete certificate rotation, recovery, rollback, and production soak-test guidance.
 - Decide whether the final repository ships one combined HACS/ESPHome project or splits
   firmware into its own versioned repository.
 

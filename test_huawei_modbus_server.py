@@ -44,6 +44,24 @@ CORE_REGISTER_COUNT = 20
 
 
 class RepositoryContractTests(unittest.TestCase):
+    def test_esphome_reverse_connector_contract(self):
+        component = Path("esphome/components/huawei_emma_reverse")
+        source = (component / "huawei_emma_reverse.cpp").read_text(encoding="utf-8")
+        schema = (component / "__init__.py").read_text(encoding="utf-8")
+        device_yaml = Path("esphome/huawei-emma-tls-server.yaml").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn("mbedtls_net_bind", source)
+        self.assertIn("CORE_ADDRESS = 30354", source)
+        self.assertIn("TOU_ADDRESS = 40004", source)
+        self.assertIn('"/api/v1/tou-periods"', source)
+        self.assertIn("ActivityKind::MODBUS_RX", source)
+        self.assertIn("ActivityKind::API_TX", source)
+        self.assertIn("CONF_CERTIFICATE", schema)
+        self.assertIn("CONF_PRIVATE_KEY", schema)
+        self.assertIn("huawei_emma_reverse:", device_yaml)
+
     def test_public_actions_are_consolidated_under_huawei_emma(self):
         source = Path(
             "custom_components/huawei_emma_management/__init__.py"
