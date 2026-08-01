@@ -236,6 +236,11 @@ because scheduling and the editor depend on it.
 Public actions are under `huawei_emma`; `huawei_emma_management` is only the internal
 config-entry domain.
 
+`device_id` may be omitted when exactly one Huawei EMMA integration entry is loaded.
+The Actions editor's **Fill example data** command inserts that entry's actual device
+registry ID automatically. With multiple EMMA entries, select the intended device in
+the UI or provide its `device_id` explicitly.
+
 Read all safe controls:
 
 ```yaml
@@ -264,6 +269,9 @@ data:
     00:00-03:59/1234567/+
     07:00-09:59/1234567/-
 ```
+
+The block scalar (`|-`) is significant: every period must be on its own line. A plain
+single-line value containing spaces is one invalid LUNA period, not multiple periods.
 
 Or structured periods:
 

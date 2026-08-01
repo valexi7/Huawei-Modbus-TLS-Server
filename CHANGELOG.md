@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.14.2
+
+- Auto-fill the installation-specific EMMA device registry ID in Home Assistant action
+  examples and allow it to be omitted when exactly one EMMA entry is loaded.
+- Clarify that LUNA text schedules require a YAML multiline block with one period per
+  line.
+
 ## 0.14.1
 
 - Correct catalog acronym formatting so `Active` and `Accumulated` are no longer

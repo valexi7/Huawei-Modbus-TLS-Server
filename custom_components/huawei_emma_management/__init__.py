@@ -87,12 +87,20 @@ def _require_tou_input(data: dict[str, Any]) -> dict[str, Any]:
 
 def _set_huawei_service_schemas(hass: HomeAssistant) -> None:
     """Describe the dynamically registered public huawei_emma actions."""
+    parent_device_ids = _configured_parent_device_ids(hass)
     device_field = {
         "name": "Device",
-        "description": "The Huawei EMMA device to use.",
-        "required": True,
+        "description": (
+            "The Huawei EMMA device to use. This may be omitted when exactly "
+            "one Huawei EMMA integration entry is configured."
+        ),
+        "required": False,
         "selector": {"device": {"integration": DOMAIN}},
     }
+    if len(parent_device_ids) == 1:
+        # Home Assistant uses field examples for "Fill example data". Device
+        # registry IDs are installation-specific, so discover the real one.
+        device_field["example"] = parent_device_ids[0]
     schemas = {
         "read_controls": {
             "name": "Read EMMA controls",
@@ -389,8 +397,53 @@ def _coordinator_for_device(
     )
 
 
+def _configured_coordinators(hass: HomeAssistant) -> list[EmmaCoordinator]:
+    return [
+        coordinator
+        for coordinator in hass.data.get(DOMAIN, {}).values()
+        if isinstance(coordinator, EmmaCoordinator)
+    ]
+
+
+def _parent_device_id_for_coordinator(
+    hass: HomeAssistant, coordinator: EmmaCoordinator
+) -> str | None:
+    device = dr.async_get(hass).async_get_device(
+        identifiers={(DOMAIN, coordinator.parent_identifier)}
+    )
+    return device.id if device is not None else None
+
+
+def _configured_parent_device_ids(hass: HomeAssistant) -> list[str]:
+    return [
+        device_id
+        for coordinator in _configured_coordinators(hass)
+        if (device_id := _parent_device_id_for_coordinator(hass, coordinator))
+        is not None
+    ]
+
+
 def _coordinator_for_call(hass: HomeAssistant, call: ServiceCall) -> EmmaCoordinator:
-    return _coordinator_for_device(hass, call.data["device_id"])
+    device_id = call.data.get("device_id")
+    if device_id:
+        return _coordinator_for_device(hass, device_id)
+
+    coordinators = _configured_coordinators(hass)
+    if len(coordinators) == 1:
+        _LOGGER.debug(
+            "INPUT device validation=accepted device_id=auto "
+            "config_entry_id=%s reason=single_huawei_emma_entry",
+            coordinators[0].entry_id,
+        )
+        return coordinators[0]
+    if not coordinators:
+        reason = "no Huawei EMMA entries are loaded"
+    else:
+        reason = "multiple Huawei EMMA entries are loaded"
+    _LOGGER.debug(
+        "INPUT device validation=rejected device_id=missing reason=%s", reason
+    )
+    raise ServiceValidationError(f"device_id is required because {reason}")
 
 
 def _writable_control(
@@ -506,7 +559,7 @@ def _async_register_services(hass: HomeAssistant) -> None:
             call.domain,
             call.service,
             call.context.user_id,
-            call.data["device_id"],
+            call.data.get("device_id", "auto"),
         )
         if call.domain == HUAWEI_EXTERNAL_API_DOMAIN:
             await _require_external_api_admin(hass, call)
@@ -540,7 +593,7 @@ def _async_register_services(hass: HomeAssistant) -> None:
                 "reason=external_growatt_controls_disabled",
                 call.domain,
                 call.service,
-                call.data["device_id"],
+                call.data.get("device_id", "auto"),
             )
             raise ServiceValidationError(
                 "External Growatt controls are disabled for this Huawei EMMA entry"
@@ -574,7 +627,7 @@ def _async_register_services(hass: HomeAssistant) -> None:
             call.domain,
             call.service,
             call.context.user_id,
-            call.data["device_id"],
+            call.data.get("device_id", "auto"),
         )
         await _require_external_api_admin(hass, call)
         target = _coordinator_for_call(hass, call)
@@ -604,7 +657,7 @@ def _async_register_services(hass: HomeAssistant) -> None:
             call.domain,
             call.service,
             call.context.user_id,
-            call.data["device_id"],
+            call.data.get("device_id", "auto"),
             call.data["register_name"],
             call.data["value"],
         )
@@ -685,7 +738,7 @@ def _async_register_services(hass: HomeAssistant) -> None:
             call.domain,
             call.service,
             call.context.user_id,
-            call.data["device_id"],
+            call.data.get("device_id", "auto"),
             call.data.get("periods"),
             call.data.get("structured_periods"),
         )
@@ -727,7 +780,8 @@ def _async_register_services(hass: HomeAssistant) -> None:
             call.domain,
         )
         return {
-            "device_id": call.data["device_id"],
+            "device_id": call.data.get("device_id")
+            or _parent_device_id_for_coordinator(hass, target),
             "periods": encode_luna_tou_periods(readback),
             "structured_periods": readback,
         }
@@ -755,7 +809,7 @@ def _async_register_services(hass: HomeAssistant) -> None:
         "huawei_emma.set_value",
         vol.Schema(
             {
-                vol.Required("device_id"): cv.string,
+                vol.Optional("device_id"): cv.string,
                 vol.Required("register_name"): cv.string,
                 vol.Required("value"): object,
             }
@@ -766,12 +820,31 @@ def _async_register_services(hass: HomeAssistant) -> None:
         vol.All(
             vol.Schema(
                 {
-                    vol.Required("device_id"): cv.string,
+                    vol.Optional("device_id"): cv.string,
                     vol.Exclusive("periods", "tou_format"): cv.string,
                     vol.Exclusive("structured_periods", "tou_format"): [dict],
                 }
             ),
             _require_tou_input,
+        ),
+    )
+    huawei_read_schema = _debug_schema(
+        "huawei_emma.read",
+        vol.Schema({vol.Optional("device_id"): cv.string}),
+    )
+    huawei_update_schema = _debug_schema(
+        "huawei_emma.update_time_segment",
+        vol.Schema(
+            {
+                vol.Optional("device_id"): cv.string,
+                vol.Required("segment_id"): vol.All(
+                    vol.Coerce(int), vol.Range(min=1, max=GROWATT_MAX_SEGMENTS)
+                ),
+                vol.Required("batt_mode"): vol.In(GROWATT_BATTERY_MODES),
+                vol.Required("start_time"): cv.string,
+                vol.Required("end_time"): cv.string,
+                vol.Required("enabled"): cv.boolean,
+            }
         ),
     )
 
@@ -824,7 +897,7 @@ def _async_register_services(hass: HomeAssistant) -> None:
                 HUAWEI_EXTERNAL_API_DOMAIN,
                 "read_controls",
                 read_controls,
-                schema=read_schema,
+                schema=huawei_read_schema,
                 supports_response=SupportsResponse.ONLY,
             )
             hass.services.async_register(
@@ -845,21 +918,24 @@ def _async_register_services(hass: HomeAssistant) -> None:
                 HUAWEI_EXTERNAL_API_DOMAIN,
                 "read_time_segments",
                 read_time_segments,
-                schema=read_schema,
+                schema=huawei_read_schema,
                 supports_response=SupportsResponse.ONLY,
             )
             hass.services.async_register(
                 HUAWEI_EXTERNAL_API_DOMAIN,
                 "update_time_segment",
                 update_time_segment,
-                schema=update_schema,
+                schema=huawei_update_schema,
             )
-            _set_huawei_service_schemas(hass)
             hass.data[_HUAWEI_API_OWNER] = True
             _LOGGER.info(
                 "Registered authenticated huawei_emma read_controls/set_value/"
                 "set_tou_periods/read_time_segments/update_time_segment API"
             )
+    if hass.data.get(_HUAWEI_API_OWNER):
+        # Refresh installation-specific device examples when entries are added.
+        _set_huawei_service_schemas(hass)
+
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     unloaded = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
@@ -888,6 +964,9 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                         hass.services.async_remove(
                             HUAWEI_EXTERNAL_API_DOMAIN, service_name
                         )
+        elif hass.data.get(_HUAWEI_API_OWNER):
+            # Refresh the auto-filled device ID after one of several entries is removed.
+            _set_huawei_service_schemas(hass)
     return unloaded
 
 

@@ -151,6 +151,12 @@ list of changed states.
 of `structured_periods` or `periods`. Disabled/draft periods are not part of this
 representation.
 
+For Home Assistant action calls, `device_id` is optional when exactly one Huawei EMMA
+entry is loaded; the integration resolves that sole coordinator automatically. **Fill
+example data** inserts its actual registry ID. If multiple entries are loaded, choose a
+device or supply `device_id` explicitly. Direct consumers should continue sending the
+ID when they may run against multi-EMMA installations.
+
 ```bash
 curl --request POST \
   --header "Authorization: Bearer $HA_TOKEN" \
@@ -197,6 +203,8 @@ data:
 Each line uses `HH:MM-HH:MM/DAYS/FLAG`. Weekdays are numbered `1` through `7`
 (Monday-Sunday), `+` means charge, and `-` means discharge. Digits must be unique and in
 ascending order; `1234567` selects every day. At most 14 non-empty periods are accepted.
+Use a YAML block scalar (`|-`) as shown: spaces do not separate periods, and each period
+must occupy its own line.
 An empty string clears the schedule:
 
 ```yaml
