@@ -270,8 +270,10 @@ data:
     07:00-09:59/1234567/-
 ```
 
-The block scalar (`|-`) is significant: every period must be on its own line. A plain
-single-line value containing spaces is one invalid LUNA period, not multiple periods.
+The block scalar (`|-`) is the canonical form: every period is on its own line.
+Home Assistant's current **Fill example data** YAML serializer flattens multiline text;
+the integration also accepts its generated whitespace-separated form, but use `|-` in
+saved automations for clarity.
 
 Or structured periods:
 

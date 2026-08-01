@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.14.3
+
+- Make **Fill example data** choose only the LUNA text TOU input, preventing its
+  structured-period placeholder from violating the mutually exclusive input rule.
+- Accept Home Assistant's flattened whitespace-separated LUNA example while retaining
+  newline-separated YAML blocks as the canonical saved-automation format.
+
 ## 0.14.2
 
 - Auto-fill the installation-specific EMMA device registry ID in Home Assistant action

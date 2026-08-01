@@ -109,13 +109,25 @@ _LUNA_TOU_LINE = re.compile(
 
 
 def decode_luna_tou_periods(value: str) -> list[dict[str, Any]]:
-    """Decode the newline-separated LUNA schedule accepted by the external API."""
+    """Decode LUNA schedule text accepted by the external API.
+
+    Newlines are the canonical separator. Home Assistant's "Fill example data"
+    action editor currently serializes a multiline text example as a space-separated
+    YAML scalar, so a whitespace-separated list of otherwise valid periods is also
+    accepted for that generated action only.
+    """
     if not isinstance(value, str):
         raise ValueError("LUNA TOU periods must be a string")
     if not value.strip():
         return []
 
-    lines = value.splitlines()
+    lines = [line.strip() for line in value.splitlines() if line.strip()]
+    if len(lines) == 1:
+        whitespace_parts = lines[0].split()
+        if len(whitespace_parts) > 1 and all(
+            _LUNA_TOU_LINE.fullmatch(part) is not None for part in whitespace_parts
+        ):
+            lines = whitespace_parts
     if len(lines) > TOU_MAX_PERIODS:
         raise ValueError(f"LUNA TOU schedule accepts at most {TOU_MAX_PERIODS} periods")
 

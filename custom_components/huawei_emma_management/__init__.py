@@ -160,16 +160,10 @@ def _set_huawei_service_schemas(hass: HomeAssistant) -> None:
                     "description": (
                         "List of periods with start_time, end_time, charge_flag, "
                         "and seven days_effective booleans. Leave this out when "
-                        "using LUNA text."
+                        "using LUNA text. It is intentionally not included in "
+                        "Fill example data because Home Assistant cannot express "
+                        "the either/or field relationship."
                     ),
-                    "example": [
-                        {
-                            "start_time": "00:00",
-                            "end_time": "23:59",
-                            "charge_flag": "discharge",
-                            "days_effective": [True] * 7,
-                        }
-                    ],
                     "selector": {"object": {}},
                 },
             },

@@ -204,7 +204,9 @@ Each line uses `HH:MM-HH:MM/DAYS/FLAG`. Weekdays are numbered `1` through `7`
 (Monday-Sunday), `+` means charge, and `-` means discharge. Digits must be unique and in
 ascending order; `1234567` selects every day. At most 14 non-empty periods are accepted.
 Use a YAML block scalar (`|-`) as shown: spaces do not separate periods, and each period
-must occupy its own line.
+must occupy its own line. Home Assistant's current **Fill example data** serializer
+flattens the sample into a space-separated scalar; the integration accepts that generated
+form, but use the block scalar in saved automations.
 An empty string clears the schedule:
 
 ```yaml
