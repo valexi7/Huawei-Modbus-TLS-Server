@@ -565,6 +565,18 @@ def _icon(name: str, device_class: str | None, structured: bool) -> str | None:
 
 
 def _friendly_name(value: str) -> str:
+    # Huawei's register identifiers use BUILT_IN_ENERGY and EXTERNAL_ENERGY as
+    # shorthand for the built-in/external *energy meter*. They contain live
+    # voltage, current, power and power-factor values as well as energy totals.
+    # Put the meter source first so a voltage is not mislabeled as energy.
+    for suffix, source in (
+        ("_built_in_energy", "Built-in Meter"),
+        ("_external_energy", "External Meter"),
+    ):
+        if value.endswith(suffix):
+            measurement = value[: -len(suffix)]
+            return f"{source} {_friendly_name(measurement)}"
+
     replacements = {
         "Pv": "PV",
         "Ess": "ESS",
@@ -583,4 +595,7 @@ def _friendly_name(value: str) -> str:
         # Acronyms are words, not arbitrary substrings: replacing ``Ac`` in
         # ``Active`` previously produced the visible typo ``ACtive``.
         text = re.sub(rf"\b{re.escape(original)}\b", replacement, text)
+    # Phase-to-phase voltage identifiers use A_B/B_C/C_A; render the pair as
+    # the conventional electrical notation A-B/B-C/C-A.
+    text = re.sub(r"\b([ABC]) ([ABC])\b", r"\1-\2", text)
     return text

@@ -458,7 +458,36 @@ class DecoderTests(unittest.TestCase):
         catalog = build_entity_catalog()
         self.assertEqual(
             catalog["active_power_built_in_energy"].name,
-            "Active Power Built In Energy",
+            "Built-in Meter Active Power",
+        )
+        self.assertEqual(
+            catalog["phase_a_voltage_built_in_energy"].name,
+            "Built-in Meter Phase A Voltage",
+        )
+        self.assertEqual(
+            catalog["phase_c_current_external_energy"].name,
+            "External Meter Phase C Current",
+        )
+        self.assertEqual(
+            catalog["line_voltage_a_b_built_in_energy"].name,
+            "Built-in Meter Line Voltage A-B",
+        )
+        self.assertEqual(
+            catalog["total_positive_active_energy_built_in_energy"].name,
+            "Built-in Meter Total Positive Active Energy",
+        )
+
+        self.assertEqual(catalog["phase_a_voltage_built_in_energy"].unit, "V")
+        self.assertEqual(
+            catalog["phase_a_voltage_built_in_energy"].device_class, "voltage"
+        )
+        self.assertEqual(catalog["phase_a_current_built_in_energy"].unit, "A")
+        self.assertEqual(
+            catalog["phase_a_current_built_in_energy"].device_class, "current"
+        )
+        self.assertEqual(catalog["active_power_built_in_energy"].unit, "W")
+        self.assertEqual(
+            catalog["active_power_built_in_energy"].device_class, "power"
         )
 
     def test_compact_tou_json_supports_fourteen_periods(self):

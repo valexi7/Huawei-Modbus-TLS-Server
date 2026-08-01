@@ -13,5 +13,5 @@
     "huawei-solar==3.0.6",
     "tmodbus==0.4.1"
   ],
-  "version": "0.14.0"
+  "version": "0.14.1"
 }

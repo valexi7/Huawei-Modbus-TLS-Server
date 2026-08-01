@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.14.1
+
+- Correct catalog acronym formatting so `Active` and `Accumulated` are no longer
+  rendered as `ACtive` and `ACcumulated`.
+- Rename Huawei's misleading `*_built_in_energy` and `*_external_energy` display-name
+  families to **Built-in Meter ...** and **External Meter ...** while preserving stable
+  register/entity IDs and the correct V, A, W, VA, power-factor, and kWh types.
+
 ## 0.14.0
 
 - Promote the ESP32 connector from the core/TOU vertical slice to the complete generated

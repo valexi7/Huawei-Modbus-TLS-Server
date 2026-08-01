@@ -1,7 +1,7 @@
 {
   "schema_version": 2,
   "connector_contract_version": 2,
-  "catalog_sha256": "ee37dcdfd44f729458b8bafe77198af427173af4a121e8de5685d745213ab2bc",
+  "catalog_sha256": "e3607d78dcc56573c4bfd0b2ec7362ce21c70cae2cccae2596bf1d780757416d",
   "source": {
     "python_module": "custom_components.huawei_emma_management.embedded_catalog",
     "contract_module": "custom_components.huawei_emma_management.connector_contract",
@@ -2412,7 +2412,7 @@
     },
     {
       "register_name": "emma_external_meter_line_voltage_a_b",
-      "name": "EMMA External Meter Line Voltage A B",
+      "name": "EMMA External Meter Line Voltage A-B",
       "address": 30508,
       "length": 2,
       "platform": "sensor",
@@ -2440,7 +2440,7 @@
     },
     {
       "register_name": "emma_external_meter_line_voltage_b_c",
-      "name": "EMMA External Meter Line Voltage B C",
+      "name": "EMMA External Meter Line Voltage B-C",
       "address": 30510,
       "length": 2,
       "platform": "sensor",
@@ -2468,7 +2468,7 @@
     },
     {
       "register_name": "emma_external_meter_line_voltage_c_a",
-      "name": "EMMA External Meter Line Voltage C A",
+      "name": "EMMA External Meter Line Voltage C-A",
       "address": 30512,
       "length": 2,
       "platform": "sensor",
@@ -3364,7 +3364,7 @@
     },
     {
       "register_name": "phase_a_voltage_built_in_energy",
-      "name": "Phase A Voltage Built In Energy",
+      "name": "Built-in Meter Phase A Voltage",
       "address": 31639,
       "length": 2,
       "platform": "sensor",
@@ -3392,7 +3392,7 @@
     },
     {
       "register_name": "phase_b_voltage_built_in_energy",
-      "name": "Phase B Voltage Built In Energy",
+      "name": "Built-in Meter Phase B Voltage",
       "address": 31641,
       "length": 2,
       "platform": "sensor",
@@ -3420,7 +3420,7 @@
     },
     {
       "register_name": "phase_c_voltage_built_in_energy",
-      "name": "Phase C Voltage Built In Energy",
+      "name": "Built-in Meter Phase C Voltage",
       "address": 31643,
       "length": 2,
       "platform": "sensor",
@@ -3448,7 +3448,7 @@
     },
     {
       "register_name": "line_voltage_a_b_built_in_energy",
-      "name": "Line Voltage A B Built In Energy",
+      "name": "Built-in Meter Line Voltage A-B",
       "address": 31645,
       "length": 2,
       "platform": "sensor",
@@ -3476,7 +3476,7 @@
     },
     {
       "register_name": "line_voltage_b_c_built_in_energy",
-      "name": "Line Voltage B C Built In Energy",
+      "name": "Built-in Meter Line Voltage B-C",
       "address": 31647,
       "length": 2,
       "platform": "sensor",
@@ -3504,7 +3504,7 @@
     },
     {
       "register_name": "line_voltage_c_a_built_in_energy",
-      "name": "Line Voltage C A Built In Energy",
+      "name": "Built-in Meter Line Voltage C-A",
       "address": 31649,
       "length": 2,
       "platform": "sensor",
@@ -3532,7 +3532,7 @@
     },
     {
       "register_name": "phase_a_current_built_in_energy",
-      "name": "Phase A Current Built In Energy",
+      "name": "Built-in Meter Phase A Current",
       "address": 31651,
       "length": 2,
       "platform": "sensor",
@@ -3560,7 +3560,7 @@
     },
     {
       "register_name": "phase_b_current_built_in_energy",
-      "name": "Phase B Current Built In Energy",
+      "name": "Built-in Meter Phase B Current",
       "address": 31653,
       "length": 2,
       "platform": "sensor",
@@ -3588,7 +3588,7 @@
     },
     {
       "register_name": "phase_c_current_built_in_energy",
-      "name": "Phase C Current Built In Energy",
+      "name": "Built-in Meter Phase C Current",
       "address": 31655,
       "length": 2,
       "platform": "sensor",
@@ -3616,7 +3616,7 @@
     },
     {
       "register_name": "active_power_built_in_energy",
-      "name": "Active Power Built In Energy",
+      "name": "Built-in Meter Active Power",
       "address": 31657,
       "length": 2,
       "platform": "sensor",
@@ -3644,7 +3644,7 @@
     },
     {
       "register_name": "power_factor_built_in_energy",
-      "name": "Power Factor Built In Energy",
+      "name": "Built-in Meter Power Factor",
       "address": 31661,
       "length": 2,
       "platform": "sensor",
@@ -3672,7 +3672,7 @@
     },
     {
       "register_name": "apparent_power_built_in_energy",
-      "name": "Apparent Power Built In Energy",
+      "name": "Built-in Meter Apparent Power",
       "address": 31663,
       "length": 2,
       "platform": "sensor",
@@ -3700,7 +3700,7 @@
     },
     {
       "register_name": "phase_a_active_power_built_in_energy",
-      "name": "Phase A Active Power Built In Energy",
+      "name": "Built-in Meter Phase A Active Power",
       "address": 31665,
       "length": 2,
       "platform": "sensor",
@@ -3728,7 +3728,7 @@
     },
     {
       "register_name": "phase_b_active_power_built_in_energy",
-      "name": "Phase B Active Power Built In Energy",
+      "name": "Built-in Meter Phase B Active Power",
       "address": 31667,
       "length": 2,
       "platform": "sensor",
@@ -3756,7 +3756,7 @@
     },
     {
       "register_name": "phase_c_active_power_built_in_energy",
-      "name": "Phase C Active Power Built In Energy",
+      "name": "Built-in Meter Phase C Active Power",
       "address": 31669,
       "length": 2,
       "platform": "sensor",
@@ -3784,7 +3784,7 @@
     },
     {
       "register_name": "total_active_energy_built_in_energy",
-      "name": "Total Active Energy Built In Energy",
+      "name": "Built-in Meter Total Active Energy",
       "address": 31671,
       "length": 4,
       "platform": "sensor",
@@ -3812,7 +3812,7 @@
     },
     {
       "register_name": "total_negative_active_energy_built_in_energy",
-      "name": "Total Negative Active Energy Built In Energy",
+      "name": "Built-in Meter Total Negative Active Energy",
       "address": 31679,
       "length": 4,
       "platform": "sensor",
@@ -3840,7 +3840,7 @@
     },
     {
       "register_name": "total_positive_active_energy_built_in_energy",
-      "name": "Total Positive Active Energy Built In Energy",
+      "name": "Built-in Meter Total Positive Active Energy",
       "address": 31687,
       "length": 4,
       "platform": "sensor",
@@ -3868,7 +3868,7 @@
     },
     {
       "register_name": "phase_a_voltage_external_energy",
-      "name": "Phase A Voltage External Energy",
+      "name": "External Meter Phase A Voltage",
       "address": 31895,
       "length": 2,
       "platform": "sensor",
@@ -3896,7 +3896,7 @@
     },
     {
       "register_name": "phase_b_voltage_external_energy",
-      "name": "Phase B Voltage External Energy",
+      "name": "External Meter Phase B Voltage",
       "address": 31897,
       "length": 2,
       "platform": "sensor",
@@ -3924,7 +3924,7 @@
     },
     {
       "register_name": "phase_c_voltage_external_energy",
-      "name": "Phase C Voltage External Energy",
+      "name": "External Meter Phase C Voltage",
       "address": 31899,
       "length": 2,
       "platform": "sensor",
@@ -3952,7 +3952,7 @@
     },
     {
       "register_name": "line_voltage_a_b_external_energy",
-      "name": "Line Voltage A B External Energy",
+      "name": "External Meter Line Voltage A-B",
       "address": 31901,
       "length": 2,
       "platform": "sensor",
@@ -3980,7 +3980,7 @@
     },
     {
       "register_name": "line_voltage_b_c_external_energy",
-      "name": "Line Voltage B C External Energy",
+      "name": "External Meter Line Voltage B-C",
       "address": 31903,
       "length": 2,
       "platform": "sensor",
@@ -4008,7 +4008,7 @@
     },
     {
       "register_name": "line_voltage_c_a_external_energy",
-      "name": "Line Voltage C A External Energy",
+      "name": "External Meter Line Voltage C-A",
       "address": 31905,
       "length": 2,
       "platform": "sensor",
@@ -4036,7 +4036,7 @@
     },
     {
       "register_name": "phase_a_current_external_energy",
-      "name": "Phase A Current External Energy",
+      "name": "External Meter Phase A Current",
       "address": 31907,
       "length": 2,
       "platform": "sensor",
@@ -4064,7 +4064,7 @@
     },
     {
       "register_name": "phase_b_current_external_energy",
-      "name": "Phase B Current External Energy",
+      "name": "External Meter Phase B Current",
       "address": 31909,
       "length": 2,
       "platform": "sensor",
@@ -4092,7 +4092,7 @@
     },
     {
       "register_name": "phase_c_current_external_energy",
-      "name": "Phase C Current External Energy",
+      "name": "External Meter Phase C Current",
       "address": 31911,
       "length": 2,
       "platform": "sensor",
@@ -4120,7 +4120,7 @@
     },
     {
       "register_name": "active_power_external_energy",
-      "name": "Active Power External Energy",
+      "name": "External Meter Active Power",
       "address": 31913,
       "length": 2,
       "platform": "sensor",
@@ -4148,7 +4148,7 @@
     },
     {
       "register_name": "power_factor_external_energy",
-      "name": "Power Factor External Energy",
+      "name": "External Meter Power Factor",
       "address": 31917,
       "length": 2,
       "platform": "sensor",
@@ -4176,7 +4176,7 @@
     },
     {
       "register_name": "apparent_power_external_energy",
-      "name": "Apparent Power External Energy",
+      "name": "External Meter Apparent Power",
       "address": 31919,
       "length": 2,
       "platform": "sensor",
@@ -4204,7 +4204,7 @@
     },
     {
       "register_name": "phase_a_active_power_external_energy",
-      "name": "Phase A Active Power External Energy",
+      "name": "External Meter Phase A Active Power",
       "address": 31921,
       "length": 2,
       "platform": "sensor",
@@ -4232,7 +4232,7 @@
     },
     {
       "register_name": "phase_b_active_power_external_energy",
-      "name": "Phase B Active Power External Energy",
+      "name": "External Meter Phase B Active Power",
       "address": 31923,
       "length": 2,
       "platform": "sensor",
@@ -4260,7 +4260,7 @@
     },
     {
       "register_name": "phase_c_active_power_external_energy",
-      "name": "Phase C Active Power External Energy",
+      "name": "External Meter Phase C Active Power",
       "address": 31925,
       "length": 2,
       "platform": "sensor",
@@ -4288,7 +4288,7 @@
     },
     {
       "register_name": "total_active_energy_external_energy",
-      "name": "Total Active Energy External Energy",
+      "name": "External Meter Total Active Energy",
       "address": 31927,
       "length": 4,
       "platform": "sensor",
@@ -4316,7 +4316,7 @@
     },
     {
       "register_name": "total_negative_active_energy_external_energy",
-      "name": "Total Negative Active Energy External Energy",
+      "name": "External Meter Total Negative Active Energy",
       "address": 31935,
       "length": 4,
       "platform": "sensor",
@@ -4344,7 +4344,7 @@
     },
     {
       "register_name": "total_positive_active_energy_external_energy",
-      "name": "Total Positive Active Energy External Energy",
+      "name": "External Meter Total Positive Active Energy",
       "address": 31943,
       "length": 4,
       "platform": "sensor",
@@ -5940,7 +5940,7 @@
     },
     {
       "register_name": "line_voltage_A_B",
-      "name": "Line Voltage A B",
+      "name": "Line Voltage A-B",
       "address": 32066,
       "length": 1,
       "platform": "sensor",
@@ -5968,7 +5968,7 @@
     },
     {
       "register_name": "line_voltage_B_C",
-      "name": "Line Voltage B C",
+      "name": "Line Voltage B-C",
       "address": 32067,
       "length": 1,
       "platform": "sensor",
@@ -5996,7 +5996,7 @@
     },
     {
       "register_name": "line_voltage_C_A",
-      "name": "Line Voltage C A",
+      "name": "Line Voltage C-A",
       "address": 32068,
       "length": 1,
       "platform": "sensor",
@@ -7480,7 +7480,7 @@
     },
     {
       "register_name": "smartlogger_external_meter_a_b_line_voltage",
-      "name": "Smartlogger External Meter A B Line Voltage",
+      "name": "Smartlogger External Meter A-B Line Voltage",
       "address": 32266,
       "length": 2,
       "platform": "sensor",
@@ -7508,7 +7508,7 @@
     },
     {
       "register_name": "smartlogger_external_meter_b_c_line_voltage",
-      "name": "Smartlogger External Meter B C Line Voltage",
+      "name": "Smartlogger External Meter B-C Line Voltage",
       "address": 32268,
       "length": 2,
       "platform": "sensor",
@@ -7536,7 +7536,7 @@
     },
     {
       "register_name": "smartlogger_external_meter_c_a_line_voltage",
-      "name": "Smartlogger External Meter C A Line Voltage",
+      "name": "Smartlogger External Meter C-A Line Voltage",
       "address": 32270,
       "length": 2,
       "platform": "sensor",
@@ -10543,7 +10543,7 @@
     },
     {
       "register_name": "active_grid_A_B_voltage",
-      "name": "Active Grid A B Voltage",
+      "name": "Active Grid A-B Voltage",
       "address": 37126,
       "length": 2,
       "platform": "sensor",
@@ -10571,7 +10571,7 @@
     },
     {
       "register_name": "active_grid_B_C_voltage",
-      "name": "Active Grid B C Voltage",
+      "name": "Active Grid B-C Voltage",
       "address": 37128,
       "length": 2,
       "platform": "sensor",
@@ -10599,7 +10599,7 @@
     },
     {
       "register_name": "active_grid_C_A_voltage",
-      "name": "Active Grid C A Voltage",
+      "name": "Active Grid C-A Voltage",
       "address": 37130,
       "length": 2,
       "platform": "sensor",
@@ -17289,7 +17289,7 @@
     },
     {
       "register_name": "smartlogger_a_b_line_voltage_of_grid",
-      "name": "Smartlogger A B Line Voltage Of Grid",
+      "name": "Smartlogger A-B Line Voltage Of Grid",
       "address": 40575,
       "length": 1,
       "platform": "sensor",
@@ -17317,7 +17317,7 @@
     },
     {
       "register_name": "smartlogger_b_c_line_voltage_of_grid",
-      "name": "Smartlogger B C Line Voltage Of Grid",
+      "name": "Smartlogger B-C Line Voltage Of Grid",
       "address": 40576,
       "length": 1,
       "platform": "sensor",
@@ -17345,7 +17345,7 @@
     },
     {
       "register_name": "smartlogger_c_a_line_voltage_of_grid",
-      "name": "Smartlogger C A Line Voltage Of Grid",
+      "name": "Smartlogger C-A Line Voltage Of Grid",
       "address": 40577,
       "length": 1,
       "platform": "sensor",
