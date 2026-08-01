@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.14.6
+
+- Synchronize connector polling subscriptions immediately when a Home Assistant entity
+  is enabled or disabled, without requiring an integration reload.
+- Log exact added/removed register names, active subscription totals per poll group, and
+  ESP32 subscribed/requested/batch counts for each polling cycle.
+
 ## 0.14.5
 
 - Add `huawei_emma.read_tou_periods` to return native EMMA TOU register data, its

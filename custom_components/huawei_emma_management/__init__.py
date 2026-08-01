@@ -9,7 +9,13 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.exceptions import ConfigEntryNotReady, ServiceValidationError
 from homeassistant.helpers.update_coordinator import UpdateFailed
 from homeassistant.const import CONF_HOST, CONF_PORT
-from homeassistant.core import HomeAssistant, ServiceCall, SupportsResponse
+from homeassistant.core import (
+    Event,
+    HomeAssistant,
+    ServiceCall,
+    SupportsResponse,
+    callback,
+)
 from homeassistant.helpers import config_validation as cv, service as service_helper
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
@@ -338,6 +344,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 registry_entry.entity_id,
                 disabled_by=er.RegistryEntryDisabler.INTEGRATION,
             )
+    await coordinator.async_sync_polling_subscriptions(
+        source="post_registry_migration"
+    )
     registry = dr.async_get(hass)
     parent_identifier = coordinator.parent_identifier
     registry.async_get_or_create(
@@ -366,6 +375,39 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             via_device=(DOMAIN, parent_identifier),
         )
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+
+    @callback
+    def _async_entity_registry_updated(event: Event) -> None:
+        """Resynchronize connector polling when an entity is enabled or disabled."""
+        if event.data.get("action") != "update":
+            return
+        changes = event.data.get("changes")
+        if isinstance(changes, dict) and "disabled_by" not in changes:
+            return
+        entity_id = event.data.get("entity_id")
+        registry_entry = entity_registry.async_get(entity_id) if entity_id else None
+        if registry_entry is None or registry_entry.config_entry_id != entry.entry_id:
+            return
+        enabled = registry_entry.disabled_by is None
+        _LOGGER.info(
+            "Entity polling preference changed entity_id=%s enabled=%s; "
+            "synchronizing connector subscriptions",
+            entity_id,
+            enabled,
+        )
+        entry.async_create_task(
+            hass,
+            coordinator.async_sync_polling_subscriptions(
+                source=f"entity_registry:{entity_id}"
+            ),
+            f"synchronize Huawei EMMA polling for {entity_id}",
+        )
+
+    entry.async_on_unload(
+        hass.bus.async_listen(
+            er.EVENT_ENTITY_REGISTRY_UPDATED, _async_entity_registry_updated
+        )
+    )
 
     _async_register_services(hass)
     return True

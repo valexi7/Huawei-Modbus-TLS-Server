@@ -661,6 +661,16 @@ class ReverseModbusSession:
             len(added),
             len(removed),
         )
+        if added:
+            log.info("Polling subscriptions added: %s", ", ".join(sorted(added)))
+        if removed:
+            log.info("Polling subscriptions removed: %s", ", ".join(sorted(removed)))
+        for group, group_registers in POLL_GROUPS.items():
+            log.info(
+                "Polling subscription group=%s active=%d",
+                group,
+                len(register_names.intersection(group_registers)),
+            )
 
     @property
     def closed(self) -> bool:

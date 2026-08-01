@@ -231,6 +231,12 @@ The Home Assistant coordinator reads cached connector state every ten seconds; t
 not generate extra Modbus traffic. The raw `emma_tou_periods` value remains subscribed
 because scheduling and the editor depend on it.
 
+Enabling or disabling an entity updates connector subscriptions immediately. Home
+Assistant logs the triggering entity ID and the accepted added/removed register names;
+ESP32 and Python connectors log the same register changes and active totals for the
+`fast`, `medium`, and `slow` groups. Poll logs distinguish the subscribed count from the
+registers actually requested after topology and unsupported-register filtering.
+
 ## Home Assistant actions
 
 Public actions are under `huawei_emma`; `huawei_emma_management` is only the internal

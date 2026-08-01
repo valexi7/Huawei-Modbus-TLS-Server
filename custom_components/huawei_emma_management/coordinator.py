@@ -60,6 +60,8 @@ class EmmaCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._growatt_slots_initialized = False
         self._growatt_active_fingerprint: tuple[Any, ...] | None = None
         self._tou_write_lock = asyncio.Lock()
+        self._subscription_sync_lock = asyncio.Lock()
+        self._accepted_subscriptions: set[str] | None = None
         self.selected_tou_slot = 0
         self.tou_dirty = False
         self._discovery_reload_scheduled = False
@@ -82,49 +84,72 @@ class EmmaCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         if discovered.get("serial_number") or not self.device_data:
             self.device_data = discovered
         self.entity_descriptions = await self.api.entities()
-        await self._async_sync_polling_subscriptions()
+        await self.async_sync_polling_subscriptions(source="initial_setup")
         await self.async_config_entry_first_refresh()
 
-    async def _async_sync_polling_subscriptions(self) -> None:
+    async def async_sync_polling_subscriptions(
+        self, *, source: str = "entity_registry"
+    ) -> None:
         """Make the connector poll exactly the entities enabled in HA."""
-        registry = er.async_get(self.hass)
-        enabled: set[str] = set()
-        for description in self.entity_descriptions:
-            register_name = description["register_name"]
-            unique_id = f"{self.unique_id_prefix}_{register_name}"
-            entity_id = registry.async_get_entity_id(
-                description["platform"], DOMAIN, unique_id
-            )
-            registry_entry = registry.async_get(entity_id) if entity_id else None
-            if (
-                registry_entry is not None
-                and registry_entry.disabled_by is None
-            ) or (
-                registry_entry is None
-                and description.get("enabled_default", True)
-            ):
-                enabled.add(
-                    description.get("source_register_name", register_name)
+        async with self._subscription_sync_lock:
+            registry = er.async_get(self.hass)
+            enabled: set[str] = set()
+            for description in self.entity_descriptions:
+                register_name = description["register_name"]
+                unique_id = f"{self.unique_id_prefix}_{register_name}"
+                entity_id = registry.async_get_entity_id(
+                    description["platform"], DOMAIN, unique_id
                 )
+                registry_entry = registry.async_get(entity_id) if entity_id else None
+                if (
+                    registry_entry is not None
+                    and registry_entry.disabled_by is None
+                ) or (
+                    registry_entry is None
+                    and description.get("enabled_default", True)
+                ):
+                    enabled.add(
+                        description.get("source_register_name", register_name)
+                    )
 
-        # TOU powers the two schedule sensors, editor, Growatt compatibility,
-        # and native services, so it remains an internal required subscription.
-        enabled.add(TOU_REGISTER_NAME)
-        try:
-            accepted = await self.api.set_subscriptions(sorted(enabled))
-        except EmmaApiError as error:
-            # Keep compatibility with a connector that has not yet been updated;
-            # it will continue using its own default poll set.
-            _LOGGER.warning(
-                "Connector does not support dynamic polling subscriptions yet: %s",
-                error,
+            # TOU powers the two schedule sensors, editor, Growatt compatibility,
+            # and native services, so it remains an internal required subscription.
+            enabled.add(TOU_REGISTER_NAME)
+            try:
+                accepted = set(await self.api.set_subscriptions(sorted(enabled)))
+            except EmmaApiError as error:
+                # Keep compatibility with a connector that has not yet been updated;
+                # it will continue using its own default poll set.
+                _LOGGER.warning(
+                    "Connector does not support dynamic polling subscriptions yet: %s",
+                    error,
+                )
+                return
+            previous = self._accepted_subscriptions
+            self._accepted_subscriptions = accepted
+            if previous is None:
+                _LOGGER.info(
+                    "Synchronized Home Assistant polling subscriptions source=%s "
+                    "enabled=%d catalog=%d",
+                    source,
+                    len(accepted),
+                    len(self.entity_descriptions),
+                )
+                return
+            added = sorted(accepted - previous)
+            removed = sorted(previous - accepted)
+            _LOGGER.info(
+                "Synchronized Home Assistant polling subscriptions source=%s "
+                "total=%d added=%d removed=%d",
+                source,
+                len(accepted),
+                len(added),
+                len(removed),
             )
-            return
-        _LOGGER.info(
-            "Synchronized Home Assistant polling subscriptions enabled=%d catalog=%d",
-            len(accepted),
-            len(self.entity_descriptions),
-        )
+            if added:
+                _LOGGER.info("Polling subscriptions added: %s", ", ".join(added))
+            if removed:
+                _LOGGER.info("Polling subscriptions removed: %s", ", ".join(removed))
 
     async def _async_update_data(self) -> dict[str, Any]:
         try:

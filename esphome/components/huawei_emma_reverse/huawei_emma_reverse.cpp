@@ -466,7 +466,15 @@ uint8_t HuaweiEmmaReverse::unit_for_role_(const char *role, bool &available) con
 }
 
 void HuaweiEmmaReverse::poll_group_(const char *group) {
-  size_t updated = 0;
+  size_t subscribed = 0;
+  xSemaphoreTake(this->data_mutex_, portMAX_DELAY);
+  for (size_t index = 0; index < GENERATED_ENTITY_COUNT; index++) {
+    if (this->values_[index].subscribed && std::strcmp(GENERATED_ENTITIES[index].poll_group, group) == 0)
+      subscribed++;
+  }
+  xSemaphoreGive(this->data_mutex_);
+  size_t requested = 0;
+  size_t batches = 0;
   const char *roles[] = {"emma", "inverter", "smartguard", "charger", "sdongle", "smartlogger"};
   for (const char *role : roles) {
     bool available = false;
@@ -482,6 +490,7 @@ void HuaweiEmmaReverse::poll_group_(const char *group) {
         indices.push_back(index);
     }
     xSemaphoreGive(this->data_mutex_);
+    requested += indices.size();
     size_t begin = 0;
     while (begin < indices.size()) {
       size_t end = begin + 1;
@@ -502,12 +511,13 @@ void HuaweiEmmaReverse::poll_group_(const char *group) {
         }
       }
       this->poll_entity_batch_(unit, indices, begin, end);
-      updated += end - begin;
+      batches++;
       begin = end;
     }
   }
-  if (updated)
-    ESP_LOGI(TAG, "EMMA poll group=%s requested=%u", group, static_cast<unsigned>(updated));
+  if (subscribed)
+    ESP_LOGI(TAG, "EMMA poll group=%s subscribed=%u requested=%u batches=%u", group,
+             static_cast<unsigned>(subscribed), static_cast<unsigned>(requested), static_cast<unsigned>(batches));
 }
 
 void HuaweiEmmaReverse::poll_entity_batch_(uint8_t unit, const std::vector<size_t> &indices, size_t begin,
@@ -896,11 +906,17 @@ esp_err_t HuaweiEmmaReverse::handle_http_(httpd_req_t *request) {
     cJSON_ArrayForEach(name, names) {
       if (!cJSON_IsString(name)) continue;
       size_t index = this->find_entity_(name->valuestring);
-      if (index < GENERATED_ENTITY_COUNT) accepted.push_back(index);
+      if (index < GENERATED_ENTITY_COUNT &&
+          std::find(accepted.begin(), accepted.end(), index) == accepted.end())
+        accepted.push_back(index);
     }
+    std::vector<size_t> added;
+    std::vector<size_t> removed;
     xSemaphoreTake(this->data_mutex_, portMAX_DELAY);
     for (size_t index = 0; index < GENERATED_ENTITY_COUNT; index++) {
       bool selected = std::find(accepted.begin(), accepted.end(), index) != accepted.end();
+      if (selected && !this->values_[index].subscribed) added.push_back(index);
+      if (!selected && this->values_[index].subscribed) removed.push_back(index);
       this->values_[index].subscribed = selected;
       if (!selected) { this->values_[index].valid = false; this->values_[index].json.clear(); }
     }
@@ -914,7 +930,22 @@ esp_err_t HuaweiEmmaReverse::handle_http_(httpd_req_t *request) {
     }
     out << "]}";
     cJSON_Delete(root);
-    ESP_LOGI(TAG, "Polling subscriptions accepted=%u", static_cast<unsigned>(accepted.size()));
+    ESP_LOGI(TAG, "Polling subscriptions updated total=%u added=%u removed=%u",
+             static_cast<unsigned>(accepted.size()), static_cast<unsigned>(added.size()),
+             static_cast<unsigned>(removed.size()));
+    for (size_t index : added)
+      ESP_LOGI(TAG, "Polling subscription added group=%s name=%s", GENERATED_ENTITIES[index].poll_group,
+               GENERATED_ENTITIES[index].register_name);
+    for (size_t index : removed)
+      ESP_LOGI(TAG, "Polling subscription removed group=%s name=%s", GENERATED_ENTITIES[index].poll_group,
+               GENERATED_ENTITIES[index].register_name);
+    const char *subscription_groups[] = {"fast", "medium", "slow"};
+    for (const char *subscription_group : subscription_groups) {
+      size_t count = 0;
+      for (size_t index : accepted)
+        if (std::strcmp(GENERATED_ENTITIES[index].poll_group, subscription_group) == 0) count++;
+      ESP_LOGI(TAG, "Polling subscription group=%s active=%u", subscription_group, static_cast<unsigned>(count));
+    }
     return this->send_json_(request, out.str());
   }
   if (request->method == HTTP_POST && uri == GENERATED_PATH_TOU) {

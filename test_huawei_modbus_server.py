@@ -80,6 +80,8 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertIn('GENERATED_PATH_TOU[] = "/api/v1/tou-periods"', generated)
         self.assertIn("ActivityKind::MODBUS_RX", source)
         self.assertIn("ActivityKind::API_TX", source)
+        self.assertIn("Polling subscription added group=%s name=%s", source)
+        self.assertIn("subscribed=%u requested=%u batches=%u", source)
         self.assertIn("CONF_CERTIFICATE", schema)
         self.assertIn("CONF_PRIVATE_KEY", schema)
         self.assertIn("huawei_emma_reverse:", device_yaml)
@@ -113,6 +115,8 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertIn('"active_tou"', source)
         self.assertIn("_device_response_metadata", source)
         self.assertIn('"native_emma_connector_poll"', source)
+        self.assertIn("EVENT_ENTITY_REGISTRY_UPDATED", source)
+        self.assertIn("async_sync_polling_subscriptions", source)
         services = Path(
             "custom_components/huawei_emma_management/services.yaml"
         ).read_text(encoding="utf-8")
