@@ -323,6 +323,36 @@ from the same source.
 - Debug logging records API validation and accepted/rejected controls without printing
   bearer tokens.
 
+## Switching connector runtime
+
+Home Assistant remains the entity owner. Switching the connector changes the coordinator
+transport only; it does not recreate entities, dashboards, automations, or the EMMA
+device ID.
+
+### Linux ↔ ESPHome
+
+Both use **External connector** mode. In **Settings > Devices & services > Huawei EMMA
+Management > Configure**, replace the connector host, port, and API token, then reload
+or restart the integration. Use the ESP32 **Wi-Fi** IP with port `8088` for ESPHome, or
+the Linux host with port `8088` for the standalone connector.
+
+Point FusionSolar/EMMA to the selected connector's TLS address on port `16100`: the
+ESP32 **W5500/ETH1** IP for ESPHome, or the Linux host IP for standalone Python. Stop
+the old external connector after the new one is receiving data so EMMA has one active
+management endpoint.
+
+### Home Assistant embedded ↔ external connector
+
+Remove and add the integration again, selecting the desired mode during setup. This is
+intentional: it prevents an accidental options edit from moving the Modbus/TLS control
+endpoint. The integration preserves stable entity unique IDs when EMMA serial and
+register names are unchanged; verify the discovered device and re-enable any optional
+entities after migration.
+
+Before changing FusionSolar, make sure EMMA trusts the CA for the new TLS listener and
+that its certificate SAN contains the exact configured IP address or DNS name. Confirm a
+successful TLS connection and API/state readback before retiring the old runtime.
+
 ## Development
 
 Run repository tests and generated-file validation:
