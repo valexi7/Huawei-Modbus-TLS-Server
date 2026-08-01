@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass, is_dataclass
 from enum import IntEnum
+import re
 from typing import Any
 
 from huawei_solar import register_names as rn
@@ -579,5 +580,7 @@ def _friendly_name(value: str) -> str:
     }
     text = value.replace("_", " ").title()
     for original, replacement in replacements.items():
-        text = text.replace(original, replacement)
+        # Acronyms are words, not arbitrary substrings: replacing ``Ac`` in
+        # ``Active`` previously produced the visible typo ``ACtive``.
+        text = re.sub(rf"\b{re.escape(original)}\b", replacement, text)
     return text

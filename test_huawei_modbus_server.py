@@ -454,6 +454,13 @@ class FrameTests(unittest.IsolatedAsyncioTestCase):
 
 
 class DecoderTests(unittest.TestCase):
+    def test_friendly_names_do_not_expand_ac_inside_active(self):
+        catalog = build_entity_catalog()
+        self.assertEqual(
+            catalog["active_power_built_in_energy"].name,
+            "Active Power Built In Energy",
+        )
+
     def test_compact_tou_json_supports_fourteen_periods(self):
         package_name = "_huawei_emma_tou_test"
         package = types.ModuleType(package_name)

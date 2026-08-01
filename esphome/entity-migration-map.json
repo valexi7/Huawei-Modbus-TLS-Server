@@ -1,7 +1,7 @@
 {
   "schema_version": 2,
   "connector_contract_version": 2,
-  "catalog_sha256": "3c88e768948cc37c27694dc21e5199bc434cfc29118fc2df970aaa8d07b6160f",
+  "catalog_sha256": "ee37dcdfd44f729458b8bafe77198af427173af4a121e8de5685d745213ab2bc",
   "source": {
     "python_module": "custom_components.huawei_emma_management.embedded_catalog",
     "contract_module": "custom_components.huawei_emma_management.connector_contract",
@@ -1645,7 +1645,7 @@
     },
     {
       "register_name": "inverter_active_power",
-      "name": "Inverter ACtive Power",
+      "name": "Inverter Active Power",
       "address": 30364,
       "length": 2,
       "platform": "sensor",
@@ -1673,7 +1673,7 @@
     },
     {
       "register_name": "realtime_max_active_capability",
-      "name": "Realtime Max ACtive Capability",
+      "name": "Realtime Max Active Capability",
       "address": 30366,
       "length": 2,
       "platform": "sensor",
@@ -2580,7 +2580,7 @@
     },
     {
       "register_name": "emma_external_meter_active_power",
-      "name": "EMMA External Meter ACtive Power",
+      "name": "EMMA External Meter Active Power",
       "address": 30520,
       "length": 2,
       "platform": "sensor",
@@ -2664,7 +2664,7 @@
     },
     {
       "register_name": "emma_external_meter_phase_a_active_power",
-      "name": "EMMA External Meter Phase A ACtive Power",
+      "name": "EMMA External Meter Phase A Active Power",
       "address": 30528,
       "length": 2,
       "platform": "sensor",
@@ -2692,7 +2692,7 @@
     },
     {
       "register_name": "emma_external_meter_phase_b_active_power",
-      "name": "EMMA External Meter Phase B ACtive Power",
+      "name": "EMMA External Meter Phase B Active Power",
       "address": 30530,
       "length": 2,
       "platform": "sensor",
@@ -2720,7 +2720,7 @@
     },
     {
       "register_name": "emma_external_meter_phase_c_active_power",
-      "name": "EMMA External Meter Phase C ACtive Power",
+      "name": "EMMA External Meter Phase C Active Power",
       "address": 30532,
       "length": 2,
       "platform": "sensor",
@@ -2748,7 +2748,7 @@
     },
     {
       "register_name": "emma_external_meter_total_active_energy",
-      "name": "EMMA External Meter Total ACtive Energy",
+      "name": "EMMA External Meter Total Active Energy",
       "address": 30534,
       "length": 4,
       "platform": "sensor",
@@ -2776,7 +2776,7 @@
     },
     {
       "register_name": "emma_external_meter_total_negative_active_energy",
-      "name": "EMMA External Meter Total Negative ACtive Energy",
+      "name": "EMMA External Meter Total Negative Active Energy",
       "address": 30542,
       "length": 4,
       "platform": "sensor",
@@ -2804,7 +2804,7 @@
     },
     {
       "register_name": "emma_external_meter_total_positive_active_energy",
-      "name": "EMMA External Meter Total Positive ACtive Energy",
+      "name": "EMMA External Meter Total Positive Active Energy",
       "address": 30550,
       "length": 4,
       "platform": "sensor",
@@ -3616,7 +3616,7 @@
     },
     {
       "register_name": "active_power_built_in_energy",
-      "name": "ACtive Power Built In Energy",
+      "name": "Active Power Built In Energy",
       "address": 31657,
       "length": 2,
       "platform": "sensor",
@@ -3700,7 +3700,7 @@
     },
     {
       "register_name": "phase_a_active_power_built_in_energy",
-      "name": "Phase A ACtive Power Built In Energy",
+      "name": "Phase A Active Power Built In Energy",
       "address": 31665,
       "length": 2,
       "platform": "sensor",
@@ -3728,7 +3728,7 @@
     },
     {
       "register_name": "phase_b_active_power_built_in_energy",
-      "name": "Phase B ACtive Power Built In Energy",
+      "name": "Phase B Active Power Built In Energy",
       "address": 31667,
       "length": 2,
       "platform": "sensor",
@@ -3756,7 +3756,7 @@
     },
     {
       "register_name": "phase_c_active_power_built_in_energy",
-      "name": "Phase C ACtive Power Built In Energy",
+      "name": "Phase C Active Power Built In Energy",
       "address": 31669,
       "length": 2,
       "platform": "sensor",
@@ -3784,7 +3784,7 @@
     },
     {
       "register_name": "total_active_energy_built_in_energy",
-      "name": "Total ACtive Energy Built In Energy",
+      "name": "Total Active Energy Built In Energy",
       "address": 31671,
       "length": 4,
       "platform": "sensor",
@@ -3812,7 +3812,7 @@
     },
     {
       "register_name": "total_negative_active_energy_built_in_energy",
-      "name": "Total Negative ACtive Energy Built In Energy",
+      "name": "Total Negative Active Energy Built In Energy",
       "address": 31679,
       "length": 4,
       "platform": "sensor",
@@ -3840,7 +3840,7 @@
     },
     {
       "register_name": "total_positive_active_energy_built_in_energy",
-      "name": "Total Positive ACtive Energy Built In Energy",
+      "name": "Total Positive Active Energy Built In Energy",
       "address": 31687,
       "length": 4,
       "platform": "sensor",
@@ -4120,7 +4120,7 @@
     },
     {
       "register_name": "active_power_external_energy",
-      "name": "ACtive Power External Energy",
+      "name": "Active Power External Energy",
       "address": 31913,
       "length": 2,
       "platform": "sensor",
@@ -4204,7 +4204,7 @@
     },
     {
       "register_name": "phase_a_active_power_external_energy",
-      "name": "Phase A ACtive Power External Energy",
+      "name": "Phase A Active Power External Energy",
       "address": 31921,
       "length": 2,
       "platform": "sensor",
@@ -4232,7 +4232,7 @@
     },
     {
       "register_name": "phase_b_active_power_external_energy",
-      "name": "Phase B ACtive Power External Energy",
+      "name": "Phase B Active Power External Energy",
       "address": 31923,
       "length": 2,
       "platform": "sensor",
@@ -4260,7 +4260,7 @@
     },
     {
       "register_name": "phase_c_active_power_external_energy",
-      "name": "Phase C ACtive Power External Energy",
+      "name": "Phase C Active Power External Energy",
       "address": 31925,
       "length": 2,
       "platform": "sensor",
@@ -4288,7 +4288,7 @@
     },
     {
       "register_name": "total_active_energy_external_energy",
-      "name": "Total ACtive Energy External Energy",
+      "name": "Total Active Energy External Energy",
       "address": 31927,
       "length": 4,
       "platform": "sensor",
@@ -4316,7 +4316,7 @@
     },
     {
       "register_name": "total_negative_active_energy_external_energy",
-      "name": "Total Negative ACtive Energy External Energy",
+      "name": "Total Negative Active Energy External Energy",
       "address": 31935,
       "length": 4,
       "platform": "sensor",
@@ -4344,7 +4344,7 @@
     },
     {
       "register_name": "total_positive_active_energy_external_energy",
-      "name": "Total Positive ACtive Energy External Energy",
+      "name": "Total Positive Active Energy External Energy",
       "address": 31943,
       "length": 4,
       "platform": "sensor",
@@ -6220,7 +6220,7 @@
     },
     {
       "register_name": "day_active_power_peak",
-      "name": "Day ACtive Power Peak",
+      "name": "Day Active Power Peak",
       "address": 32078,
       "length": 2,
       "platform": "sensor",
@@ -6248,7 +6248,7 @@
     },
     {
       "register_name": "active_power",
-      "name": "ACtive Power",
+      "name": "Active Power",
       "address": 32080,
       "length": 2,
       "platform": "sensor",
@@ -6556,7 +6556,7 @@
     },
     {
       "register_name": "active_power_fast",
-      "name": "ACtive Power Fast",
+      "name": "Active Power Fast",
       "address": 32095,
       "length": 2,
       "platform": "sensor",
@@ -6584,7 +6584,7 @@
     },
     {
       "register_name": "accumulated_yield_energy",
-      "name": "ACcumulated Yield Energy",
+      "name": "Accumulated Yield Energy",
       "address": 32106,
       "length": 2,
       "platform": "sensor",
@@ -6780,7 +6780,7 @@
     },
     {
       "register_name": "latest_active_alarm_sn",
-      "name": "Latest ACtive Alarm Sn",
+      "name": "Latest Active Alarm Sn",
       "address": 32172,
       "length": 2,
       "platform": "sensor",
@@ -7116,7 +7116,7 @@
     },
     {
       "register_name": "cumulative_dc_energy_yield_mppt1",
-      "name": "Cumulative DC Energy Yield MPPt1",
+      "name": "Cumulative DC Energy Yield Mppt1",
       "address": 32212,
       "length": 2,
       "platform": "sensor",
@@ -7144,7 +7144,7 @@
     },
     {
       "register_name": "cumulative_dc_energy_yield_mppt2",
-      "name": "Cumulative DC Energy Yield MPPt2",
+      "name": "Cumulative DC Energy Yield Mppt2",
       "address": 32214,
       "length": 2,
       "platform": "sensor",
@@ -7172,7 +7172,7 @@
     },
     {
       "register_name": "cumulative_dc_energy_yield_mppt3",
-      "name": "Cumulative DC Energy Yield MPPt3",
+      "name": "Cumulative DC Energy Yield Mppt3",
       "address": 32216,
       "length": 2,
       "platform": "sensor",
@@ -7200,7 +7200,7 @@
     },
     {
       "register_name": "cumulative_dc_energy_yield_mppt4",
-      "name": "Cumulative DC Energy Yield MPPt4",
+      "name": "Cumulative DC Energy Yield Mppt4",
       "address": 32218,
       "length": 2,
       "platform": "sensor",
@@ -7228,7 +7228,7 @@
     },
     {
       "register_name": "cumulative_dc_energy_yield_mppt5",
-      "name": "Cumulative DC Energy Yield MPPt5",
+      "name": "Cumulative DC Energy Yield Mppt5",
       "address": 32220,
       "length": 2,
       "platform": "sensor",
@@ -7256,7 +7256,7 @@
     },
     {
       "register_name": "cumulative_dc_energy_yield_mppt6",
-      "name": "Cumulative DC Energy Yield MPPt6",
+      "name": "Cumulative DC Energy Yield Mppt6",
       "address": 32222,
       "length": 2,
       "platform": "sensor",
@@ -7284,7 +7284,7 @@
     },
     {
       "register_name": "cumulative_dc_energy_yield_mppt7",
-      "name": "Cumulative DC Energy Yield MPPt7",
+      "name": "Cumulative DC Energy Yield Mppt7",
       "address": 32224,
       "length": 2,
       "platform": "sensor",
@@ -7312,7 +7312,7 @@
     },
     {
       "register_name": "cumulative_dc_energy_yield_mppt8",
-      "name": "Cumulative DC Energy Yield MPPt8",
+      "name": "Cumulative DC Energy Yield Mppt8",
       "address": 32226,
       "length": 2,
       "platform": "sensor",
@@ -7340,7 +7340,7 @@
     },
     {
       "register_name": "cumulative_dc_energy_yield_mppt9",
-      "name": "Cumulative DC Energy Yield MPPt9",
+      "name": "Cumulative DC Energy Yield Mppt9",
       "address": 32228,
       "length": 2,
       "platform": "sensor",
@@ -7368,7 +7368,7 @@
     },
     {
       "register_name": "cumulative_dc_energy_yield_mppt10",
-      "name": "Cumulative DC Energy Yield MPPt10",
+      "name": "Cumulative DC Energy Yield Mppt10",
       "address": 32230,
       "length": 2,
       "platform": "sensor",
@@ -7648,7 +7648,7 @@
     },
     {
       "register_name": "smartlogger_external_meter_active_power",
-      "name": "Smartlogger External Meter ACtive Power",
+      "name": "Smartlogger External Meter Active Power",
       "address": 32278,
       "length": 2,
       "platform": "sensor",
@@ -7704,7 +7704,7 @@
     },
     {
       "register_name": "smartlogger_external_meter_active_electricity",
-      "name": "Smartlogger External Meter ACtive Electricity",
+      "name": "Smartlogger External Meter Active Electricity",
       "address": 32282,
       "length": 2,
       "platform": "sensor",
@@ -7816,7 +7816,7 @@
     },
     {
       "register_name": "smartlogger_external_meter_positive_active_electricity",
-      "name": "Smartlogger External Meter Positive ACtive Electricity",
+      "name": "Smartlogger External Meter Positive Active Electricity",
       "address": 32289,
       "length": 2,
       "platform": "sensor",
@@ -7872,7 +7872,7 @@
     },
     {
       "register_name": "smartlogger_external_meter_electricity_in_positive_active_electricity_price_segment_1",
-      "name": "Smartlogger External Meter Electricity In Positive ACtive Electricity Price Segment 1",
+      "name": "Smartlogger External Meter Electricity In Positive Active Electricity Price Segment 1",
       "address": 32299,
       "length": 2,
       "platform": "sensor",
@@ -7900,7 +7900,7 @@
     },
     {
       "register_name": "smartlogger_external_meter_electricity_in_positive_active_electricity_price_segment_2",
-      "name": "Smartlogger External Meter Electricity In Positive ACtive Electricity Price Segment 2",
+      "name": "Smartlogger External Meter Electricity In Positive Active Electricity Price Segment 2",
       "address": 32301,
       "length": 2,
       "platform": "sensor",
@@ -7928,7 +7928,7 @@
     },
     {
       "register_name": "smartlogger_external_meter_electricity_in_positive_active_electricity_price_segment_3",
-      "name": "Smartlogger External Meter Electricity In Positive ACtive Electricity Price Segment 3",
+      "name": "Smartlogger External Meter Electricity In Positive Active Electricity Price Segment 3",
       "address": 32303,
       "length": 2,
       "platform": "sensor",
@@ -7956,7 +7956,7 @@
     },
     {
       "register_name": "smartlogger_external_meter_electricity_in_positive_active_electricity_price_segment_4",
-      "name": "Smartlogger External Meter Electricity In Positive ACtive Electricity Price Segment 4",
+      "name": "Smartlogger External Meter Electricity In Positive Active Electricity Price Segment 4",
       "address": 32305,
       "length": 2,
       "platform": "sensor",
@@ -7984,7 +7984,7 @@
     },
     {
       "register_name": "smartlogger_external_meter_electricity_in_negative_active_electricity_price_segment_1",
-      "name": "Smartlogger External Meter Electricity In Negative ACtive Electricity Price Segment 1",
+      "name": "Smartlogger External Meter Electricity In Negative Active Electricity Price Segment 1",
       "address": 32307,
       "length": 2,
       "platform": "sensor",
@@ -8012,7 +8012,7 @@
     },
     {
       "register_name": "smartlogger_external_meter_electricity_in_negative_active_electricity_price_segment_2",
-      "name": "Smartlogger External Meter Electricity In Negative ACtive Electricity Price Segment 2",
+      "name": "Smartlogger External Meter Electricity In Negative Active Electricity Price Segment 2",
       "address": 32309,
       "length": 2,
       "platform": "sensor",
@@ -8040,7 +8040,7 @@
     },
     {
       "register_name": "smartlogger_external_meter_electricity_in_negative_active_electricity_price_segment_3",
-      "name": "Smartlogger External Meter Electricity In Negative ACtive Electricity Price Segment 3",
+      "name": "Smartlogger External Meter Electricity In Negative Active Electricity Price Segment 3",
       "address": 32311,
       "length": 2,
       "platform": "sensor",
@@ -8068,7 +8068,7 @@
     },
     {
       "register_name": "smartlogger_external_meter_electricity_in_negative_active_electricity_price_segment_4",
-      "name": "Smartlogger External Meter Electricity In Negative ACtive Electricity Price Segment 4",
+      "name": "Smartlogger External Meter Electricity In Negative Active Electricity Price Segment 4",
       "address": 32313,
       "length": 2,
       "platform": "sensor",
@@ -8376,7 +8376,7 @@
     },
     {
       "register_name": "smartlogger_external_meter_phase_a_active_power",
-      "name": "Smartlogger External Meter Phase A ACtive Power",
+      "name": "Smartlogger External Meter Phase A Active Power",
       "address": 32335,
       "length": 2,
       "platform": "sensor",
@@ -8404,7 +8404,7 @@
     },
     {
       "register_name": "smartlogger_external_meter_phase_b_active_power",
-      "name": "Smartlogger External Meter Phase B ACtive Power",
+      "name": "Smartlogger External Meter Phase B Active Power",
       "address": 32337,
       "length": 2,
       "platform": "sensor",
@@ -8432,7 +8432,7 @@
     },
     {
       "register_name": "smartlogger_external_meter_phase_c_active_power",
-      "name": "Smartlogger External Meter Phase C ACtive Power",
+      "name": "Smartlogger External Meter Phase C Active Power",
       "address": 32339,
       "length": 2,
       "platform": "sensor",
@@ -8460,7 +8460,7 @@
     },
     {
       "register_name": "smartlogger_external_meter_total_active_electricity",
-      "name": "Smartlogger External Meter Total ACtive Electricity",
+      "name": "Smartlogger External Meter Total Active Electricity",
       "address": 32341,
       "length": 4,
       "platform": "sensor",
@@ -8516,7 +8516,7 @@
     },
     {
       "register_name": "smartlogger_external_meter_negative_active_electricity",
-      "name": "Smartlogger External Meter Negative ACtive Electricity",
+      "name": "Smartlogger External Meter Negative Active Electricity",
       "address": 32349,
       "length": 4,
       "platform": "sensor",
@@ -8572,7 +8572,7 @@
     },
     {
       "register_name": "smartlogger_external_meter_positive_active_electricity_total",
-      "name": "Smartlogger External Meter Positive ACtive Electricity Total",
+      "name": "Smartlogger External Meter Positive Active Electricity Total",
       "address": 32357,
       "length": 4,
       "platform": "sensor",
@@ -8908,7 +8908,7 @@
     },
     {
       "register_name": "phase_a_dc_component_dci",
-      "name": "Phase A DC Component DCi",
+      "name": "Phase A DC Component Dci",
       "address": 35038,
       "length": 1,
       "platform": "sensor",
@@ -8936,7 +8936,7 @@
     },
     {
       "register_name": "phase_b_dc_component_dci",
-      "name": "Phase B DC Component DCi",
+      "name": "Phase B DC Component Dci",
       "address": 35039,
       "length": 1,
       "platform": "sensor",
@@ -8964,7 +8964,7 @@
     },
     {
       "register_name": "phase_c_dc_component_dci",
-      "name": "Phase C DC Component DCi",
+      "name": "Phase C DC Component Dci",
       "address": 35040,
       "length": 1,
       "platform": "sensor",
@@ -9104,7 +9104,7 @@
     },
     {
       "register_name": "sdongle_wireless_route_access_signal_strength",
-      "name": "Sdongle Wireless Route ACcess Signal Strength",
+      "name": "Sdongle Wireless Route Access Signal Strength",
       "address": 35104,
       "length": 1,
       "platform": "sensor",
@@ -9370,7 +9370,7 @@
     },
     {
       "register_name": "active_power_adjustment_mode",
-      "name": "ACtive Power Adjustment Mode",
+      "name": "Active Power Adjustment Mode",
       "address": 35300,
       "length": 1,
       "platform": "sensor",
@@ -9398,7 +9398,7 @@
     },
     {
       "register_name": "active_power_adjustment_value",
-      "name": "ACtive Power Adjustment Value",
+      "name": "Active Power Adjustment Value",
       "address": 35301,
       "length": 2,
       "platform": "sensor",
@@ -9426,7 +9426,7 @@
     },
     {
       "register_name": "active_power_adjustment_command",
-      "name": "ACtive Power Adjustment Command",
+      "name": "Active Power Adjustment Command",
       "address": 35303,
       "length": 1,
       "platform": "sensor",
@@ -9650,7 +9650,7 @@
         {
           "value": 8,
           "key": "remote_scheduling_full_internet_access",
-          "label": "Remote Scheduling Full Internet ACcess"
+          "label": "Remote Scheduling Full Internet Access"
         },
         {
           "value": 9,
@@ -9905,7 +9905,7 @@
     },
     {
       "register_name": "storage_unit_1_dcdc_version",
-      "name": "Storage Unit 1 DCdc Version",
+      "name": "Storage Unit 1 Dcdc Version",
       "address": 37026,
       "length": 10,
       "platform": "sensor",
@@ -10224,7 +10224,7 @@
     },
     {
       "register_name": "active_grid_A_current",
-      "name": "ACtive Grid A Current",
+      "name": "Active Grid A Current",
       "address": 37107,
       "length": 2,
       "platform": "sensor",
@@ -10252,7 +10252,7 @@
     },
     {
       "register_name": "active_grid_B_current",
-      "name": "ACtive Grid B Current",
+      "name": "Active Grid B Current",
       "address": 37109,
       "length": 2,
       "platform": "sensor",
@@ -10280,7 +10280,7 @@
     },
     {
       "register_name": "active_grid_C_current",
-      "name": "ACtive Grid C Current",
+      "name": "Active Grid C Current",
       "address": 37111,
       "length": 2,
       "platform": "sensor",
@@ -10308,7 +10308,7 @@
     },
     {
       "register_name": "power_meter_active_power",
-      "name": "Power Meter ACtive Power",
+      "name": "Power Meter Active Power",
       "address": 37113,
       "length": 2,
       "platform": "sensor",
@@ -10364,7 +10364,7 @@
     },
     {
       "register_name": "active_grid_power_factor",
-      "name": "ACtive Grid Power Factor",
+      "name": "Active Grid Power Factor",
       "address": 37117,
       "length": 1,
       "platform": "sensor",
@@ -10392,7 +10392,7 @@
     },
     {
       "register_name": "active_grid_frequency",
-      "name": "ACtive Grid Frequency",
+      "name": "Active Grid Frequency",
       "address": 37118,
       "length": 1,
       "platform": "sensor",
@@ -10448,7 +10448,7 @@
     },
     {
       "register_name": "grid_accumulated_energy",
-      "name": "Grid ACcumulated Energy",
+      "name": "Grid Accumulated Energy",
       "address": 37121,
       "length": 2,
       "platform": "sensor",
@@ -10476,7 +10476,7 @@
     },
     {
       "register_name": "grid_accumulated_reactive_power",
-      "name": "Grid ACcumulated Reactive Power",
+      "name": "Grid Accumulated Reactive Power",
       "address": 37123,
       "length": 2,
       "platform": "sensor",
@@ -10543,7 +10543,7 @@
     },
     {
       "register_name": "active_grid_A_B_voltage",
-      "name": "ACtive Grid A B Voltage",
+      "name": "Active Grid A B Voltage",
       "address": 37126,
       "length": 2,
       "platform": "sensor",
@@ -10571,7 +10571,7 @@
     },
     {
       "register_name": "active_grid_B_C_voltage",
-      "name": "ACtive Grid B C Voltage",
+      "name": "Active Grid B C Voltage",
       "address": 37128,
       "length": 2,
       "platform": "sensor",
@@ -10599,7 +10599,7 @@
     },
     {
       "register_name": "active_grid_C_A_voltage",
-      "name": "ACtive Grid C A Voltage",
+      "name": "Active Grid C A Voltage",
       "address": 37130,
       "length": 2,
       "platform": "sensor",
@@ -10627,7 +10627,7 @@
     },
     {
       "register_name": "active_grid_A_power",
-      "name": "ACtive Grid A Power",
+      "name": "Active Grid A Power",
       "address": 37132,
       "length": 2,
       "platform": "sensor",
@@ -10655,7 +10655,7 @@
     },
     {
       "register_name": "active_grid_B_power",
-      "name": "ACtive Grid B Power",
+      "name": "Active Grid B Power",
       "address": 37134,
       "length": 2,
       "platform": "sensor",
@@ -10683,7 +10683,7 @@
     },
     {
       "register_name": "active_grid_C_power",
-      "name": "ACtive Grid C Power",
+      "name": "Active Grid C Power",
       "address": 37136,
       "length": 2,
       "platform": "sensor",
@@ -11100,7 +11100,7 @@
     },
     {
       "register_name": "sdongle_total_active_power",
-      "name": "Sdongle Total ACtive Power",
+      "name": "Sdongle Total Active Power",
       "address": 37516,
       "length": 2,
       "platform": "sensor",
@@ -14381,7 +14381,7 @@
         {
           "value": 1,
           "key": "di_active_scheduling",
-          "label": "Di ACtive Scheduling"
+          "label": "Di Active Scheduling"
         },
         {
           "value": 5,
@@ -14619,7 +14619,7 @@
     },
     {
       "register_name": "active_power_percentage_derating",
-      "name": "ACtive Power Percentage Derating",
+      "name": "Active Power Percentage Derating",
       "address": 40125,
       "length": 1,
       "platform": "sensor",
@@ -14647,7 +14647,7 @@
     },
     {
       "register_name": "active_power_fixed_value_derating",
-      "name": "ACtive Power Fixed Value Derating",
+      "name": "Active Power Fixed Value Derating",
       "address": 40126,
       "length": 2,
       "platform": "sensor",
@@ -15207,7 +15207,7 @@
     },
     {
       "register_name": "smartlogger_active_pv_power_adjustment_in_fixed_value",
-      "name": "Smartlogger ACtive PV Power Adjustment In Fixed Value",
+      "name": "Smartlogger Active PV Power Adjustment In Fixed Value",
       "address": 40378,
       "length": 2,
       "platform": "sensor",
@@ -15235,7 +15235,7 @@
     },
     {
       "register_name": "smartlogger_active_pv_power_adjustment_in_percentage",
-      "name": "Smartlogger ACtive PV Power Adjustment In Percentage",
+      "name": "Smartlogger Active PV Power Adjustment In Percentage",
       "address": 40380,
       "length": 1,
       "platform": "sensor",
@@ -15263,7 +15263,7 @@
     },
     {
       "register_name": "smartlogger_active_ess_power_adjustment_in_fixed_value",
-      "name": "Smartlogger ACtive ESS Power Adjustment In Fixed Value",
+      "name": "Smartlogger Active ESS Power Adjustment In Fixed Value",
       "address": 40381,
       "length": 2,
       "platform": "sensor",
@@ -15291,7 +15291,7 @@
     },
     {
       "register_name": "smartlogger_active_ess_power_adjustment_in_percentage",
-      "name": "Smartlogger ACtive ESS Power Adjustment In Percentage",
+      "name": "Smartlogger Active ESS Power Adjustment In Percentage",
       "address": 40383,
       "length": 1,
       "platform": "sensor",
@@ -15375,7 +15375,7 @@
     },
     {
       "register_name": "smartlogger_active_pv_power",
-      "name": "Smartlogger ACtive PV Power",
+      "name": "Smartlogger Active PV Power",
       "address": 40388,
       "length": 2,
       "platform": "sensor",
@@ -15431,7 +15431,7 @@
     },
     {
       "register_name": "smartlogger_active_ess_power",
-      "name": "Smartlogger ACtive ESS Power",
+      "name": "Smartlogger Active ESS Power",
       "address": 40392,
       "length": 2,
       "platform": "sensor",
@@ -15543,7 +15543,7 @@
     },
     {
       "register_name": "smartlogger_maximum_active_pv_power_adjustment_value",
-      "name": "Smartlogger Maximum ACtive PV Power Adjustment Value",
+      "name": "Smartlogger Maximum Active PV Power Adjustment Value",
       "address": 40400,
       "length": 2,
       "platform": "sensor",
@@ -15683,7 +15683,7 @@
     },
     {
       "register_name": "smartlogger_minimum_active_power_adjustment_value",
-      "name": "Smartlogger Minimum ACtive Power Adjustment Value",
+      "name": "Smartlogger Minimum Active Power Adjustment Value",
       "address": 40412,
       "length": 2,
       "platform": "sensor",
@@ -15711,7 +15711,7 @@
     },
     {
       "register_name": "smartlogger_active_power_adjustment",
-      "name": "Smartlogger ACtive Power Adjustment",
+      "name": "Smartlogger Active Power Adjustment",
       "address": 40420,
       "length": 2,
       "platform": "sensor",
@@ -15767,7 +15767,7 @@
     },
     {
       "register_name": "smartlogger_active_power_adjustment_target",
-      "name": "Smartlogger ACtive Power Adjustment Target",
+      "name": "Smartlogger Active Power Adjustment Target",
       "address": 40424,
       "length": 2,
       "platform": "sensor",
@@ -15823,7 +15823,7 @@
     },
     {
       "register_name": "smartlogger_active_power_adjustment_in_percentage",
-      "name": "Smartlogger ACtive Power Adjustment In Percentage",
+      "name": "Smartlogger Active Power Adjustment In Percentage",
       "address": 40428,
       "length": 1,
       "platform": "sensor",
@@ -15879,7 +15879,7 @@
     },
     {
       "register_name": "smartlogger_active_power_adjustment_highest_priority",
-      "name": "Smartlogger ACtive Power Adjustment Highest Priority",
+      "name": "Smartlogger Active Power Adjustment Highest Priority",
       "address": 40430,
       "length": 2,
       "platform": "sensor",
@@ -16551,7 +16551,7 @@
     },
     {
       "register_name": "smartlogger_active_power",
-      "name": "Smartlogger ACtive Power",
+      "name": "Smartlogger Active Power",
       "address": 40525,
       "length": 2,
       "platform": "sensor",
@@ -17149,7 +17149,7 @@
     },
     {
       "register_name": "smartlogger_active_alarm_sequence_number",
-      "name": "Smartlogger ACtive Alarm Sequence Number",
+      "name": "Smartlogger Active Alarm Sequence Number",
       "address": 40568,
       "length": 2,
       "platform": "sensor",
@@ -17513,7 +17513,7 @@
     },
     {
       "register_name": "smartlogger_maximum_active_power_adjustment_value",
-      "name": "Smartlogger Maximum ACtive Power Adjustment Value",
+      "name": "Smartlogger Maximum Active Power Adjustment Value",
       "address": 40697,
       "length": 2,
       "platform": "sensor",
@@ -17653,7 +17653,7 @@
     },
     {
       "register_name": "smartlogger_fast_device_access",
-      "name": "Smartlogger Fast Device ACcess",
+      "name": "Smartlogger Fast Device Access",
       "address": 40724,
       "length": 1,
       "platform": "sensor",
@@ -17709,7 +17709,7 @@
     },
     {
       "register_name": "smartlogger_device_access_status",
-      "name": "Smartlogger Device ACcess Status",
+      "name": "Smartlogger Device Access Status",
       "address": 40736,
       "length": 1,
       "platform": "sensor",
@@ -17737,7 +17737,7 @@
     },
     {
       "register_name": "smartlogger_active_power_control_mode",
-      "name": "Smartlogger ACtive Power Control Mode",
+      "name": "Smartlogger Active Power Control Mode",
       "address": 40737,
       "length": 1,
       "platform": "sensor",
@@ -17765,7 +17765,7 @@
     },
     {
       "register_name": "smartlogger_active_power_scheduling_target_value",
-      "name": "Smartlogger ACtive Power Scheduling Target Value",
+      "name": "Smartlogger Active Power Scheduling Target Value",
       "address": 40738,
       "length": 2,
       "platform": "sensor",
@@ -17948,7 +17948,7 @@
     },
     {
       "register_name": "smartlogger_active_power_scheduling_in_percentage",
-      "name": "Smartlogger ACtive Power Scheduling In Percentage",
+      "name": "Smartlogger Active Power Scheduling In Percentage",
       "address": 40802,
       "length": 2,
       "platform": "sensor",
@@ -18092,7 +18092,7 @@
     },
     {
       "register_name": "smartlogger_active_power_control_mode_plant",
-      "name": "Smartlogger ACtive Power Control Mode Plant",
+      "name": "Smartlogger Active Power Control Mode Plant",
       "address": 41889,
       "length": 1,
       "platform": "sensor",
@@ -18540,7 +18540,7 @@
     },
     {
       "register_name": "mppt_multimodal_scanning",
-      "name": "MPPt Multimodal Scanning",
+      "name": "Mppt Multimodal Scanning",
       "address": 42054,
       "length": 1,
       "platform": "switch",
@@ -18568,7 +18568,7 @@
     },
     {
       "register_name": "mppt_scanning_interval",
-      "name": "MPPt Scanning Interval",
+      "name": "Mppt Scanning Interval",
       "address": 42055,
       "length": 1,
       "platform": "sensor",
@@ -18596,7 +18596,7 @@
     },
     {
       "register_name": "mppt_predicted_power",
-      "name": "MPPt Predicted Power",
+      "name": "Mppt Predicted Power",
       "address": 42056,
       "length": 2,
       "platform": "sensor",
@@ -18652,7 +18652,7 @@
     },
     {
       "register_name": "maximum_active_power",
-      "name": "Maximum ACtive Power",
+      "name": "Maximum Active Power",
       "address": 42178,
       "length": 2,
       "platform": "sensor",
@@ -18708,7 +18708,7 @@
     },
     {
       "register_name": "smartlogger_the_active_power_gradient_register",
-      "name": "Smartlogger The ACtive Power Gradient Register",
+      "name": "Smartlogger The Active Power Gradient Register",
       "address": 42728,
       "length": 2,
       "platform": "sensor",
@@ -20599,7 +20599,7 @@
     },
     {
       "register_name": "active_power_control_mode",
-      "name": "ACtive Power Control Mode",
+      "name": "Active Power Control Mode",
       "address": 47415,
       "length": 1,
       "platform": "select",
@@ -20622,7 +20622,7 @@
         {
           "value": 1,
           "key": "di_active_scheduling",
-          "label": "Di ACtive Scheduling"
+          "label": "Di Active Scheduling"
         },
         {
           "value": 5,
@@ -20886,7 +20886,7 @@
     },
     {
       "register_name": "default_active_power_change_gradient",
-      "name": "Default ACtive Power Change Gradient",
+      "name": "Default Active Power Change Gradient",
       "address": 47677,
       "length": 2,
       "platform": "sensor",
@@ -21105,7 +21105,7 @@
         {
           "value": 1,
           "key": "active_capacity_control",
-          "label": "ACtive Capacity Control"
+          "label": "Active Capacity Control"
         },
         {
           "value": 2,
