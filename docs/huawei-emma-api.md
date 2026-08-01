@@ -1,6 +1,6 @@
 # Huawei EMMA external control API
 
-The Home Assistant integration registers five actions intended for authenticated external
+The Home Assistant integration registers six actions intended for authenticated external
 controllers:
 
 - `huawei_emma.read_controls` discovers controls currently exposed as safe and writable.
@@ -8,6 +8,8 @@ controllers:
   the connector.
 - `huawei_emma.set_tou_periods` replaces the TOU schedule from LUNA text or structured
   periods.
+- `huawei_emma.read_tou_periods` returns native EMMA `emma_tou_periods` data and its
+  connector-poll timestamp, without Growatt/BESS conversion.
 - `huawei_emma.read_time_segments` returns the nine-slot BESS-compatible schedule.
 - `huawei_emma.update_time_segment` updates one BESS-compatible schedule slot.
 
@@ -78,8 +80,16 @@ Home Assistant wraps the result in `service_response`:
   "changed_states": [],
   "service_response": {
     "device": {
+      "device_id": "0123456789abcdef0123456789abcdef",
+      "name": "Huawei EMMA-A02",
       "model": "EMMA-A02",
-      "serial_number": "TESTEMMA0001"
+      "serial_number": "TESTEMMA0001",
+      "firmware_version": "V100R025C00SPC115",
+      "config_entry_id": "0123456789abcdef0123456789abcdef"
+    },
+    "active_tou": {
+      "luna_text": "00:00-23:59/1234567/-",
+      "periods": [{"start_time": 0, "end_time": 1439, "action": "discharge", "days": [true, true, true, true, true, true, true]}]
     },
     "accept_external_growatt_controls": true,
     "controls": [
@@ -103,6 +113,22 @@ Home Assistant wraps the result in `service_response`:
 
 Use the returned `register_name` in write requests. Limits and options reflect the live
 catalog and should be preferred over hard-coded values.
+
+## Read native EMMA TOU schedule
+
+Use this action when you need the schedule as EMMA reported it, rather than the
+Growatt/BESS nine-slot compatibility view:
+
+```yaml
+action: huawei_emma.read_tou_periods
+data: {}
+response_variable: emma_tou
+```
+
+The result contains the native period list, LUNA-text representation, resolved device,
+and `updated_at`: the most recent timestamp at which the connector polled
+`emma_tou_periods` from EMMA. It deliberately does not contain disabled placeholder
+slots.
 
 ## Write a value
 

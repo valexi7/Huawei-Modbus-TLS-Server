@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.14.5
+
+- Add `huawei_emma.read_tou_periods` to return native EMMA TOU register data, its
+  connector-poll timestamp, and device metadata without Growatt/BESS slot conversion.
+
+## 0.14.4
+
+- Include resolved Home Assistant device metadata and active EMMA TOU readback in the
+  `huawei_emma.read_controls` response for straightforward action/API testing.
+
 ## 0.14.3
 
 - Make **Fill example data** choose only the LUNA text TOU input, preventing its

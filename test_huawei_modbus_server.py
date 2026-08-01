@@ -104,11 +104,15 @@ class RepositoryContractTests(unittest.TestCase):
         ).read_text(encoding="utf-8")
         self.assertIn('"structured_periods"', source)
         self.assertIn('"read_time_segments"', source)
+        self.assertIn('"read_tou_periods"', source)
         self.assertIn('"update_time_segment"', source)
         self.assertIn("_set_huawei_service_schemas(hass)", source)
         self.assertIn('vol.Optional("device_id")', source)
         self.assertIn('device_field["example"] = parent_device_ids[0]', source)
         self.assertIn('"00:00-03:59/1234567/+\\n"', source)
+        self.assertIn('"active_tou"', source)
+        self.assertIn("_device_response_metadata", source)
+        self.assertIn('"native_emma_connector_poll"', source)
         services = Path(
             "custom_components/huawei_emma_management/services.yaml"
         ).read_text(encoding="utf-8")

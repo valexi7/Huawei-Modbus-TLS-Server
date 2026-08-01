@@ -249,6 +249,20 @@ data:
   device_id: 1ef2da1cca18dcec9ee5a4db36ac9800
 ```
 
+The response includes the resolved Home Assistant device ID, device name/model/serial,
+and the active EMMA TOU schedule in both structured and LUNA text forms. This is useful
+for validating automations without guessing which device a no-`device_id` action used.
+
+Read only the native EMMA TOU register, without BESS/Growatt conversion:
+
+```yaml
+action: huawei_emma.read_tou_periods
+data: {}
+response_variable: emma_tou
+```
+
+The response includes `updated_at`, the time of the connector's most recent EMMA poll.
+
 Write a safe mapped register:
 
 ```yaml

@@ -52,6 +52,7 @@ _HUAWEI_API_SERVICE_NAMES = (
     "read_controls",
     "set_value",
     "set_tou_periods",
+    "read_tou_periods",
     "read_time_segments",
     "update_time_segment",
 )
@@ -167,6 +168,15 @@ def _set_huawei_service_schemas(hass: HomeAssistant) -> None:
                     "selector": {"object": {}},
                 },
             },
+        },
+        "read_tou_periods": {
+            "name": "Read native EMMA TOU periods",
+            "description": (
+                "Return the native emma_tou_periods register from the latest "
+                "EMMA connector poll. This is not the nine-slot Growatt/BESS "
+                "compatibility projection."
+            ),
+            "fields": {"device_id": device_field},
         },
         "read_time_segments": {
             "name": "Read EMMA time segments",
@@ -417,6 +427,27 @@ def _configured_parent_device_ids(hass: HomeAssistant) -> list[str]:
     ]
 
 
+def _device_response_metadata(
+    hass: HomeAssistant, coordinator: EmmaCoordinator
+) -> dict[str, Any]:
+    """Return stable, human-readable metadata for action/API diagnostics."""
+    device_id = _parent_device_id_for_coordinator(hass, coordinator)
+    device = dr.async_get(hass).async_get(device_id) if device_id else None
+    model = coordinator.device_data.get("model") or "EMMA"
+    return {
+        "device_id": device_id,
+        "name": (
+            (device.name_by_user or device.name)
+            if device is not None
+            else f"Huawei {model}"
+        ),
+        "model": model,
+        "serial_number": coordinator.device_data.get("serial_number"),
+        "firmware_version": coordinator.device_data.get("sw_version"),
+        "config_entry_id": coordinator.entry_id,
+    }
+
+
 def _coordinator_for_call(hass: HomeAssistant, call: ServiceCall) -> EmmaCoordinator:
     device_id = call.data.get("device_id")
     if device_id:
@@ -626,10 +657,18 @@ def _async_register_services(hass: HomeAssistant) -> None:
         await _require_external_api_admin(hass, call)
         target = _coordinator_for_call(hass, call)
         controls = _external_controls(target)
+        active_periods = (
+            target.data.get("values", {}).get(TOU_REGISTER_NAME)
+            if target.data
+            else []
+        )
+        if not isinstance(active_periods, list):
+            active_periods = []
         result = {
-            "device": {
-                "model": target.device_data.get("model"),
-                "serial_number": target.device_data.get("serial_number"),
+            "device": _device_response_metadata(hass, target),
+            "active_tou": {
+                "periods": active_periods,
+                "luna_text": encode_luna_tou_periods(active_periods),
             },
             "accept_external_growatt_controls": (
                 target.accept_external_growatt_controls
@@ -641,6 +680,43 @@ def _async_register_services(hass: HomeAssistant) -> None:
             call.domain,
             call.service,
             len(controls),
+        )
+        return result
+
+    async def read_tou_periods(call: ServiceCall) -> dict[str, Any]:
+        """Return native EMMA TOU data, never Growatt compatibility slots."""
+        _LOGGER.debug(
+            "API received domain=%s service=%s user_id=%s device_id=%s "
+            "action=read_native_tou",
+            call.domain,
+            call.service,
+            call.context.user_id,
+            call.data.get("device_id", "auto"),
+        )
+        await _require_external_api_admin(hass, call)
+        target = _coordinator_for_call(hass, call)
+        try:
+            await target.async_request_refresh()
+        except UpdateFailed as error:
+            raise ServiceValidationError(str(error)) from error
+        data = target.data or {}
+        periods = data.get("values", {}).get(TOU_REGISTER_NAME)
+        if not isinstance(periods, list):
+            periods = []
+        result = {
+            "device": _device_response_metadata(hass, target),
+            "register_name": TOU_REGISTER_NAME,
+            "source": "native_emma_connector_poll",
+            "updated_at": data.get("updated_at", {}).get(TOU_REGISTER_NAME),
+            "periods": periods,
+            "luna_text": encode_luna_tou_periods(periods),
+        }
+        _LOGGER.debug(
+            "API completed domain=%s service=%s native_periods=%s updated_at=%s",
+            call.domain,
+            call.service,
+            len(periods),
+            result["updated_at"],
         )
         return result
 
@@ -910,6 +986,13 @@ def _async_register_services(hass: HomeAssistant) -> None:
             )
             hass.services.async_register(
                 HUAWEI_EXTERNAL_API_DOMAIN,
+                "read_tou_periods",
+                read_tou_periods,
+                schema=huawei_read_schema,
+                supports_response=SupportsResponse.ONLY,
+            )
+            hass.services.async_register(
+                HUAWEI_EXTERNAL_API_DOMAIN,
                 "read_time_segments",
                 read_time_segments,
                 schema=huawei_read_schema,
@@ -924,7 +1007,8 @@ def _async_register_services(hass: HomeAssistant) -> None:
             hass.data[_HUAWEI_API_OWNER] = True
             _LOGGER.info(
                 "Registered authenticated huawei_emma read_controls/set_value/"
-                "set_tou_periods/read_time_segments/update_time_segment API"
+                "set_tou_periods/read_tou_periods/read_time_segments/"
+                "update_time_segment API"
             )
     if hass.data.get(_HUAWEI_API_OWNER):
         # Refresh installation-specific device examples when entries are added.
