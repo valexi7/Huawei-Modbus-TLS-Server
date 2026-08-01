@@ -106,6 +106,7 @@ class RepositoryContractTests(unittest.TestCase):
         ).read_text(encoding="utf-8")
         self.assertIn('"structured_periods"', source)
         self.assertIn('"read_time_segments"', source)
+        self.assertIn('"read_value"', source)
         self.assertIn('"read_tou_periods"', source)
         self.assertIn('"update_time_segment"', source)
         self.assertIn("_set_huawei_service_schemas(hass)", source)
@@ -117,6 +118,8 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertIn('"native_emma_connector_poll"', source)
         self.assertIn("EVENT_ENTITY_REGISTRY_UPDATED", source)
         self.assertIn("async_sync_polling_subscriptions", source)
+        self.assertIn("external_read_value_schema", source)
+        self.assertIn('"source_register_name": source_register', source)
         services = Path(
             "custom_components/huawei_emma_management/services.yaml"
         ).read_text(encoding="utf-8")

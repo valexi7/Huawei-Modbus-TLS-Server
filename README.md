@@ -259,6 +259,19 @@ The response includes the resolved Home Assistant device ID, device name/model/s
 and the active EMMA TOU schedule in both structured and LUNA text forms. This is useful
 for validating automations without guessing which device a no-`device_id` action used.
 
+Read one mapped value:
+
+```yaml
+action: huawei_emma.read_value
+data:
+  device_id: 1ef2da1cca18dcec9ee5a4db36ac9800
+  register_name: storage_maximum_charging_power
+response_variable: emma_value
+```
+
+When exactly one EMMA entry is loaded, `device_id` may be omitted. **Fill example data**
+inserts the actual installation-specific device ID and the example register name.
+
 Read only the native EMMA TOU register, without BESS/Growatt conversion:
 
 ```yaml

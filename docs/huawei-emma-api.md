@@ -1,9 +1,11 @@
 # Huawei EMMA external control API
 
-The Home Assistant integration registers six actions intended for authenticated external
+The Home Assistant integration registers seven actions intended for authenticated external
 controllers:
 
 - `huawei_emma.read_controls` discovers controls currently exposed as safe and writable.
+- `huawei_emma.read_value` returns one mapped value with device, availability, unit,
+  poll group, and freshness metadata.
 - `huawei_emma.set_value` writes one exposed control and returns the value read back by
   the connector.
 - `huawei_emma.set_tou_periods` replaces the TOU schedule from LUNA text or structured
@@ -113,6 +115,21 @@ Home Assistant wraps the result in `service_response`:
 
 Use the returned `register_name` in write requests. Limits and options reflect the live
 catalog and should be preferred over hard-coded values.
+
+## Read one mapped value
+
+```yaml
+action: huawei_emma.read_value
+data:
+  device_id: 0123456789abcdef0123456789abcdef
+  register_name: storage_maximum_charging_power
+response_variable: emma_value
+```
+
+The response contains `value`, `available`, `updated_at`, `unit`, `platform`,
+`poll_group`, the resolved Home Assistant device, and the source register name. If only
+one Huawei EMMA entry is loaded, `device_id` may be omitted; **Fill example data** uses
+the entry's real registry ID automatically.
 
 ## Read native EMMA TOU schedule
 

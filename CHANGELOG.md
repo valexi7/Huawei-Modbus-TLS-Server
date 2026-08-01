@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.14.7
+
+- Add `huawei_emma.read_value` with automatic single-entry device resolution, dynamic
+  example device ID, and value/availability/unit/poll-timestamp response metadata.
+
 ## 0.14.6
 
 - Synchronize connector polling subscriptions immediately when a Home Assistant entity

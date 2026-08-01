@@ -56,6 +56,7 @@ _GROWATT_ALIAS_OWNER = f"{DOMAIN}_owns_growatt_aliases"
 _HUAWEI_API_OWNER = f"{DOMAIN}_owns_huawei_api"
 _HUAWEI_API_SERVICE_NAMES = (
     "read_controls",
+    "read_value",
     "set_value",
     "set_tou_periods",
     "read_tou_periods",
@@ -115,6 +116,22 @@ def _set_huawei_service_schemas(hass: HomeAssistant) -> None:
                 "Return all currently exposed writable controls, values, and limits."
             ),
             "fields": {"device_id": device_field},
+        },
+        "read_value": {
+            "name": "Read EMMA value",
+            "description": (
+                "Return one mapped register value from the latest connector "
+                "state, including availability and poll timestamp."
+            ),
+            "fields": {
+                "device_id": device_field,
+                "register_name": {
+                    "name": "Register name",
+                    "required": True,
+                    "example": "storage_maximum_charging_power",
+                    "selector": {"text": {}},
+                },
+            },
         },
         "set_value": {
             "name": "Set EMMA value",
@@ -533,6 +550,15 @@ def _writable_control(
     )
 
 
+def _catalog_description(
+    coordinator: EmmaCoordinator, register_name: str
+) -> dict[str, Any]:
+    for description in coordinator.entity_descriptions:
+        if description.get("register_name") == register_name:
+            return description
+    raise ServiceValidationError(f"Unknown mapped register: {register_name}")
+
+
 def _external_controls(coordinator: EmmaCoordinator) -> list[dict[str, Any]]:
     values = coordinator.data.get("values", {}) if coordinator.data else {}
     updated_at = coordinator.data.get("updated_at", {}) if coordinator.data else {}
@@ -762,6 +788,58 @@ def _async_register_services(hass: HomeAssistant) -> None:
         )
         return result
 
+    async def read_value(call: ServiceCall) -> dict[str, Any]:
+        """Return one mapped connector value with device and freshness metadata."""
+        register_name = call.data["register_name"]
+        _LOGGER.debug(
+            "API received domain=%s service=%s user_id=%s device_id=%s "
+            "register=%s action=read_value",
+            call.domain,
+            call.service,
+            call.context.user_id,
+            call.data.get("device_id", "auto"),
+            register_name,
+        )
+        await _require_external_api_admin(hass, call)
+        target = _coordinator_for_call(hass, call)
+        description = _catalog_description(target, register_name)
+        try:
+            await target.async_request_refresh()
+        except UpdateFailed as error:
+            raise ServiceValidationError(str(error)) from error
+        data = target.data or {}
+        values = data.get("values", {})
+        unsupported = set(data.get("unsupported", []))
+        connected = bool(data.get("health", {}).get("connected"))
+        source_register = description.get("source_register_name", register_name)
+        value_present = source_register in values
+        result = {
+            "device": _device_response_metadata(hass, target),
+            "register_name": register_name,
+            "source_register_name": source_register,
+            "name": description.get("name"),
+            "value": values.get(source_register),
+            "available": (
+                connected and source_register not in unsupported and value_present
+            ),
+            "updated_at": data.get("updated_at", {}).get(source_register),
+            "unit": description.get("unit"),
+            "platform": description.get("platform"),
+            "poll_group": description.get("poll_group"),
+            "unsupported": source_register in unsupported,
+        }
+        _LOGGER.debug(
+            "API completed domain=%s service=%s register=%s available=%s "
+            "value=%r updated_at=%s",
+            call.domain,
+            call.service,
+            register_name,
+            result["available"],
+            result["value"],
+            result["updated_at"],
+        )
+        return result
+
     async def set_external_value(call: ServiceCall) -> dict[str, Any]:
         _LOGGER.debug(
             "API received domain=%s service=%s user_id=%s device_id=%s "
@@ -927,6 +1005,15 @@ def _async_register_services(hass: HomeAssistant) -> None:
             }
         ),
     )
+    external_read_value_schema = _debug_schema(
+        "huawei_emma.read_value",
+        vol.Schema(
+            {
+                vol.Optional("device_id"): cv.string,
+                vol.Required("register_name"): cv.string,
+            }
+        ),
+    )
     luna_tou_schema = _debug_schema(
         "huawei_emma.set_tou_periods",
         vol.All(
@@ -1014,6 +1101,13 @@ def _async_register_services(hass: HomeAssistant) -> None:
             )
             hass.services.async_register(
                 HUAWEI_EXTERNAL_API_DOMAIN,
+                "read_value",
+                read_value,
+                schema=external_read_value_schema,
+                supports_response=SupportsResponse.ONLY,
+            )
+            hass.services.async_register(
+                HUAWEI_EXTERNAL_API_DOMAIN,
                 "set_value",
                 set_external_value,
                 schema=external_set_schema,
@@ -1048,7 +1142,8 @@ def _async_register_services(hass: HomeAssistant) -> None:
             )
             hass.data[_HUAWEI_API_OWNER] = True
             _LOGGER.info(
-                "Registered authenticated huawei_emma read_controls/set_value/"
+                "Registered authenticated huawei_emma read_controls/read_value/"
+                "set_value/"
                 "set_tou_periods/read_tou_periods/read_time_segments/"
                 "update_time_segment API"
             )
