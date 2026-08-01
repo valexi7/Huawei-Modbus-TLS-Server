@@ -15,10 +15,6 @@
 namespace esphome::huawei_emma_reverse {
 
 static const char *const TAG = "huawei_emma_reverse";
-static constexpr uint32_t FAST_POLL_MS = 30000;
-static constexpr uint32_t TOU_POLL_MS = 300000;
-static constexpr size_t MAX_MBAP_LENGTH = 512;
-
 void HuaweiEmmaReverse::setup() {
   ESP_LOGI(TAG, "Starting ESP32 Huawei EMMA reverse connector");
   this->tls_mutex_ = xSemaphoreCreateMutex();
@@ -41,6 +37,7 @@ void HuaweiEmmaReverse::setup() {
   }
   this->activity_output_->turn_off();
   this->connected_sensor_->publish_initial_state(false);
+  this->initialize_subscriptions_();
   if (!this->start_http_server_()) {
     this->mark_failed();
     return;
@@ -63,6 +60,8 @@ void HuaweiEmmaReverse::dump_config() {
   ESP_LOGCONFIG(TAG, "  Raw Modbus logging: %s", YESNO(this->log_raw_));
   ESP_LOGCONFIG(TAG, "  TLS certificate: embedded (%u bytes)", static_cast<unsigned>(this->certificate_.size()));
   ESP_LOGCONFIG(TAG, "  Activity LED: GPIO binary; timing-coded (RGB is not available on T-ETH-Elite)");
+  ESP_LOGCONFIG(TAG, "  Connector contract: v%u; generated catalog: %u registers", GENERATED_CONTRACT_VERSION,
+                static_cast<unsigned>(GENERATED_ENTITY_COUNT));
 }
 
 void HuaweiEmmaReverse::tls_task_entry_(void *parameter) {
@@ -150,6 +149,8 @@ bool HuaweiEmmaReverse::accept_tls_client_() {
     return false;
   }
   this->set_connected_(true);
+  this->connected_at_ms_ = millis();
+  this->reconnect_count_++;
   ESP_LOGI(TAG, "EMMA TLS client connected; ESP32 is now Modbus master");
   return true;
 }
@@ -181,20 +182,34 @@ void HuaweiEmmaReverse::tls_task_() {
     if (startup_ok)
       this->handle_unsolicited_(startup);
     this->discover_topology_();
-    this->poll_core_();
-    this->poll_tou_();
-    uint32_t next_fast = millis() + FAST_POLL_MS;
-    uint32_t next_tou = millis() + TOU_POLL_MS;
+    this->poll_group_("slow");
+    this->poll_group_("medium");
+    this->poll_group_("fast");
+    uint32_t next_fast = millis() + GENERATED_FAST_POLL_MS;
+    uint32_t next_medium = millis() + GENERATED_MEDIUM_POLL_MS;
+    uint32_t next_slow = millis() + GENERATED_SLOW_POLL_MS;
 
     while (this->connected_.load()) {
       const uint32_t now = millis();
-      if (static_cast<int32_t>(now - next_fast) >= 0) {
-        this->poll_core_();
-        next_fast = now + FAST_POLL_MS;
+      if (this->subscriptions_changed_.exchange(false)) {
+        this->poll_group_("slow");
+        this->poll_group_("medium");
+        this->poll_group_("fast");
+        next_fast = now + GENERATED_FAST_POLL_MS;
+        next_medium = now + GENERATED_MEDIUM_POLL_MS;
+        next_slow = now + GENERATED_SLOW_POLL_MS;
       }
-      if (static_cast<int32_t>(now - next_tou) >= 0) {
-        this->poll_tou_();
-        next_tou = now + TOU_POLL_MS;
+      if (static_cast<int32_t>(now - next_fast) >= 0) {
+        this->poll_group_("fast");
+        next_fast = now + GENERATED_FAST_POLL_MS;
+      }
+      if (static_cast<int32_t>(now - next_medium) >= 0) {
+        this->poll_group_("medium");
+        next_medium = now + GENERATED_MEDIUM_POLL_MS;
+      }
+      if (static_cast<int32_t>(now - next_slow) >= 0) {
+        this->poll_group_("slow");
+        next_slow = now + GENERATED_SLOW_POLL_MS;
       }
       vTaskDelay(pdMS_TO_TICKS(100));
     }
@@ -244,7 +259,7 @@ bool HuaweiEmmaReverse::read_frame_(ModbusFrame &frame) {
   frame.transaction = static_cast<uint16_t>(header[0] << 8 | header[1]);
   frame.protocol = static_cast<uint16_t>(header[2] << 8 | header[3]);
   uint16_t length = static_cast<uint16_t>(header[4] << 8 | header[5]);
-  if (length < 2 || length > MAX_MBAP_LENGTH) {
+  if (length < 2 || length > GENERATED_MAX_MBAP_LENGTH) {
     ESP_LOGW(TAG, "Rejected MBAP length %u", length);
     this->set_connected_(false);
     return false;
@@ -297,6 +312,8 @@ bool HuaweiEmmaReverse::request_(uint8_t unit, const std::vector<uint8_t> &pdu, 
 
 bool HuaweiEmmaReverse::read_registers_(uint8_t unit, uint16_t address, uint16_t count,
                                         std::vector<uint16_t> &values) {
+  if (count == 0 || count > GENERATED_MAX_READ_REGISTERS)
+    return false;
   std::vector<uint8_t> pdu{0x03, static_cast<uint8_t>(address >> 8), static_cast<uint8_t>(address),
                            static_cast<uint8_t>(count >> 8), static_cast<uint8_t>(count)};
   ModbusFrame response;
@@ -310,7 +327,7 @@ bool HuaweiEmmaReverse::read_registers_(uint8_t unit, uint16_t address, uint16_t
 }
 
 bool HuaweiEmmaReverse::write_registers_(uint8_t unit, uint16_t address, const std::vector<uint16_t> &values) {
-  if (values.empty() || values.size() > 123)
+  if (values.empty() || values.size() > GENERATED_MAX_WRITE_REGISTERS)
     return false;
   std::vector<uint8_t> pdu{0x10, static_cast<uint8_t>(address >> 8), static_cast<uint8_t>(address),
                            static_cast<uint8_t>(values.size() >> 8), static_cast<uint8_t>(values.size()),
@@ -321,6 +338,13 @@ bool HuaweiEmmaReverse::write_registers_(uint8_t unit, uint16_t address, const s
   }
   ModbusFrame response;
   return this->request_(unit, pdu, response) && response.pdu.size() == 5 && response.pdu[0] == 0x10;
+}
+
+bool HuaweiEmmaReverse::write_single_register_(uint8_t unit, uint16_t address, uint16_t value) {
+  std::vector<uint8_t> pdu{0x06, static_cast<uint8_t>(address >> 8), static_cast<uint8_t>(address),
+                           static_cast<uint8_t>(value >> 8), static_cast<uint8_t>(value)};
+  ModbusFrame response;
+  return this->request_(unit, pdu, response) && response.pdu == pdu;
 }
 
 void HuaweiEmmaReverse::handle_unsolicited_(const ModbusFrame &frame) {
@@ -414,54 +438,252 @@ void HuaweiEmmaReverse::discover_topology_() {
   ESP_LOGI(TAG, "Discovered %u Huawei topology devices", static_cast<unsigned>(devices.size()));
 }
 
-void HuaweiEmmaReverse::poll_core_() {
-  std::vector<uint16_t> registers;
-  xSemaphoreTake(this->tls_mutex_, portMAX_DELAY);
-  const bool ok = this->read_registers_(0, GENERATED_CORE_ADDRESS, GENERATED_CORE_COUNT, registers);
-  xSemaphoreGive(this->tls_mutex_);
-  if (!ok)
-    return;
-  xSemaphoreTake(this->data_mutex_, portMAX_DELAY);
-  for (size_t index = 0; index < GENERATED_CORE_ENTITY_COUNT; index++) {
-    const auto &metadata = GENERATED_ENTITIES[index];
-    const size_t offset = metadata.address - GENERATED_CORE_ADDRESS;
-    int64_t raw = 0;
-    if (metadata.value_type == GeneratedValueType::U16)
-      raw = registers[offset];
-    else if (metadata.value_type == GeneratedValueType::U32)
-      raw = u32_(registers[offset], registers[offset + 1]);
-    else if (metadata.value_type == GeneratedValueType::I32)
-      raw = i32_(registers[offset], registers[offset + 1]);
-    this->core_values_[index] = static_cast<double>(raw) / metadata.gain;
-    this->core_valid_[index] = true;
-  }
-  this->last_poll_ms_ = millis();
-  this->last_error_.clear();
-  xSemaphoreGive(this->data_mutex_);
-  ESP_LOGI(TAG, "EMMA core poll updated %u entities", static_cast<unsigned>(GENERATED_CORE_ENTITY_COUNT));
+void HuaweiEmmaReverse::initialize_subscriptions_() {
+  for (size_t index = 0; index < GENERATED_ENTITY_COUNT; index++)
+    this->values_[index].subscribed = GENERATED_ENTITIES[index].enabled_default;
 }
 
-void HuaweiEmmaReverse::poll_tou_() {
-  const auto &metadata = GENERATED_ENTITIES[GENERATED_CORE_ENTITY_COUNT];
+size_t HuaweiEmmaReverse::find_entity_(const std::string &name) const {
+  for (size_t index = 0; index < GENERATED_ENTITY_COUNT; index++)
+    if (name == GENERATED_ENTITIES[index].register_name)
+      return index;
+  return GENERATED_ENTITY_COUNT;
+}
+
+uint8_t HuaweiEmmaReverse::unit_for_role_(const char *role, bool &available) const {
+  if (std::strcmp(role, "emma") == 0 || role[0] == '\0') {
+    available = true;
+    return 0;
+  }
+  for (const auto &device : this->topology_) {
+    if (device.role == role) {
+      available = true;
+      return device.unit_id;
+    }
+  }
+  available = false;
+  return 0;
+}
+
+void HuaweiEmmaReverse::poll_group_(const char *group) {
+  size_t updated = 0;
+  const char *roles[] = {"emma", "inverter", "smartguard", "charger", "sdongle", "smartlogger"};
+  for (const char *role : roles) {
+    bool available = false;
+    uint8_t unit = this->unit_for_role_(role, available);
+    if (!available)
+      continue;
+    std::vector<size_t> indices;
+    xSemaphoreTake(this->data_mutex_, portMAX_DELAY);
+    for (size_t index = 0; index < GENERATED_ENTITY_COUNT; index++) {
+      const auto &metadata = GENERATED_ENTITIES[index];
+      if (this->values_[index].subscribed && !this->values_[index].unsupported &&
+          std::strcmp(metadata.poll_group, group) == 0 && std::strcmp(metadata.client_role, role) == 0)
+        indices.push_back(index);
+    }
+    xSemaphoreGive(this->data_mutex_);
+    size_t begin = 0;
+    while (begin < indices.size()) {
+      size_t end = begin + 1;
+      const auto &first = GENERATED_ENTITIES[indices[begin]];
+      uint32_t block_end = first.address + first.length;
+      const bool structured = first.value_type == GeneratedValueType::TOU_HUAWEI ||
+                              first.value_type == GeneratedValueType::TOU_LG ||
+                              first.value_type == GeneratedValueType::CHARGE_PERIODS ||
+                              first.value_type == GeneratedValueType::PEAK_PERIODS;
+      if (!structured) {
+        while (end < indices.size()) {
+          const auto &next = GENERATED_ENTITIES[indices[end]];
+          uint32_t candidate_end = next.address + next.length;
+          if (next.address > block_end || candidate_end - first.address > GENERATED_MAX_READ_REGISTERS)
+            break;
+          block_end = std::max(block_end, candidate_end);
+          end++;
+        }
+      }
+      this->poll_entity_batch_(unit, indices, begin, end);
+      updated += end - begin;
+      begin = end;
+    }
+  }
+  if (updated)
+    ESP_LOGI(TAG, "EMMA poll group=%s requested=%u", group, static_cast<unsigned>(updated));
+}
+
+void HuaweiEmmaReverse::poll_entity_batch_(uint8_t unit, const std::vector<size_t> &indices, size_t begin,
+                                           size_t end) {
+  const auto &first = GENERATED_ENTITIES[indices[begin]];
+  uint16_t block_end = first.address + first.length;
+  for (size_t position = begin + 1; position < end; position++) {
+    const auto &metadata = GENERATED_ENTITIES[indices[position]];
+    block_end = std::max<uint16_t>(block_end, metadata.address + metadata.length);
+  }
   std::vector<uint16_t> registers;
   xSemaphoreTake(this->tls_mutex_, portMAX_DELAY);
-  const bool ok = this->read_registers_(0, metadata.address, metadata.length, registers);
+  const bool ok = this->read_registers_(unit, first.address, block_end - first.address, registers);
   xSemaphoreGive(this->tls_mutex_);
-  if (!ok)
+  if (!ok) {
+    if (end - begin > 1) {
+      for (size_t position = begin; position < end; position++)
+        this->poll_entity_batch_(unit, indices, position, position + 1);
+    } else if (this->connected_.load()) {
+      xSemaphoreTake(this->data_mutex_, portMAX_DELAY);
+      this->values_[indices[begin]].unsupported = true;
+      this->values_[indices[begin]].valid = false;
+      xSemaphoreGive(this->data_mutex_);
+      ESP_LOGW(TAG, "Register unsupported unit=%u name=%s address=%u count=%u", unit, first.register_name,
+               first.address, first.length);
+    }
     return;
-  std::vector<TouPeriod> decoded = decode_tou_(registers);
+  }
+  const uint32_t now = millis();
   xSemaphoreTake(this->data_mutex_, portMAX_DELAY);
-  this->tou_periods_ = decoded;
-  this->tou_valid_ = true;
+  for (size_t position = begin; position < end; position++) {
+    size_t index = indices[position];
+    std::string json;
+    if (this->decode_entity_(index, registers, GENERATED_ENTITIES[index].address - first.address, json)) {
+      this->values_[index].json = std::move(json);
+      this->values_[index].valid = true;
+      this->values_[index].updated_ms = now;
+    } else {
+      this->values_[index].valid = false;
+    }
+  }
+  this->last_poll_ms_ = now;
+  this->last_error_.clear();
   xSemaphoreGive(this->data_mutex_);
-  ESP_LOGI(TAG, "EMMA TOU readback contains %u periods", static_cast<unsigned>(decoded.size()));
+}
+
+bool HuaweiEmmaReverse::decode_entity_(size_t index, const std::vector<uint16_t> &values, size_t offset,
+                                       std::string &json) {
+  const auto &metadata = GENERATED_ENTITIES[index];
+  if (offset + metadata.length > values.size())
+    return false;
+  if (metadata.value_type == GeneratedValueType::STRING) {
+    std::string text;
+    for (size_t i = 0; i < metadata.length; i++) {
+      char high = values[offset + i] >> 8;
+      char low = values[offset + i] & 0xFF;
+      if (high) text.push_back(high);
+      if (low) text.push_back(low);
+    }
+    json = '"' + json_escape_(text) + '"';
+    return true;
+  }
+  if (metadata.value_type == GeneratedValueType::TOU_HUAWEI) {
+    std::vector<uint16_t> structured(values.begin() + offset, values.begin() + offset + metadata.length);
+    json = this->tou_json_(decode_tou_(structured));
+    return true;
+  }
+  if (metadata.value_type == GeneratedValueType::TOU_LG ||
+      metadata.value_type == GeneratedValueType::CHARGE_PERIODS ||
+      metadata.value_type == GeneratedValueType::PEAK_PERIODS) {
+    std::vector<uint16_t> structured(values.begin() + offset, values.begin() + offset + metadata.length);
+    json = this->decode_structured_(metadata, structured);
+    return !json.empty();
+  }
+  uint64_t unsigned_raw = 0;
+  int64_t signed_raw = 0;
+  switch (metadata.value_type) {
+    case GeneratedValueType::U16: unsigned_raw = values[offset]; break;
+    case GeneratedValueType::I16: signed_raw = static_cast<int16_t>(values[offset]); break;
+    case GeneratedValueType::U32:
+    case GeneratedValueType::TIMESTAMP: unsigned_raw = u32_(values[offset], values[offset + 1]); break;
+    case GeneratedValueType::I32:
+    case GeneratedValueType::I32_ABSOLUTE: signed_raw = i32_(values[offset], values[offset + 1]); break;
+    case GeneratedValueType::U64: unsigned_raw = u64_(values, offset); break;
+    case GeneratedValueType::I64: signed_raw = static_cast<int64_t>(u64_(values, offset)); break;
+    default: return false;
+  }
+  const bool unsigned_type = metadata.value_type == GeneratedValueType::U16 ||
+                             metadata.value_type == GeneratedValueType::U32 ||
+                             metadata.value_type == GeneratedValueType::U64 ||
+                             metadata.value_type == GeneratedValueType::TIMESTAMP;
+  if (metadata.has_invalid && (unsigned_type ? unsigned_raw == metadata.invalid_raw
+                                             : signed_raw == static_cast<int64_t>(metadata.invalid_raw)))
+    return false;
+  int64_t raw = (metadata.value_type == GeneratedValueType::U16 || metadata.value_type == GeneratedValueType::U32 ||
+                 metadata.value_type == GeneratedValueType::U64 || metadata.value_type == GeneratedValueType::TIMESTAMP)
+                    ? static_cast<int64_t>(unsigned_raw) : signed_raw;
+  if (metadata.value_type == GeneratedValueType::I32_ABSOLUTE && raw < 0)
+    raw = -raw;
+  if (metadata.unit_kind == GeneratedUnitKind::BOOL) {
+    json = raw ? "true" : "false";
+    return true;
+  }
+  if (metadata.unit_kind == GeneratedUnitKind::ENUM || metadata.unit_kind == GeneratedUnitKind::MAP) {
+    for (size_t i = metadata.mapping_start; i < metadata.mapping_start + metadata.mapping_count; i++) {
+      if (GENERATED_MAPPINGS[i].raw == raw) {
+        const char *value = metadata.unit_kind == GeneratedUnitKind::ENUM ? GENERATED_MAPPINGS[i].key
+                                                                          : GENERATED_MAPPINGS[i].label;
+        json = '"' + json_escape_(value) + '"';
+        return true;
+      }
+    }
+  }
+  if (metadata.unit_kind == GeneratedUnitKind::BITFIELD) {
+    std::string text;
+    for (size_t i = metadata.mapping_start; i < metadata.mapping_start + metadata.mapping_count; i++) {
+      const auto &mapping = GENERATED_MAPPINGS[i];
+      const char *label = (raw & mapping.raw) ? mapping.label : mapping.off_label;
+      if (label[0] == '\0') continue;
+      if (!text.empty()) text += "; ";
+      text += label;
+    }
+    json = '"' + json_escape_(text) + '"';
+    return true;
+  }
+  json = number_(static_cast<double>(raw) / metadata.gain);
+  return true;
+}
+
+std::string HuaweiEmmaReverse::decode_structured_(const GeneratedEntityMetadata &metadata,
+                                                  const std::vector<uint16_t> &values) {
+  if (values.empty() || values[0] > 14)
+    return "";
+  std::ostringstream out;
+  out << '[';
+  if (metadata.value_type == GeneratedValueType::TOU_LG || metadata.value_type == GeneratedValueType::CHARGE_PERIODS) {
+    if (1 + values[0] * 4 > values.size()) return "";
+    for (size_t i = 0; i < values[0]; i++) {
+      if (i) out << ',';
+      size_t base = 1 + i * 4;
+      int32_t amount = i32_(values[base + 2], values[base + 3]);
+      out << "{\"start_time\":" << values[base] << ",\"end_time\":" << values[base + 1]
+          << (metadata.value_type == GeneratedValueType::TOU_LG ? ",\"electricity_price\":" : ",\"power\":")
+          << (metadata.value_type == GeneratedValueType::TOU_LG ? number_(amount / 1000.0) : std::to_string(amount)) << '}';
+    }
+  } else if (metadata.value_type == GeneratedValueType::PEAK_PERIODS) {
+    std::vector<uint8_t> bytes;
+    bytes.reserve(values.size() * 2);
+    for (uint16_t value : values) { bytes.push_back(value >> 8); bytes.push_back(value); }
+    if (2 + values[0] * 9 > bytes.size()) return "";
+    for (size_t i = 0; i < values[0]; i++) {
+      size_t base = 2 + i * 9;
+      uint16_t start = bytes[base] << 8 | bytes[base + 1];
+      uint16_t end = bytes[base + 2] << 8 | bytes[base + 3];
+      int32_t power = static_cast<int32_t>(static_cast<uint32_t>(bytes[base + 4]) << 24 |
+                                           static_cast<uint32_t>(bytes[base + 5]) << 16 |
+                                           static_cast<uint32_t>(bytes[base + 6]) << 8 | bytes[base + 7]);
+      uint8_t days = bytes[base + 8];
+      if (start == end || days == 0) continue;
+      if (out.tellp() > 1) out << ',';
+      out << "{\"start_time\":" << start << ",\"end_time\":" << end << ",\"power\":" << power
+          << ",\"days_effective\":[";
+      for (uint8_t day = 0; day < 7; day++) { if (day) out << ','; out << ((days & (1U << day)) ? "true" : "false"); }
+      out << "]}";
+    }
+  } else {
+    return "";
+  }
+  out << ']';
+  return out.str();
 }
 
 std::vector<uint16_t> HuaweiEmmaReverse::encode_tou_(const std::vector<TouPeriod> &periods) {
-  const auto &metadata = GENERATED_ENTITIES[GENERATED_CORE_ENTITY_COUNT];
-  std::vector<uint16_t> result(metadata.length, 0);
+  std::vector<uint16_t> result(1 + GENERATED_TOU_MAX_PERIODS * 3, 0);
   result[0] = periods.size();
-  for (size_t index = 0; index < periods.size() && index < 14; index++) {
+  for (size_t index = 0; index < periods.size() && index < GENERATED_TOU_MAX_PERIODS; index++) {
     result[1 + index * 3] = periods[index].start;
     result[2 + index * 3] = periods[index].end;
     result[3 + index * 3] = static_cast<uint16_t>(periods[index].charge_flag << 8 | periods[index].days);
@@ -470,9 +692,8 @@ std::vector<uint16_t> HuaweiEmmaReverse::encode_tou_(const std::vector<TouPeriod
 }
 
 std::vector<TouPeriod> HuaweiEmmaReverse::decode_tou_(const std::vector<uint16_t> &registers) {
-  const auto &metadata = GENERATED_ENTITIES[GENERATED_CORE_ENTITY_COUNT];
   std::vector<TouPeriod> periods;
-  if (registers.size() != metadata.length || registers[0] > 14)
+  if (registers.size() < 1 + GENERATED_TOU_MAX_PERIODS * 3 || registers[0] > GENERATED_TOU_MAX_PERIODS)
     return periods;
   for (size_t index = 0; index < registers[0]; index++) {
     TouPeriod period;
@@ -485,37 +706,148 @@ std::vector<TouPeriod> HuaweiEmmaReverse::decode_tou_(const std::vector<uint16_t
   return periods;
 }
 
-bool HuaweiEmmaReverse::write_tou_(const std::vector<TouPeriod> &periods, std::vector<TouPeriod> &readback) {
-  const auto &metadata = GENERATED_ENTITIES[GENERATED_CORE_ENTITY_COUNT];
+bool HuaweiEmmaReverse::write_tou_(size_t entity_index, const std::vector<TouPeriod> &periods,
+                                   std::vector<TouPeriod> &readback) {
+  const auto &metadata = GENERATED_ENTITIES[entity_index];
+  bool available = false;
+  uint8_t unit = this->unit_for_role_(metadata.client_role, available);
+  if (!available) return false;
   xSemaphoreTake(this->tls_mutex_, portMAX_DELAY);
-  bool ok = this->write_registers_(0, metadata.address, encode_tou_(periods));
+  bool ok = this->write_registers_(unit, metadata.address, encode_tou_(periods));
   std::vector<uint16_t> values;
   if (ok)
-    ok = this->read_registers_(0, metadata.address, metadata.length, values);
+    ok = this->read_registers_(unit, metadata.address, metadata.length, values);
   xSemaphoreGive(this->tls_mutex_);
   if (!ok)
     return false;
   readback = decode_tou_(values);
   xSemaphoreTake(this->data_mutex_, portMAX_DELAY);
-  this->tou_periods_ = readback;
-  this->tou_valid_ = true;
+  this->values_[entity_index].json = this->tou_json_(readback);
+  this->values_[entity_index].valid = true;
+  this->values_[entity_index].updated_ms = millis();
   xSemaphoreGive(this->data_mutex_);
+  return true;
+}
+
+bool HuaweiEmmaReverse::encode_scalar_(size_t index, cJSON *value, std::vector<uint16_t> &registers,
+                                       std::string &error) {
+  const auto &metadata = GENERATED_ENTITIES[index];
+  double requested = 0;
+  if (metadata.unit_kind == GeneratedUnitKind::BOOL) {
+    if (!cJSON_IsBool(value)) { error = "value must be true or false"; return false; }
+    requested = cJSON_IsTrue(value) ? 1 : 0;
+  } else if (metadata.unit_kind == GeneratedUnitKind::ENUM) {
+    bool matched = false;
+    if (cJSON_IsString(value)) {
+      std::string candidate(value->valuestring);
+      std::transform(candidate.begin(), candidate.end(), candidate.begin(), ::tolower);
+      for (size_t i = metadata.mapping_start; i < metadata.mapping_start + metadata.mapping_count; i++) {
+        std::string key(GENERATED_MAPPINGS[i].key), label(GENERATED_MAPPINGS[i].label);
+        std::transform(key.begin(), key.end(), key.begin(), ::tolower);
+        std::transform(label.begin(), label.end(), label.begin(), ::tolower);
+        if (candidate == key || candidate == label) {
+          requested = GENERATED_MAPPINGS[i].raw;
+          matched = true;
+          break;
+        }
+      }
+    } else if (cJSON_IsNumber(value)) {
+      requested = value->valuedouble;
+      for (size_t i = metadata.mapping_start; i < metadata.mapping_start + metadata.mapping_count; i++)
+        matched |= GENERATED_MAPPINGS[i].raw == static_cast<int64_t>(requested);
+    }
+    if (!matched) { error = "value is not a supported option"; return false; }
+  } else {
+    if (!cJSON_IsNumber(value) || !std::isfinite(value->valuedouble)) {
+      error = "value must be a finite number"; return false;
+    }
+    requested = value->valuedouble;
+    if (metadata.has_range && (requested < metadata.minimum || requested > metadata.maximum)) {
+      error = "value is outside the safe range"; return false;
+    }
+    const std::string name(metadata.register_name);
+    if (name == "storage_maximum_charging_power" || name == "storage_maximum_discharging_power" ||
+        name == "storage_forcible_charge_power" || name == "storage_forcible_discharge_power") {
+      size_t rated_index = this->find_entity_("inverter_rated_power");
+      double rated = 0;
+      xSemaphoreTake(this->data_mutex_, portMAX_DELAY);
+      if (rated_index < GENERATED_ENTITY_COUNT && this->values_[rated_index].valid)
+        rated = std::atof(this->values_[rated_index].json.c_str());
+      xSemaphoreGive(this->data_mutex_);
+      if (rated > 0 && requested > rated) {
+        error = "value cannot exceed inverter rated power"; return false;
+      }
+    }
+    requested *= metadata.gain;
+  }
+  int64_t raw = static_cast<int64_t>(std::llround(requested));
+  registers.assign(metadata.length, 0);
+  if (metadata.length == 1) {
+    registers[0] = static_cast<uint16_t>(raw);
+  } else if (metadata.length == 2) {
+    uint32_t bits = static_cast<uint32_t>(raw);
+    registers[0] = bits >> 16; registers[1] = bits;
+  } else if (metadata.length == 4) {
+    uint64_t bits = static_cast<uint64_t>(raw);
+    for (size_t i = 0; i < 4; i++) registers[i] = bits >> (48 - i * 16);
+  } else {
+    error = "unsupported writable register width"; return false;
+  }
+  return true;
+}
+
+bool HuaweiEmmaReverse::write_entity_(size_t index, cJSON *value, std::string &readback, std::string &error) {
+  const auto &metadata = GENERATED_ENTITIES[index];
+  if (!metadata.writeable) { error = "register is read-only"; return false; }
+  if (!this->connected_.load()) { error = "EMMA is not connected"; return false; }
+  if (metadata.value_type == GeneratedValueType::TOU_HUAWEI) {
+    char *encoded = cJSON_PrintUnformatted(value);
+    std::string body = std::string("{\"periods\":") + (encoded == nullptr ? "[]" : encoded) + "}";
+    cJSON_free(encoded);
+    std::vector<TouPeriod> periods, result;
+    if (!this->parse_tou_json_(body, periods, error)) return false;
+    if (!this->write_tou_(index, periods, result)) { error = "TOU write/readback failed"; return false; }
+    readback = this->tou_json_(result);
+    return true;
+  }
+  std::vector<uint16_t> registers;
+  if (!this->encode_scalar_(index, value, registers, error)) return false;
+  bool available = false;
+  uint8_t unit = this->unit_for_role_(metadata.client_role, available);
+  if (!available) { error = std::string("device role is unavailable: ") + metadata.client_role; return false; }
+  std::vector<uint16_t> returned;
+  xSemaphoreTake(this->tls_mutex_, portMAX_DELAY);
+  bool ok = registers.size() == 1 ? this->write_single_register_(unit, metadata.address, registers[0])
+                                  : this->write_registers_(unit, metadata.address, registers);
+  if (ok) ok = this->read_registers_(unit, metadata.address, metadata.length, returned);
+  xSemaphoreGive(this->tls_mutex_);
+  if (!ok) { error = "Modbus write/readback failed"; return false; }
+  if (!this->decode_entity_(index, returned, 0, readback)) { error = "readback could not be decoded"; return false; }
+  xSemaphoreTake(this->data_mutex_, portMAX_DELAY);
+  this->values_[index].json = readback;
+  this->values_[index].valid = true;
+  this->values_[index].updated_ms = millis();
+  xSemaphoreGive(this->data_mutex_);
+  ESP_LOGI(TAG, "Control accepted register=%s unit=%u address=%u value=%s", metadata.register_name, unit,
+           metadata.address, readback.c_str());
   return true;
 }
 
 bool HuaweiEmmaReverse::start_http_server_() {
   httpd_config_t config = HTTPD_DEFAULT_CONFIG();
   config.server_port = this->api_port_;
-  config.max_uri_handlers = 8;
+  config.max_uri_handlers = 9;
   config.stack_size = 10240;
   config.lru_purge_enable = true;
+  config.uri_match_fn = httpd_uri_match_wildcard;
   if (httpd_start(&this->http_server_, &config) != ESP_OK) {
     ESP_LOGE(TAG, "Could not start connector API on port %u", this->api_port_);
     return false;
   }
-  const std::array<std::pair<const char *, httpd_method_t>, 6> routes{{
-      {"/api/v1/health", HTTP_GET}, {"/api/v1/device", HTTP_GET}, {"/api/v1/entities", HTTP_GET},
-      {"/api/v1/states", HTTP_GET}, {"/api/v1/subscriptions", HTTP_POST}, {"/api/v1/tou-periods", HTTP_POST},
+  const std::array<std::pair<const char *, httpd_method_t>, 7> routes{{
+      {GENERATED_PATH_HEALTH, HTTP_GET}, {GENERATED_PATH_DEVICE, HTTP_GET}, {GENERATED_PATH_ENTITIES, HTTP_GET},
+      {GENERATED_PATH_STATES, HTTP_GET}, {GENERATED_PATH_SUBSCRIPTIONS, HTTP_POST}, {GENERATED_PATH_TOU, HTTP_POST},
+      {GENERATED_PATH_ENTITY_WILDCARD, HTTP_POST},
   }};
   for (const auto &route : routes) {
     httpd_uri_t uri{};
@@ -543,15 +875,15 @@ esp_err_t HuaweiEmmaReverse::handle_http_(httpd_req_t *request) {
   }
   ESP_LOGD(TAG, "Connector API request accepted method=%s path=%s", method, request->uri);
   const std::string uri(request->uri);
-  if (request->method == HTTP_GET && uri == "/api/v1/health")
+  if (request->method == HTTP_GET && uri == GENERATED_PATH_HEALTH)
     return this->send_json_(request, this->health_json_());
-  if (request->method == HTTP_GET && uri == "/api/v1/device")
+  if (request->method == HTTP_GET && uri == GENERATED_PATH_DEVICE)
     return this->send_json_(request, this->device_json_());
-  if (request->method == HTTP_GET && uri == "/api/v1/entities")
-    return this->send_json_(request, this->entities_json_());
-  if (request->method == HTTP_GET && uri == "/api/v1/states")
+  if (request->method == HTTP_GET && uri == GENERATED_PATH_ENTITIES)
+    return this->send_entities_json_(request);
+  if (request->method == HTTP_GET && uri == GENERATED_PATH_STATES)
     return this->send_json_(request, this->states_json_());
-  if (request->method == HTTP_POST && uri == "/api/v1/subscriptions") {
+  if (request->method == HTTP_POST && uri == GENERATED_PATH_SUBSCRIPTIONS) {
     std::string body = this->read_http_body_(request);
     cJSON *root = cJSON_Parse(body.c_str());
     cJSON *names = root == nullptr ? nullptr : cJSON_GetObjectItem(root, "register_names");
@@ -559,21 +891,62 @@ esp_err_t HuaweiEmmaReverse::handle_http_(httpd_req_t *request) {
       cJSON_Delete(root);
       return this->send_json_(request, "{\"error\":\"register_names must be an array\"}", "400 Bad Request");
     }
-    char *encoded = cJSON_PrintUnformatted(names);
-    std::string response = std::string("{\"register_names\":") + (encoded == nullptr ? "[]" : encoded) + "}";
-    cJSON_free(encoded);
+    std::vector<size_t> accepted;
+    cJSON *name;
+    cJSON_ArrayForEach(name, names) {
+      if (!cJSON_IsString(name)) continue;
+      size_t index = this->find_entity_(name->valuestring);
+      if (index < GENERATED_ENTITY_COUNT) accepted.push_back(index);
+    }
+    xSemaphoreTake(this->data_mutex_, portMAX_DELAY);
+    for (size_t index = 0; index < GENERATED_ENTITY_COUNT; index++) {
+      bool selected = std::find(accepted.begin(), accepted.end(), index) != accepted.end();
+      this->values_[index].subscribed = selected;
+      if (!selected) { this->values_[index].valid = false; this->values_[index].json.clear(); }
+    }
+    xSemaphoreGive(this->data_mutex_);
+    this->subscriptions_changed_.store(true);
+    std::ostringstream out;
+    out << "{\"register_names\":[";
+    for (size_t position = 0; position < accepted.size(); position++) {
+      if (position) out << ',';
+      out << '"' << GENERATED_ENTITIES[accepted[position]].register_name << '"';
+    }
+    out << "]}";
     cJSON_Delete(root);
-    return this->send_json_(request, response);
+    ESP_LOGI(TAG, "Polling subscriptions accepted=%u", static_cast<unsigned>(accepted.size()));
+    return this->send_json_(request, out.str());
   }
-  if (request->method == HTTP_POST && uri == "/api/v1/tou-periods") {
+  if (request->method == HTTP_POST && uri == GENERATED_PATH_TOU) {
     std::vector<TouPeriod> periods;
     std::string error;
     if (!this->parse_tou_json_(this->read_http_body_(request), periods, error))
       return this->send_json_(request, "{\"error\":\"" + json_escape_(error) + "\"}", "400 Bad Request");
     std::vector<TouPeriod> readback;
-    if (!this->write_tou_(periods, readback))
+    size_t index = this->find_entity_("emma_tou_periods");
+    if (index == GENERATED_ENTITY_COUNT || !this->write_tou_(index, periods, readback))
       return this->send_json_(request, "{\"error\":\"EMMA TOU write/readback failed\"}", "503 Service Unavailable");
     return this->send_json_(request, "{\"value\":" + this->tou_json_(readback) + "}");
+  }
+  const std::string prefix = std::string(GENERATED_PATH_ENTITIES) + "/";
+  const std::string suffix = "/value";
+  if (request->method == HTTP_POST && uri.rfind(prefix, 0) == 0 && uri.size() > prefix.size() + suffix.size() &&
+      uri.compare(uri.size() - suffix.size(), suffix.size(), suffix) == 0) {
+    std::string name = uri.substr(prefix.size(), uri.size() - prefix.size() - suffix.size());
+    size_t index = this->find_entity_(name);
+    if (index == GENERATED_ENTITY_COUNT)
+      return this->send_json_(request, "{\"error\":\"unknown register\"}", "404 Not Found");
+    std::string body = this->read_http_body_(request);
+    cJSON *root = cJSON_Parse(body.c_str());
+    cJSON *value = root == nullptr ? nullptr : cJSON_GetObjectItem(root, "value");
+    if (value == nullptr) { cJSON_Delete(root); return this->send_json_(request, "{\"error\":\"value is required\"}", "400 Bad Request"); }
+    std::string readback, error;
+    bool ok = this->write_entity_(index, value, readback, error);
+    cJSON_Delete(root);
+    if (!ok)
+      return this->send_json_(request, "{\"error\":\"" + json_escape_(error) + "\"}",
+                              this->connected_.load() ? "400 Bad Request" : "503 Service Unavailable");
+    return this->send_json_(request, "{\"value\":" + readback + "}");
   }
   return this->send_json_(request, "{\"error\":\"not found\"}", "404 Not Found");
 }
@@ -595,7 +968,7 @@ bool HuaweiEmmaReverse::authenticate_(httpd_req_t *request) {
 }
 
 std::string HuaweiEmmaReverse::read_http_body_(httpd_req_t *request) {
-  if (request->content_len <= 0 || request->content_len > 8192)
+  if (request->content_len <= 0 || request->content_len > GENERATED_MAX_HTTP_BODY)
     return "";
   std::string body(request->content_len, '\0');
   size_t offset = 0;
@@ -617,6 +990,67 @@ esp_err_t HuaweiEmmaReverse::send_json_(httpd_req_t *request, const std::string 
   return httpd_resp_send(request, json.c_str(), json.size());
 }
 
+esp_err_t HuaweiEmmaReverse::send_entities_json_(httpd_req_t *request) {
+  this->signal_activity_(ActivityKind::API_TX);
+  httpd_resp_set_type(request, "application/json");
+  std::string opening = std::string("{\"contract_version\":") + std::to_string(GENERATED_CONTRACT_VERSION) +
+                        ",\"catalog_sha256\":\"" + GENERATED_CATALOG_SHA256 + "\",\"entities\":[";
+  if (httpd_resp_send_chunk(request, opening.c_str(), opening.size()) != ESP_OK) return ESP_FAIL;
+  double rated_power = 0;
+  size_t rated_index = this->find_entity_("inverter_rated_power");
+  xSemaphoreTake(this->data_mutex_, portMAX_DELAY);
+  if (rated_index < GENERATED_ENTITY_COUNT && this->values_[rated_index].valid)
+    rated_power = std::atof(this->values_[rated_index].json.c_str());
+  xSemaphoreGive(this->data_mutex_);
+  for (size_t index = 0; index < GENERATED_ENTITY_COUNT; index++) {
+    const auto &metadata = GENERATED_ENTITIES[index];
+    auto value = [](const char *text) {
+      return text == nullptr || text[0] == '\0' ? std::string("null") :
+             std::string("\"") + HuaweiEmmaReverse::json_escape_(text) + "\"";
+    };
+    std::ostringstream out;
+    if (index) out << ',';
+    out << "{\"register_name\":\"" << metadata.register_name << "\",\"esphome_id\":\"" << metadata.esphome_id
+        << "\",\"name\":\"" << json_escape_(metadata.name) << "\",\"address\":" << metadata.address
+        << ",\"length\":" << metadata.length << ",\"platform\":\"" << metadata.platform
+        << "\",\"poll_group\":\"" << metadata.poll_group << "\",\"device_role\":\"" << metadata.device_role
+        << "\",\"client_role\":\"" << metadata.client_role << "\",\"unit\":" << value(metadata.unit)
+        << ",\"device_class\":" << value(metadata.device_class) << ",\"state_class\":" << value(metadata.state_class)
+        << ",\"entity_category\":" << value(metadata.entity_category) << ",\"icon\":" << value(metadata.icon)
+        << ",\"enabled_default\":" << (metadata.enabled_default ? "true" : "false")
+        << ",\"writeable\":" << (metadata.writeable ? "true" : "false") << ",\"format\":" << value(metadata.format);
+    if (metadata.has_range) {
+      const std::string name(metadata.register_name);
+      const bool rated_limited = name == "storage_maximum_charging_power" ||
+                                  name == "storage_maximum_discharging_power" ||
+                                  name == "storage_forcible_charge_power" ||
+                                  name == "storage_forcible_discharge_power";
+      const double maximum = rated_limited && rated_power > 0 ? rated_power : metadata.maximum;
+      out << ",\"minimum\":" << number_(metadata.minimum) << ",\"maximum\":" << number_(maximum)
+          << ",\"step\":" << number_(metadata.step);
+    }
+    if (metadata.unit_kind == GeneratedUnitKind::ENUM) {
+      out << ",\"options\":[";
+      for (size_t i = metadata.mapping_start; i < metadata.mapping_start + metadata.mapping_count; i++) {
+        if (i != metadata.mapping_start) out << ',';
+        const auto &mapping = GENERATED_MAPPINGS[i];
+        out << "{\"value\":" << mapping.raw << ",\"key\":\"" << json_escape_(mapping.key)
+            << "\",\"label\":\"" << json_escape_(mapping.label) << "\"}";
+      }
+      out << ']';
+    } else {
+      out << ",\"options\":[]";
+    }
+    out << '}';
+    std::string chunk = out.str();
+    if (httpd_resp_send_chunk(request, chunk.c_str(), chunk.size()) != ESP_OK) return ESP_FAIL;
+  }
+  const char closing[] = "]}";
+  ESP_LOGD(TAG, "Connector API streamed catalog entities=%u", static_cast<unsigned>(GENERATED_ENTITY_COUNT));
+  httpd_resp_send_chunk(request, closing, sizeof(closing) - 1);
+  return httpd_resp_send_chunk(request, nullptr, 0);
+}
+
 std::string HuaweiEmmaReverse::health_json_() {
   std::ostringstream out;
   out << "{\"connected\":" << (this->connected_.load() ? "true" : "false")
@@ -624,11 +1058,15 @@ std::string HuaweiEmmaReverse::health_json_() {
       << ",\"registers_available\":";
   size_t available = 0;
   xSemaphoreTake(this->data_mutex_, portMAX_DELAY);
-  for (bool valid : this->core_valid_)
-    available += valid ? 1 : 0;
-  if (this->tou_valid_)
-    available++;
-  out << available << ",\"last_poll_ms\":" << this->last_poll_ms_ << ",\"last_error\":\""
+  size_t unsupported = 0, subscribed = 0;
+  for (const auto &value : this->values_) {
+    available += value.valid ? 1 : 0;
+    unsupported += value.unsupported ? 1 : 0;
+    subscribed += value.subscribed ? 1 : 0;
+  }
+  out << available << ",\"registers_subscribed\":" << subscribed << ",\"registers_unsupported\":" << unsupported
+      << ",\"reconnect_count\":" << this->reconnect_count_ << ",\"connected_at_ms\":" << this->connected_at_ms_
+      << ",\"last_poll_ms\":" << this->last_poll_ms_ << ",\"last_error\":\""
       << json_escape_(this->last_error_) << "\"}";
   xSemaphoreGive(this->data_mutex_);
   return out.str();
@@ -697,17 +1135,29 @@ std::string HuaweiEmmaReverse::states_json_() {
   std::ostringstream out;
   out << "{\"values\":{";
   bool first = true;
-  for (size_t index = 0; index < GENERATED_CORE_ENTITY_COUNT; index++) {
-    if (!this->core_valid_[index]) continue;
+  for (size_t index = 0; index < GENERATED_ENTITY_COUNT; index++) {
+    if (!this->values_[index].valid || !this->values_[index].subscribed) continue;
     if (!first) out << ',';
     first = false;
-    out << '\"' << GENERATED_ENTITIES[index].register_name << "\":" << number_(this->core_values_[index]);
+    out << '\"' << GENERATED_ENTITIES[index].register_name << "\":" << this->values_[index].json;
   }
-  if (this->tou_valid_) {
+  out << "},\"updated_at\":{";
+  first = true;
+  for (size_t index = 0; index < GENERATED_ENTITY_COUNT; index++) {
+    if (!this->values_[index].valid || !this->values_[index].subscribed) continue;
     if (!first) out << ',';
-    out << "\"emma_tou_periods\":" << this->tou_json_(this->tou_periods_);
+    first = false;
+    out << '\"' << GENERATED_ENTITIES[index].register_name << "\":\"" << iso_time_(this->values_[index].updated_ms) << '\"';
   }
-  out << "},\"updated_at\":{},\"unsupported\":[]}";
+  out << "},\"unsupported\":[";
+  first = true;
+  for (size_t index = 0; index < GENERATED_ENTITY_COUNT; index++) {
+    if (!this->values_[index].unsupported || !this->values_[index].subscribed) continue;
+    if (!first) out << ',';
+    first = false;
+    out << '\"' << GENERATED_ENTITIES[index].register_name << '\"';
+  }
+  out << "]}";
   xSemaphoreGive(this->data_mutex_);
   return out.str();
 }
@@ -748,7 +1198,7 @@ bool HuaweiEmmaReverse::parse_tou_json_(const std::string &body, std::vector<Tou
                                         std::string &error) {
   cJSON *root = cJSON_Parse(body.c_str());
   cJSON *items = root == nullptr ? nullptr : cJSON_GetObjectItem(root, "periods");
-  if (!cJSON_IsArray(items) || cJSON_GetArraySize(items) > 14) {
+  if (!cJSON_IsArray(items) || cJSON_GetArraySize(items) > GENERATED_TOU_MAX_PERIODS) {
     error = "periods must be a list containing at most 14 items";
     cJSON_Delete(root);
     return false;
@@ -864,11 +1314,30 @@ std::string HuaweiEmmaReverse::role_for_(const std::string &model, const std::st
   if (text.find("smartguard") != std::string::npos || text.find("backupbox") != std::string::npos) return "smartguard";
   if (text.find("sun2000") != std::string::npos || text.find("inverter") != std::string::npos) return "inverter";
   if (text.find("charger") != std::string::npos) return "charger";
+  if (text.find("sdongle") != std::string::npos || text.find("smart dongle") != std::string::npos) return "sdongle";
+  if (text.find("smartlogger") != std::string::npos || text.find("smart logger") != std::string::npos) return "smartlogger";
   return "accessory";
 }
 
 uint32_t HuaweiEmmaReverse::u32_(uint16_t high, uint16_t low) { return static_cast<uint32_t>(high) << 16 | low; }
 int32_t HuaweiEmmaReverse::i32_(uint16_t high, uint16_t low) { return static_cast<int32_t>(u32_(high, low)); }
+
+uint64_t HuaweiEmmaReverse::u64_(const std::vector<uint16_t> &values, size_t offset) {
+  uint64_t result = 0;
+  for (size_t index = 0; index < 4; index++) result = (result << 16) | values[offset + index];
+  return result;
+}
+
+std::string HuaweiEmmaReverse::iso_time_(uint32_t updated_ms) {
+  std::time_t now = std::time(nullptr);
+  if (now < 1600000000) return std::to_string(updated_ms);
+  now -= static_cast<uint32_t>(millis() - updated_ms) / 1000;
+  std::tm utc{};
+  gmtime_r(&now, &utc);
+  char buffer[32];
+  std::strftime(buffer, sizeof(buffer), "%Y-%m-%dT%H:%M:%SZ", &utc);
+  return buffer;
+}
 
 std::string HuaweiEmmaReverse::number_(double value) {
   char buffer[32];

@@ -1,0 +1,21 @@
+{
+  "contract_version": 2,
+  "api_prefix": "/api/v1",
+  "defaults": {
+    "tls_port": 16100,
+    "api_port": 8088,
+    "request_timeout_seconds": 5
+  },
+  "limits": {
+    "http_request_body": 32768,
+    "mbap_length": 512,
+    "read_registers": 125,
+    "write_registers": 123,
+    "tou_periods": 14
+  },
+  "poll_intervals_seconds": {
+    "fast": 30,
+    "medium": 300,
+    "slow": 1800
+  }
+}

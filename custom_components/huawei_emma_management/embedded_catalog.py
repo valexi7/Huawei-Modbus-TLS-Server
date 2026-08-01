@@ -10,8 +10,11 @@ from huawei_solar import register_names as rn
 from huawei_solar.register_definitions import TargetDevice
 from huawei_solar.registers import REGISTERS
 
+try:
+    from .connector_contract import POLL_INTERVALS
+except ImportError:  # Standalone generator compatibility.
+    from connector_contract import POLL_INTERVALS
 
-POLL_INTERVALS = {"fast": 30, "medium": 300, "slow": 1800}
 
 SUN2000_EXPOSED_REGISTERS = {
     str(rn.STORAGE_MAXIMUM_CHARGING_POWER),

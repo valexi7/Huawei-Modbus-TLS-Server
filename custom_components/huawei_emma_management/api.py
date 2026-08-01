@@ -6,6 +6,7 @@ from typing import Any
 
 from aiohttp import ClientError, ClientSession
 
+from .connector_contract import API_PREFIX
 from .embedded_server import RuntimeState
 
 
@@ -27,7 +28,7 @@ class EmmaApiConnectionError(EmmaApiError):
 class EmmaApiClient:
     def __init__(self, session: ClientSession, host: str, port: int, token: str) -> None:
         self._session = session
-        self._base_url = f"http://{host}:{port}/api/v1"
+        self._base_url = f"http://{host}:{port}{API_PREFIX}"
         self._headers = {"Authorization": f"Bearer {token}"}
 
     async def _request(

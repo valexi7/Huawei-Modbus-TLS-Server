@@ -21,7 +21,10 @@
 #include <atomic>
 #include <cstdint>
 #include <string>
+#include <ctime>
 #include <vector>
+
+struct cJSON;
 
 namespace esphome::huawei_emma_reverse {
 
@@ -50,6 +53,14 @@ struct TopologyDevice {
   std::string serial;
   std::string protocol;
   std::string product_type;
+};
+
+struct CachedEntityValue {
+  std::string json;
+  uint32_t updated_ms{0};
+  bool valid{false};
+  bool subscribed{false};
+  bool unsupported{false};
 };
 
 class HuaweiEmmaReverse : public Component {
@@ -85,12 +96,20 @@ class HuaweiEmmaReverse : public Component {
   bool request_(uint8_t unit, const std::vector<uint8_t> &pdu, ModbusFrame &response);
   bool read_registers_(uint8_t unit, uint16_t address, uint16_t count, std::vector<uint16_t> &values);
   bool write_registers_(uint8_t unit, uint16_t address, const std::vector<uint16_t> &values);
+  bool write_single_register_(uint8_t unit, uint16_t address, uint16_t value);
   void handle_unsolicited_(const ModbusFrame &frame);
   void parse_device_info_(const uint8_t *data, size_t length, TopologyDevice &device);
   void discover_topology_();
-  void poll_core_();
-  void poll_tou_();
-  bool write_tou_(const std::vector<TouPeriod> &periods, std::vector<TouPeriod> &readback);
+  void initialize_subscriptions_();
+  void poll_group_(const char *group);
+  void poll_entity_batch_(uint8_t unit, const std::vector<size_t> &indices, size_t begin, size_t end);
+  bool decode_entity_(size_t index, const std::vector<uint16_t> &registers, size_t offset, std::string &json);
+  std::string decode_structured_(const GeneratedEntityMetadata &metadata, const std::vector<uint16_t> &values);
+  uint8_t unit_for_role_(const char *role, bool &available) const;
+  size_t find_entity_(const std::string &register_name) const;
+  bool write_entity_(size_t index, cJSON *value, std::string &readback, std::string &error);
+  bool encode_scalar_(size_t index, cJSON *value, std::vector<uint16_t> &registers, std::string &error);
+  bool write_tou_(size_t entity_index, const std::vector<TouPeriod> &periods, std::vector<TouPeriod> &readback);
   static std::vector<TouPeriod> decode_tou_(const std::vector<uint16_t> &registers);
   static std::vector<uint16_t> encode_tou_(const std::vector<TouPeriod> &periods);
 
@@ -100,6 +119,7 @@ class HuaweiEmmaReverse : public Component {
   bool authenticate_(httpd_req_t *request);
   std::string read_http_body_(httpd_req_t *request);
   esp_err_t send_json_(httpd_req_t *request, const std::string &json, const char *status = "200 OK");
+  esp_err_t send_entities_json_(httpd_req_t *request);
   std::string health_json_();
   std::string device_json_();
   std::string entities_json_();
@@ -116,12 +136,14 @@ class HuaweiEmmaReverse : public Component {
   static uint32_t u32_(uint16_t high, uint16_t low);
   static int32_t i32_(uint16_t high, uint16_t low);
   static std::string number_(double value);
+  static uint64_t u64_(const std::vector<uint16_t> &values, size_t offset);
+  static std::string iso_time_(uint32_t updated_ms);
 
   emma_w5500::EmmaW5500 *ethernet_{nullptr};
   output::BinaryOutput *activity_output_{nullptr};
   binary_sensor::BinarySensor *connected_sensor_{nullptr};
-  uint16_t tls_port_{16100};
-  uint16_t api_port_{8088};
+  uint16_t tls_port_{GENERATED_DEFAULT_TLS_PORT};
+  uint16_t api_port_{GENERATED_DEFAULT_API_PORT};
   std::string api_token_;
   std::string certificate_;
   std::string private_key_;
@@ -132,6 +154,7 @@ class HuaweiEmmaReverse : public Component {
   SemaphoreHandle_t data_mutex_{nullptr};
   httpd_handle_t http_server_{nullptr};
   std::atomic<bool> connected_{false};
+  std::atomic<bool> subscriptions_changed_{false};
   std::atomic<uint8_t> pending_activity_{0};
   uint32_t led_until_{0};
   uint8_t led_pulses_left_{0};
@@ -150,11 +173,10 @@ class HuaweiEmmaReverse : public Component {
 
   TopologyDevice emma_;
   std::vector<TopologyDevice> topology_;
-  std::array<double, GENERATED_CORE_ENTITY_COUNT> core_values_{};
-  std::array<bool, GENERATED_CORE_ENTITY_COUNT> core_valid_{};
-  std::vector<TouPeriod> tou_periods_;
-  bool tou_valid_{false};
+  std::array<CachedEntityValue, GENERATED_ENTITY_COUNT> values_{};
   std::string last_error_;
+  uint32_t reconnect_count_{0};
+  uint32_t connected_at_ms_{0};
   uint32_t last_poll_ms_{0};
 };
 

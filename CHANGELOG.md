@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.14.0
+
+- Promote the ESP32 connector from the core/TOU vertical slice to the complete generated
+  740-register catalog with subscription-aware, topology-routed, grouped polling.
+- Add generic scalar/string/timestamp/enum/bitfield and structured-period decoding,
+  safe generic control writes with readback, unsupported-register isolation, and
+  streamed catalog responses.
+- Introduce a dependency-free connector contract as the single source for ports, poll
+  intervals, protocol limits, and generated ESPHome defaults.
+- Reorder and rewrite deployment documentation around embedded Home Assistant first,
+  ESPHome second, and standalone Linux third.
+
 ## 0.13.1
 
 - Add a networked Armbian EMMA mock that connects outbound to the ESP32 as a TLS

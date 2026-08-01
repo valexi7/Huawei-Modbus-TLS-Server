@@ -120,25 +120,28 @@ Configure the Home Assistant integration in **external** mode using the ESP32 Wi
 port `8088`, and `emma_connector_api_token`. Configure EMMA's third-party management
 address as the ESP32 W5500 IP on port `16100`.
 
-## Implemented firmware scope
+## Production firmware scope
 
-The first hardware-testable connector version provides:
+The connector provides:
 
 - a single-client TLS 1.2 listener bound specifically to the W5500 address;
 - Huawei `0x41` startup parsing and paged `0x2B` topology discovery;
-- one grouped function-3 read for the ten core power, SOC, and energy values at
-  addresses 30354-30373;
-- structured 43-register `EMMA_TOU_PERIODS` read, validated write, and readback;
+- subscription-aware fast/medium/slow polling for the complete generated 740-register
+  catalog, with adjacent-address grouping and topology-unit routing;
+- scalar, enum, mapping, boolean, bitfield, timestamp, string, and structured-period
+  decoding;
+- safe generic controls and structured `EMMA_TOU_PERIODS` validation, write, and
+  readback;
 - the existing authenticated `/api/v1` connector contract over Wi-Fi for Home
   Assistant external mode;
-- strict MBAP/body/TOU limits, request serialization, reconnect handling, and optional
-  raw-frame summaries;
+- strict shared MBAP/body/register/TOU limits, request serialization, reconnect handling,
+  unsupported-register isolation, streamed catalog output, and optional raw-frame
+  summaries;
 - a native ESPHome **EMMA TLS Connected** diagnostic binary sensor.
 
-The complete optional 740-register generated catalog, generic scalar configuration
-writes, and subdevice polling are the next parity stage. Keep the Armbian connector
-available until the TLS handshake, readings, TOU readback, reconnect behavior, and at
-least a 24-hour soak test pass on the real installation.
+The firmware and Linux connector expose the same authenticated API contract. A new
+firmware release should still pass the mock suite and at least a 24-hour real-device soak
+test before unattended control is enabled.
 
 ## Entity IDs and generated mapping
 
@@ -156,11 +159,12 @@ The canonical logical ID is the Huawei register name. The generated mapping defi
   address, length, and whether the current firmware supports the register.
 
 [`esphome/entity-migration-map.json`](../esphome/entity-migration-map.json) contains all
-740 physical catalog entities and the ten virtual TOU editor entities. The compact C++
-table currently includes the eleven registers implemented by the ESP32 protocol engine.
+740 physical catalog entities and the ten virtual TOU editor entities. The generated C++
+table includes every physical register; Home Assistant subscriptions determine which
+ones use ESP32 RAM and Modbus bandwidth at runtime.
 
-Both artifacts are generated from the same `embedded_catalog.py` used by the Python
-connector:
+The tables and shared connector defaults are generated from the same
+`embedded_catalog.py` and `connector_contract.py` used by the Python connector:
 
 ```bash
 python tools/generate_esphome_catalog.py

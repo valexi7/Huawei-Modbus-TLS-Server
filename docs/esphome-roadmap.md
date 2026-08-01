@@ -6,54 +6,51 @@ Armbian/Python connector while preserving EMMA's unusual role arrangement: EMMA 
 TLS socket as TCP client/Modbus slave, and the ESP32 accepts it while issuing Modbus
 requests as master.
 
-## Proposed architecture
+## Implemented architecture
 
-1. Create an ESPHome external component named `huawei_emma_reverse` in a separate
-   `esphome/components/huawei_emma_reverse` tree.
+1. The ESPHome external component is maintained in
+   `esphome/components/huawei_emma_reverse`.
 2. Use ESP-IDF on ESP32-S3 with ESPHome Wi-Fi plus the repository's `emma_w5500`
    compatibility component. Wi-Fi carries the Home Assistant native API and OTA; the
    fixed-address W5500 is isolated on the EMMA management network. Released ESPHome
    2026.7.3 still rejects its two built-in interfaces together, although upstream support
    has merged for a future release. The TLS listener must bind only to ETH1.
-3. Implement a bounded single-client TLS 1.2 server using ESP-IDF/mbedTLS. Reject a
+3. A bounded single-client TLS 1.2 server uses ESP-IDF/mbedTLS, rejects a
    second EMMA connection and apply handshake, frame-size, and request timeouts.
-4. Port only the MBAP transport, Huawei `0x41` startup parsing, paged `0x2B` topology,
+4. The firmware implements MBAP transport, Huawei `0x41` startup parsing, paged `0x2B` topology,
    grouped function-3 reads, and function-6/16 writes. Do not attempt to run the Python
    `huawei-solar` library on the microcontroller.
-5. Generate a compact C++ register table from the pinned Python catalog at build time.
+5. A generated C++ register table comes from the pinned Python catalog.
    The generator becomes the single mapping source for address, width, signedness,
    scale, enum, unit, poll group, device role, and writable range.
-6. Expose ordinary measurements and controls through ESPHome's encrypted native API.
-   Add custom native-API actions for complete TOU read/write because a 14-period
-   structured schedule is not a natural scalar entity.
-7. Keep Home Assistant schedule compatibility in a small companion integration only if
-   BESS still requires the `growatt_server.*` aliases. Otherwise use ESPHome entities and
-   API actions directly.
+6. The HACS integration remains the entity owner and consumes the same authenticated
+   connector HTTP API as the Linux runtime. ESPHome's encrypted native API is retained
+   for device management, logs, and OTA, avoiding duplicate sensor/entity ownership.
+7. Home Assistant provides native `huawei_emma` controls and optional
+   `growatt_server.*` compatibility independent of the selected connector runtime.
 
-## Certificate strategy to prototype
+## Certificate strategy
 
 - Generate a dedicated local CA and leaf key off-device with a repository script.
 - Embed the leaf certificate/key in the firmware from ESPHome secrets or upload them to
   a protected filesystem partition; never expose the key as an entity or log value.
 - Import only the CA certificate into EMMA.
-- Evaluate renewal without changing the CA, secure-boot/flash-encryption support, and
+- Evaluate secure-boot/flash-encryption support and
   whether filesystem storage materially improves key handling over a compiled secret.
 - Avoid on-device RSA key generation in the first version; it adds startup latency,
   entropy and persistence complexity without helping normal provisioning.
 
-## Bring-up checklist when hardware arrives
+## Production qualification checklist
 
-- Confirm the exact T-ETH-Elite board revision and W5500 SPI CS, clock, MOSI, MISO,
+- [x] Confirm the exact T-ETH-Elite board revision and W5500 SPI CS, clock, MOSI, MISO,
   interrupt, and reset pins against LilyGO's official schematic/examples.
-- Compile a minimal ESPHome 2026.7+ Ethernet node with DHCP, then a fixed management IP.
+- [x] Compile a dual-network ESPHome node and confirm the fixed W5500 management IP.
 - Run a 24-hour PoE/Ethernet stability and reconnect test; record free/minimum heap.
-- Prove an mbedTLS server accepts EMMA's cipher suite and captures the `0x41` frame.
-- Replay the recorded startup/device-list exchange before enabling real polling.
-- Port the six core power registers first and compare values against the Python server.
-- Add grouped fast/medium/slow polling with watchdog-friendly yielding and strict buffer
+- [x] Prove the mbedTLS server accepts the EMMA/mock cipher suite and parses `0x41`.
+- [x] Replay startup/device-list, core telemetry, and TOU read/write/readback with the mock.
+- [x] Add generated full-catalog fast/medium/slow polling with watchdog-friendly yielding and strict buffer
   bounds (MBAP maximum, object length, register count, and TOU payload).
-- Add writes only after readback verification; start with a harmless configuration item,
-  then TOU in a controlled test window.
+- [x] Require readback verification for safe scalar and TOU writes.
 - Test link loss, EMMA restart, ESP32 restart, certificate failure, malformed frames,
   duplicate clients, request timeout, and OTA rollback.
 - Measure flash, internal RAM, PSRAM use, task stack high-water marks, poll latency, and
@@ -67,12 +64,13 @@ requests as master.
 - [x] Compile the component against ESPHome/ESP-IDF 5.5 with bounded protocol buffers.
 - [x] Generate the ESPHome C++ register table and complete entity migration manifest
   from the pinned Python catalog, with CI rejecting stale generated artifacts.
-- Add captured-frame unit tests runnable on the host plus an ESP-IDF test target.
+- [x] Add a networked mock for captured startup/topology, telemetry, TOU, reconnect, and
+  error tests; a native ESP-IDF unit-test target remains optional.
 - [x] Define stable firmware IDs and the migration policy from the HACS integration.
 - [x] Add OTA, native API encryption, watchdog-compatible tasks, connection diagnostics,
   and a timing-coded activity LED.
 - [x] Write initial provisioning and certificate-generation instructions.
-- Complete certificate rotation, recovery, rollback, and production soak-test guidance.
+- Complete certificate rotation, recovery, rollback, and real-device production soak-test guidance.
 - Decide whether the final repository ships one combined HACS/ESPHome project or splits
   firmware into its own versioned repository.
 

@@ -1,3 +1,10 @@
+from .connector_contract import (
+    DEFAULT_API_PORT,
+    DEFAULT_TLS_PORT,
+    TOU_MAX_PERIODS,
+)
+
+
 DOMAIN = "huawei_emma_management"
 PLATFORMS = [
     "sensor",
@@ -24,10 +31,8 @@ CERTIFICATE_AUTOMATIC = "automatic"
 CERTIFICATE_CUSTOM = "custom"
 CONF_ACCEPT_EXTERNAL_GROWATT_CONTROLS = "accept_external_growatt_controls"
 DEFAULT_ACCEPT_EXTERNAL_GROWATT_CONTROLS = True
-DEFAULT_PORT = 8088
-DEFAULT_TLS_PORT = 16100
+DEFAULT_PORT = DEFAULT_API_PORT
 TOU_REGISTER_NAME = "emma_tou_periods"
-TOU_MAX_PERIODS = 14
 TOU_MODES = ("charge", "discharge")
 GROWATT_COMPAT_DOMAIN = "growatt_server"
 HUAWEI_EXTERNAL_API_DOMAIN = "huawei_emma"

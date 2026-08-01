@@ -42,6 +42,15 @@ from tmodbus.pdu import BaseClientPDU
 from tmodbus.transport.async_base import AsyncBaseTransport
 
 try:
+    from .connector_contract import (
+        API_PREFIX,
+        DEFAULT_API_PORT,
+        DEFAULT_TLS_PORT,
+        MAX_HTTP_REQUEST_BODY,
+        MAX_MBAP_LENGTH,
+        MAX_READ_REGISTERS,
+        MAX_WRITE_REGISTERS,
+    )
     from .embedded_catalog import (
         POLL_INTERVALS,
         EntityDescription,
@@ -56,6 +65,15 @@ try:
         load_or_create_environment,
     )
 except ImportError:  # Standalone external-server launcher.
+    from connector_contract import (
+        API_PREFIX,
+        DEFAULT_API_PORT,
+        DEFAULT_TLS_PORT,
+        MAX_HTTP_REQUEST_BODY,
+        MAX_MBAP_LENGTH,
+        MAX_READ_REGISTERS,
+        MAX_WRITE_REGISTERS,
+    )
     from embedded_catalog import (
         POLL_INTERVALS,
         EntityDescription,
@@ -72,13 +90,19 @@ except ImportError:  # Standalone external-server launcher.
 
 log = logging.getLogger(__name__)
 
+API_HEALTH = f"{API_PREFIX}/health"
+API_DEVICE = f"{API_PREFIX}/device"
+API_ENTITIES = f"{API_PREFIX}/entities"
+API_STATES = f"{API_PREFIX}/states"
+API_SUBSCRIPTIONS = f"{API_PREFIX}/subscriptions"
+API_TOU_PERIODS = f"{API_PREFIX}/tou-periods"
+
 DEFAULT_HOST = "0.0.0.0"
-DEFAULT_PORT = 16100
+DEFAULT_PORT = DEFAULT_TLS_PORT
 DEFAULT_CERTFILE = Path("certs/server-cert.pem")
 DEFAULT_KEYFILE = Path("certs/server-key.pem")
 DEFAULT_CA_CERTFILE = Path("certs/ca-cert.pem")
 DEFAULT_CA_KEYFILE = Path("certs/ca-key.pem")
-MAX_MBAP_LENGTH = 4096
 
 
 FUNCTION_NAMES = {
@@ -741,8 +765,8 @@ class ReverseModbusSession:
             raise ValueError("Unit ID must be between 0 and 255")
         if not 0 <= address <= 0xFFFF:
             raise ValueError("Register address must be between 0 and 65535")
-        if not 1 <= count <= 125:
-            raise ValueError("Register count must be between 1 and 125")
+        if not 1 <= count <= MAX_READ_REGISTERS:
+            raise ValueError(f"Register count must be between 1 and {MAX_READ_REGISTERS}")
 
         response = await self.request(unit_id, struct.pack(">BHH", 0x03, address, count))
         expected_byte_count = count * 2
@@ -769,8 +793,10 @@ class ReverseModbusSession:
     async def write_multiple_registers(
         self, unit_id: int, address: int, values: list[int]
     ) -> None:
-        if not 1 <= len(values) <= 123:
-            raise ValueError("Write-multiple requires between 1 and 123 registers")
+        if not 1 <= len(values) <= MAX_WRITE_REGISTERS:
+            raise ValueError(
+                f"Write-multiple requires between 1 and {MAX_WRITE_REGISTERS} registers"
+            )
         if any(not 0 <= value <= 0xFFFF for value in values):
             raise ValueError("Register values must be between 0 and 65535")
 
@@ -1577,16 +1603,16 @@ class CommandApi:
                 raise HttpError(401, "Unauthorized")
 
             content_length = int(headers.get("content-length", "0"))
-            if not 0 <= content_length <= 65536:
+            if not 0 <= content_length <= MAX_HTTP_REQUEST_BODY:
                 raise HttpError(413, "Request body is too large")
             body = await reader.readexactly(content_length) if content_length else b""
             path = urllib.parse.urlsplit(target).path
-            if path in ("/api/v1/device", "/api/v1/entities"):
+            if path in (API_DEVICE, API_ENTITIES):
                 log.info("Authenticated API request peer=%s method=%s path=%s", peer, method, path)
             else:
                 log.debug("Authenticated API request peer=%s method=%s path=%s", peer, method, path)
 
-            if method == "GET" and path in ("/health", "/api/v1/health"):
+            if method == "GET" and path in ("/health", API_HEALTH):
                 payload = self.state.health()
                 if path == "/health":
                     payload = {
@@ -1595,9 +1621,9 @@ class CommandApi:
                         "states": self.state.latest_states,
                     }
                 await _send_json(writer, 200, payload)
-            elif method == "GET" and path == "/api/v1/device":
+            elif method == "GET" and path == API_DEVICE:
                 await _send_json(writer, 200, self.state.device())
-            elif method == "GET" and path == "/api/v1/entities":
+            elif method == "GET" and path == API_ENTITIES:
                 await _send_json(
                     writer,
                     200,
@@ -1606,7 +1632,7 @@ class CommandApi:
                         "entities": self.state.entities(),
                     },
                 )
-            elif method == "GET" and path == "/api/v1/states":
+            elif method == "GET" and path == API_STATES:
                 session = self.state.active_session
                 unsupported = sorted(session.unsupported_registers) if session else []
                 summary = (
@@ -1633,7 +1659,7 @@ class CommandApi:
                         "unsupported": unsupported,
                     },
                 )
-            elif method == "POST" and path == "/api/v1/subscriptions":
+            elif method == "POST" and path == API_SUBSCRIPTIONS:
                 payload = _decode_json_object(body)
                 try:
                     register_names = self.state.set_subscriptions(
@@ -1651,9 +1677,9 @@ class CommandApi:
                     200,
                     {"ok": True, "register_names": register_names},
                 )
-            elif method == "POST" and path.startswith("/api/v1/entities/") and path.endswith("/value"):
+            elif method == "POST" and path.startswith(f"{API_ENTITIES}/") and path.endswith("/value"):
                 register_name = urllib.parse.unquote(
-                    path.removeprefix("/api/v1/entities/").removesuffix("/value")
+                    path.removeprefix(f"{API_ENTITIES}/").removesuffix("/value")
                 ).strip("/")
                 payload = _decode_json_object(body)
                 if "value" not in payload:
@@ -1665,7 +1691,7 @@ class CommandApi:
                 except (TimeoutError, ConnectionError, ModbusProtocolError, HuaweiSolarException) as error:
                     raise HttpError(502, str(error)) from error
                 await _send_json(writer, 200, {"ok": True, "register_name": register_name, "value": value})
-            elif method == "POST" and path == "/api/v1/tou-periods":
+            elif method == "POST" and path == API_TOU_PERIODS:
                 payload = _decode_json_object(body)
                 try:
                     value = await self.state.set_tou_periods(payload.get("periods"))
@@ -1823,7 +1849,7 @@ def parse_args() -> argparse.Namespace:
         help="CA certificate used to verify Home Assistant HTTPS",
     )
     parser.add_argument("--api-host", default="0.0.0.0", help="Command API bind address")
-    parser.add_argument("--api-port", type=int, default=8088, help="Command API port")
+    parser.add_argument("--api-port", type=int, default=DEFAULT_API_PORT, help="Command API port")
     parser.add_argument(
         "--api-token-env",
         default="EMMA_API_TOKEN",

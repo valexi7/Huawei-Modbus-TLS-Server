@@ -7,6 +7,7 @@ from esphome.const import CONF_ID
 from esphome.core import CORE
 
 from esphome.components.emma_w5500 import EmmaW5500
+from .generated_contract import DEFAULT_API_PORT, DEFAULT_TLS_PORT
 
 CONF_ETHERNET_ID = "ethernet_id"
 CONF_TLS_PORT = "tls_port"
@@ -31,8 +32,8 @@ CONFIG_SCHEMA = cv.All(
             cv.GenerateID(): cv.declare_id(HuaweiEmmaReverse),
             cv.Required(CONF_ETHERNET_ID): cv.use_id(EmmaW5500),
             cv.Required(CONF_ACTIVITY_OUTPUT_ID): cv.use_id(output.BinaryOutput),
-            cv.Optional(CONF_TLS_PORT, default=16100): cv.port,
-            cv.Optional(CONF_API_PORT, default=8088): cv.port,
+            cv.Optional(CONF_TLS_PORT, default=DEFAULT_TLS_PORT): cv.port,
+            cv.Optional(CONF_API_PORT, default=DEFAULT_API_PORT): cv.port,
             cv.Required(CONF_API_TOKEN): cv.sensitive(cv.string_strict),
             cv.Required(CONF_CERTIFICATE): cv.sensitive(cv.string_strict),
             cv.Required(CONF_PRIVATE_KEY): cv.sensitive(cv.string_strict),

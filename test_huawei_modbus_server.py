@@ -72,10 +72,12 @@ class RepositoryContractTests(unittest.TestCase):
             "generated_register_catalog.h",
             (component / "huawei_emma_reverse.h").read_text(encoding="utf-8"),
         )
-        self.assertIn("GENERATED_CORE_ADDRESS = 30354", generated)
+        self.assertIn("GENERATED_ENTITY_COUNT = 740", generated)
+        self.assertIn("GENERATED_CONTRACT_VERSION = 2", generated)
         self.assertIn('"emma_tou_periods"', generated)
         self.assertIn("GENERATED_CATALOG_SHA256", source)
-        self.assertIn('"/api/v1/tou-periods"', source)
+        self.assertIn("GENERATED_PATH_TOU", source)
+        self.assertIn('GENERATED_PATH_TOU[] = "/api/v1/tou-periods"', generated)
         self.assertIn("ActivityKind::MODBUS_RX", source)
         self.assertIn("ActivityKind::API_TX", source)
         self.assertIn("CONF_CERTIFICATE", schema)
@@ -87,7 +89,7 @@ class RepositoryContractTests(unittest.TestCase):
         )
         self.assertEqual(migration["physical_entity_count"], 740)
         self.assertEqual(migration["virtual_entity_count"], 10)
-        self.assertEqual(migration["firmware_supported_count"], 11)
+        self.assertEqual(migration["firmware_supported_count"], 740)
         check = subprocess.run(
             [sys.executable, "tools/generate_esphome_catalog.py", "--check"],
             check=False,
@@ -459,7 +461,7 @@ class DecoderTests(unittest.TestCase):
         sys.modules[package_name] = package
         component_root = Path(__file__).parent / "custom_components" / "huawei_emma_management"
         try:
-            for module_name in ("const", "embedded_catalog", "tou"):
+            for module_name in ("connector_contract", "const", "embedded_catalog", "tou"):
                 spec = importlib.util.spec_from_file_location(
                     f"{package_name}.{module_name}", component_root / f"{module_name}.py"
                 )
