@@ -13,6 +13,16 @@ control schemas, and `/api/v1` connector contract. Changing runtime does not cre
 Home Assistant entities: keep the existing config entry and change only its connector
 mode or external host.
 
+## Expanded documentation
+
+- [Home Assistant integration and embedded TLS server](docs/home-assistant-embedded.md)
+- [ESPHome / LilyGO T-ETH-Elite dual-network connector](docs/esphome-t-eth-elite.md)
+- [Standalone Linux/Python connector](docs/linux-python.md)
+- [Authenticated connector API and Home Assistant actions](docs/huawei-emma-api.md)
+- [EMMA mock test workflow](docs/emma-mock-test.md)
+- [Maintenance and upgrade guidance](docs/maintenance.md)
+- [ESPHome architecture and production qualification roadmap](docs/esphome-roadmap.md)
+
 EMMA uses a reverse connection: EMMA opens an outbound TLS socket as the TCP client, but
 the connector becomes the Modbus master and EMMA answers as the Modbus slave. A normal
 Modbus TCP server cannot handle its private `0x41` startup frame or this reversed role.
@@ -47,6 +57,9 @@ move from Home Assistant to ESP32 or Linux.
 Choose **Run inside Home Assistant**, retain TLS port `16100`, and enter the fixed IP or
 DNS name that EMMA will use to reach Home Assistant. No separate machine, HTTP API token,
 or `.env` file is required.
+
+See the [embedded Home Assistant guide](docs/home-assistant-embedded.md) for certificate
+paths, custom TLS material, migration, and troubleshooting.
 
 ### Automatic certificate
 
@@ -149,6 +162,9 @@ Detailed provisioning, migration, and mock testing:
 ## Choice 3: standalone Python on Linux
 
 Python 3.12 or newer is required:
+
+The [Linux/Python connector guide](docs/linux-python.md) covers first-run configuration,
+systemd, upgrades, and troubleshooting in detail.
 
 ```bash
 sudo systemctl disable --now huawei-emma.service 2>/dev/null || true
