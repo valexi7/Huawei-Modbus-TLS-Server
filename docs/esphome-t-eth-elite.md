@@ -22,6 +22,9 @@ The packaged W5500 pins come from LilyGO's official T-ETH-Elite definition:
 | Interrupt | 14 |
 | Reset | not connected |
 
+## Sample installation picture, when connected directly to EMMA router/network
+<img width="844" height="921" alt="image" src="https://github.com/user-attachments/assets/3ab2aa65-0931-4815-8f99-071636552cf3" />
+
 ## Minimal device YAML
 
 Copy [`esphome/huawei-emma-tls-server.yaml`](../esphome/huawei-emma-tls-server.yaml)
