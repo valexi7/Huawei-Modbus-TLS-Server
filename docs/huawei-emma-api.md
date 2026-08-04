@@ -312,6 +312,34 @@ data:
   enabled: true
 ```
 
+The optional Growatt compatibility aliases expose the same operations. With one Huawei
+EMMA integration entry, `device_id` may be omitted and **Fill example data** inserts the
+runtime Device Registry ID automatically:
+
+```yaml
+action: growatt_server.read_time_segments
+data: {}
+response_variable: growatt_segments
+```
+
+The result contains `device` metadata and the complete list under `time_segments`.
+
+```yaml
+action: growatt_server.update_time_segment
+data:
+  segment_id: 1
+  batt_mode: battery_first
+  start_time: "00:00"
+  end_time: "06:00"
+  enabled: true
+response_variable: growatt_update
+```
+
+The update response contains `device`, `updated_segment_id`, and the complete
+`time_segments` readback. `response_variable` is a top-level Home Assistant action key,
+not part of `data`. Existing BESS callers may omit it because update responses are
+optional.
+
 ## Growatt/BESS emergency stop
 
 The **Accept External Growatt Controls** option applies only to

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.14.9
+
+- Auto-discover the sole Huawei EMMA Device Registry ID in **Fill example data** for
+  `growatt_server.read_time_segments` and `growatt_server.update_time_segment`, while
+  allowing `device_id` to be omitted when only one entry is loaded.
+- Expose Growatt action-response metadata in the UI and optionally return the complete
+  nine-slot readback after `growatt_server.update_time_segment`.
+
 ## 0.14.8
 
 - Report connector subscription state, routing metadata, Modbus address, and a precise

@@ -516,7 +516,7 @@ class EmmaCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         start_time: str,
         end_time: str,
         enabled: bool,
-    ) -> None:
+    ) -> list[dict[str, Any]]:
         """Update one compatibility slot and immediately commit the EMMA schedule."""
         _LOGGER.debug(
             "GROWATT UPDATE received segment_id=%s batt_mode=%s start=%s end=%s "
@@ -609,3 +609,4 @@ class EmmaCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             if self.data
             else None,
         )
+        return self.growatt_time_segments()

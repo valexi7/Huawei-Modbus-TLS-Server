@@ -335,6 +335,31 @@ weekdays, maximum 14 periods, and overlap, then read back before success is retu
 See the [authenticated connector API guide](docs/huawei-emma-api.md) for direct HTTP use
 and Growatt-compatible scheduling actions.
 
+The optional `growatt_server` compatibility aliases use the same automatic device
+selection. Their response-enabled examples are:
+
+```yaml
+action: growatt_server.read_time_segments
+data: {}
+response_variable: growatt_segments
+```
+
+```yaml
+action: growatt_server.update_time_segment
+data:
+  segment_id: 1
+  batt_mode: battery_first
+  start_time: "00:00"
+  end_time: "06:00"
+  enabled: true
+response_variable: growatt_update
+```
+
+When exactly one Huawei EMMA entry is loaded, **Fill example data** discovers its
+Device Registry ID for both aliases. The read action always returns all nine slots.
+The update action remains compatible with callers that ignore responses, but when a
+`response_variable` is requested it returns `updated_segment_id` and all nine slots.
+
 ## One maintenance path
 
 Runtime-neutral values live in:

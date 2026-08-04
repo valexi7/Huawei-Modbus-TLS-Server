@@ -93,8 +93,8 @@ def _require_tou_input(data: dict[str, Any]) -> dict[str, Any]:
     return data
 
 
-def _set_huawei_service_schemas(hass: HomeAssistant) -> None:
-    """Describe the dynamically registered public huawei_emma actions."""
+def _service_device_field(hass: HomeAssistant) -> dict[str, Any]:
+    """Build a Device Registry selector with a runtime-discovered example."""
     parent_device_ids = _configured_parent_device_ids(hass)
     device_field = {
         "name": "Device",
@@ -109,6 +109,51 @@ def _set_huawei_service_schemas(hass: HomeAssistant) -> None:
         # Home Assistant uses field examples for "Fill example data". Device
         # registry IDs are installation-specific, so discover the real one.
         device_field["example"] = parent_device_ids[0]
+    return device_field
+
+
+def _time_segment_service_fields(
+    device_field: dict[str, Any],
+) -> dict[str, dict[str, Any]]:
+    """Build the shared Huawei/Growatt time-segment editor fields."""
+    return {
+        "device_id": device_field,
+        "segment_id": {
+            "name": "Segment",
+            "required": True,
+            "example": 1,
+            "selector": {"number": {"min": 1, "max": 9, "step": 1, "mode": "box"}},
+        },
+        "batt_mode": {
+            "name": "Battery mode",
+            "required": True,
+            "example": "battery_first",
+            "selector": {"select": {"options": list(GROWATT_BATTERY_MODES)}},
+        },
+        "start_time": {
+            "name": "Start time",
+            "required": True,
+            "example": "00:00",
+            "selector": {"time": {}},
+        },
+        "end_time": {
+            "name": "End time",
+            "required": True,
+            "example": "06:00",
+            "selector": {"time": {}},
+        },
+        "enabled": {
+            "name": "Enabled",
+            "required": True,
+            "example": True,
+            "selector": {"boolean": {}},
+        },
+    }
+
+
+def _set_huawei_service_schemas(hass: HomeAssistant) -> None:
+    """Describe the dynamically registered public huawei_emma actions."""
+    device_field = _service_device_field(hass)
     schemas = {
         "read_controls": {
             "name": "Read EMMA controls",
@@ -211,48 +256,39 @@ def _set_huawei_service_schemas(hass: HomeAssistant) -> None:
             "description": (
                 "Update one BESS-compatible slot and immediately write the full schedule."
             ),
-            "fields": {
-                "device_id": device_field,
-                "segment_id": {
-                    "name": "Segment",
-                    "required": True,
-                    "example": 1,
-                    "selector": {
-                        "number": {"min": 1, "max": 9, "step": 1, "mode": "box"}
-                    },
-                },
-                "batt_mode": {
-                    "name": "Battery mode",
-                    "required": True,
-                    "example": "battery_first",
-                    "selector": {
-                        "select": {"options": list(GROWATT_BATTERY_MODES)}
-                    },
-                },
-                "start_time": {
-                    "name": "Start time",
-                    "required": True,
-                    "example": "00:00",
-                    "selector": {"time": {}},
-                },
-                "end_time": {
-                    "name": "End time",
-                    "required": True,
-                    "example": "06:00",
-                    "selector": {"time": {}},
-                },
-                "enabled": {
-                    "name": "Enabled",
-                    "required": True,
-                    "example": True,
-                    "selector": {"boolean": {}},
-                },
-            },
+            "fields": _time_segment_service_fields(device_field),
         },
     }
     for service_name, schema in schemas.items():
         service_helper.async_set_service_schema(
             hass, HUAWEI_EXTERNAL_API_DOMAIN, service_name, schema
+        )
+
+
+def _set_growatt_service_schemas(hass: HomeAssistant) -> None:
+    """Describe the dynamically registered Growatt compatibility actions."""
+    device_field = _service_device_field(hass)
+    schemas = {
+        "read_time_segments": {
+            "name": "Read Huawei EMMA time segments",
+            "description": (
+                "Return the nine-slot Growatt/BESS-compatible Huawei EMMA TOU "
+                "schedule as action response data."
+            ),
+            "fields": {"device_id": device_field},
+        },
+        "update_time_segment": {
+            "name": "Update Huawei EMMA time segment",
+            "description": (
+                "Update one Growatt/BESS-compatible slot, write the complete "
+                "Huawei EMMA schedule, and optionally return all nine slots."
+            ),
+            "fields": _time_segment_service_fields(device_field),
+        },
+    }
+    for service_name, schema in schemas.items():
+        service_helper.async_set_service_schema(
+            hass, GROWATT_COMPAT_DOMAIN, service_name, schema
         )
 
 
@@ -664,9 +700,12 @@ def _async_register_services(hass: HomeAssistant) -> None:
             call.service,
             segments,
         )
-        return {"time_segments": segments}
+        return {
+            "device": _device_response_metadata(hass, target),
+            "time_segments": segments,
+        }
 
-    async def update_time_segment(call: ServiceCall) -> None:
+    async def update_time_segment(call: ServiceCall) -> dict[str, Any] | None:
         _LOGGER.debug(
             "SERVICE received domain=%s service=%s user_id=%s data=%r",
             call.domain,
@@ -697,7 +736,7 @@ def _async_register_services(hass: HomeAssistant) -> None:
             call.service,
         )
         try:
-            await target.async_update_growatt_time_segment(
+            segments = await target.async_update_growatt_time_segment(
                 call.data["segment_id"],
                 call.data["batt_mode"],
                 call.data["start_time"],
@@ -712,7 +751,20 @@ def _async_register_services(hass: HomeAssistant) -> None:
                 error,
             )
             raise ServiceValidationError(str(error)) from error
-        _LOGGER.debug("SERVICE completed domain=%s service=%s", call.domain, call.service)
+        _LOGGER.debug(
+            "SERVICE completed domain=%s service=%s return_response=%s readback=%r",
+            call.domain,
+            call.service,
+            call.return_response,
+            segments,
+        )
+        if not call.return_response:
+            return None
+        return {
+            "device": _device_response_metadata(hass, target),
+            "updated_segment_id": call.data["segment_id"],
+            "time_segments": segments,
+        }
 
     async def read_controls(call: ServiceCall) -> dict[str, Any]:
         _LOGGER.debug(
@@ -999,13 +1051,13 @@ def _async_register_services(hass: HomeAssistant) -> None:
 
     read_schema = _debug_schema(
         "read_time_segments_or_controls",
-        vol.Schema({vol.Required("device_id"): cv.string}),
+        vol.Schema({vol.Optional("device_id"): cv.string}),
     )
     update_schema = _debug_schema(
         "update_time_segment",
         vol.Schema(
             {
-                vol.Required("device_id"): cv.string,
+                vol.Optional("device_id"): cv.string,
                 vol.Required("segment_id"): vol.All(
                     vol.Coerce(int), vol.Range(min=1, max=GROWATT_MAX_SEGMENTS)
                 ),
@@ -1095,6 +1147,7 @@ def _async_register_services(hass: HomeAssistant) -> None:
                 "update_time_segment",
                 update_time_segment,
                 schema=update_schema,
+                supports_response=SupportsResponse.OPTIONAL,
             )
             hass.data[_GROWATT_ALIAS_OWNER] = True
             _LOGGER.info(
@@ -1171,6 +1224,9 @@ def _async_register_services(hass: HomeAssistant) -> None:
     if hass.data.get(_HUAWEI_API_OWNER):
         # Refresh installation-specific device examples when entries are added.
         _set_huawei_service_schemas(hass)
+    if hass.data.get(_GROWATT_ALIAS_OWNER):
+        # Refresh installation-specific device examples when entries are added.
+        _set_growatt_service_schemas(hass)
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:

@@ -113,6 +113,12 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertIn('"read_tou_periods"', source)
         self.assertIn('"update_time_segment"', source)
         self.assertIn("_set_huawei_service_schemas(hass)", source)
+        self.assertIn("_set_growatt_service_schemas(hass)", source)
+        self.assertIn("def _service_device_field", source)
+        self.assertEqual(
+            source.count('"fields": _time_segment_service_fields(device_field)'),
+            2,
+        )
         self.assertIn('vol.Optional("device_id")', source)
         self.assertIn('device_field["example"] = parent_device_ids[0]', source)
         self.assertIn('"00:00-03:59/1234567/+\\n"', source)
@@ -125,6 +131,9 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertIn('"source_register_name": source_register', source)
         self.assertIn('"availability_reason": availability_reason', source)
         self.assertIn('"subscribed": subscribed', source)
+        self.assertIn('"updated_segment_id": call.data["segment_id"]', source)
+        self.assertIn('"time_segments": segments', source)
+        self.assertIn("supports_response=SupportsResponse.OPTIONAL", source)
         coordinator = Path(
             "custom_components/huawei_emma_management/coordinator.py"
         ).read_text(encoding="utf-8")
