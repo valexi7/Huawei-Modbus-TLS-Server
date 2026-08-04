@@ -62,6 +62,7 @@ class EmmaCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._tou_write_lock = asyncio.Lock()
         self._subscription_sync_lock = asyncio.Lock()
         self._accepted_subscriptions: set[str] | None = None
+        self._connector_instance_id: str | None = None
         self.selected_tou_slot = 0
         self.tou_dirty = False
         self._discovery_reload_scheduled = False
@@ -79,6 +80,13 @@ class EmmaCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     def unique_id_prefix(self) -> str:
         return self.parent_identifier
 
+    def is_register_subscribed(self, register_name: str) -> bool:
+        """Return whether the connector accepted this register subscription."""
+        return bool(
+            self._accepted_subscriptions is not None
+            and register_name in self._accepted_subscriptions
+        )
+
     async def async_initialize(self) -> None:
         discovered = await self.api.device()
         if discovered.get("serial_number") or not self.device_data:
@@ -89,7 +97,7 @@ class EmmaCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     async def async_sync_polling_subscriptions(
         self, *, source: str = "entity_registry"
-    ) -> None:
+    ) -> bool:
         """Make the connector poll exactly the entities enabled in HA."""
         async with self._subscription_sync_lock:
             registry = er.async_get(self.hass)
@@ -124,7 +132,7 @@ class EmmaCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     "Connector does not support dynamic polling subscriptions yet: %s",
                     error,
                 )
-                return
+                return False
             previous = self._accepted_subscriptions
             self._accepted_subscriptions = accepted
             if previous is None:
@@ -135,7 +143,7 @@ class EmmaCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     len(accepted),
                     len(self.entity_descriptions),
                 )
-                return
+                return True
             added = sorted(accepted - previous)
             removed = sorted(previous - accepted)
             _LOGGER.info(
@@ -150,10 +158,51 @@ class EmmaCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 _LOGGER.info("Polling subscriptions added: %s", ", ".join(added))
             if removed:
                 _LOGGER.info("Polling subscriptions removed: %s", ", ".join(removed))
+            return True
+
+    async def _async_reconcile_connector_subscriptions(
+        self, health: dict[str, Any]
+    ) -> None:
+        """Reassert HA subscriptions after a connector process or device restart."""
+        instance_id = health.get("connector_instance_id")
+        reported_count = health.get("registers_subscribed")
+        expected_count = (
+            len(self._accepted_subscriptions)
+            if self._accepted_subscriptions is not None
+            else None
+        )
+        instance_changed = bool(
+            instance_id
+            and self._connector_instance_id is not None
+            and instance_id != self._connector_instance_id
+        )
+        count_mismatch = bool(
+            expected_count is not None
+            and isinstance(reported_count, int)
+            and reported_count != expected_count
+        )
+        if instance_changed or count_mismatch:
+            reason = "restart" if instance_changed else "count_mismatch"
+            _LOGGER.info(
+                "Connector subscriptions require reconciliation reason=%s "
+                "instance=%s previous_instance=%s reported=%s expected=%s",
+                reason,
+                instance_id,
+                self._connector_instance_id,
+                reported_count,
+                expected_count,
+            )
+            if not await self.async_sync_polling_subscriptions(
+                source=f"connector_{reason}"
+            ):
+                return
+        if instance_id:
+            self._connector_instance_id = str(instance_id)
 
     async def _async_update_data(self) -> dict[str, Any]:
         try:
             health = await self.api.health()
+            await self._async_reconcile_connector_subscriptions(health)
             states = await self.api.states()
             discovered = await self.api.device() if health.get("connected") else None
         except EmmaApiError as error:

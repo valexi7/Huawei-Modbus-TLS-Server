@@ -9,6 +9,7 @@ import hmac
 import json
 import logging
 import os
+import secrets
 import re
 import ssl
 import struct
@@ -1287,6 +1288,7 @@ def _now_iso() -> str:
 
 @dataclass(slots=True)
 class RuntimeState:
+    connector_instance_id: str = field(default_factory=lambda: secrets.token_hex(8))
     active_session: ReverseModbusSession | None = None
     latest_states: dict[str, dict[str, Any]] = field(default_factory=dict)
     latest_values: dict[str, Any] = field(default_factory=dict)
@@ -1318,6 +1320,7 @@ class RuntimeState:
     def health(self) -> dict[str, Any]:
         session = self.active_session
         return {
+            "connector_instance_id": self.connector_instance_id,
             "connected": session is not None and not session.closed,
             "peer": session.peer if session is not None else None,
             "connected_at": self.connected_at,

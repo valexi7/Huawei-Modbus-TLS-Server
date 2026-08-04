@@ -145,6 +145,7 @@ class HuaweiEmmaReverse : public Component {
   uint16_t tls_port_{GENERATED_DEFAULT_TLS_PORT};
   uint16_t api_port_{GENERATED_DEFAULT_API_PORT};
   std::string api_token_;
+  std::string connector_instance_id_;
   std::string certificate_;
   std::string private_key_;
   bool log_raw_{false};

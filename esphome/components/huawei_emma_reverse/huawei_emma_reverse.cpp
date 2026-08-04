@@ -5,6 +5,7 @@
 
 #include <cJSON.h>
 #include <esp_idf_version.h>
+#include <esp_random.h>
 
 #include <algorithm>
 #include <cmath>
@@ -17,6 +18,10 @@ namespace esphome::huawei_emma_reverse {
 static const char *const TAG = "huawei_emma_reverse";
 void HuaweiEmmaReverse::setup() {
   ESP_LOGI(TAG, "Starting ESP32 Huawei EMMA reverse connector");
+  char instance_id[17];
+  std::snprintf(instance_id, sizeof(instance_id), "%08lx%08lx",
+                static_cast<unsigned long>(esp_random()), static_cast<unsigned long>(esp_random()));
+  this->connector_instance_id_ = instance_id;
   this->tls_mutex_ = xSemaphoreCreateMutex();
   this->data_mutex_ = xSemaphoreCreateMutex();
   if (this->tls_mutex_ == nullptr || this->data_mutex_ == nullptr) {
@@ -1084,7 +1089,8 @@ esp_err_t HuaweiEmmaReverse::send_entities_json_(httpd_req_t *request) {
 
 std::string HuaweiEmmaReverse::health_json_() {
   std::ostringstream out;
-  out << "{\"connected\":" << (this->connected_.load() ? "true" : "false")
+  out << "{\"connector_instance_id\":\"" << this->connector_instance_id_ << "\",\"connected\":"
+      << (this->connected_.load() ? "true" : "false")
       << ",\"tls_port\":" << this->tls_port_ << ",\"api_port\":" << this->api_port_
       << ",\"registers_available\":";
   size_t available = 0;

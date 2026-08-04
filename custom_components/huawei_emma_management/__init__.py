@@ -813,6 +813,19 @@ def _async_register_services(hass: HomeAssistant) -> None:
         connected = bool(data.get("health", {}).get("connected"))
         source_register = description.get("source_register_name", register_name)
         value_present = source_register in values
+        subscribed = target.is_register_subscribed(source_register)
+        if not connected:
+            availability_reason = "connector_disconnected"
+        elif source_register in unsupported:
+            availability_reason = "unsupported_by_device"
+        elif value_present and not subscribed:
+            availability_reason = "cached_not_subscribed_enable_the_entity_for_updates"
+        elif not subscribed:
+            availability_reason = "not_subscribed_enable_the_entity"
+        elif not value_present:
+            availability_reason = "awaiting_poll_or_target_device_unavailable"
+        else:
+            availability_reason = "available"
         result = {
             "device": _device_response_metadata(hass, target),
             "register_name": register_name,
@@ -822,19 +835,27 @@ def _async_register_services(hass: HomeAssistant) -> None:
             "available": (
                 connected and source_register not in unsupported and value_present
             ),
+            "availability_reason": availability_reason,
+            "subscribed": subscribed,
             "updated_at": data.get("updated_at", {}).get(source_register),
             "unit": description.get("unit"),
             "platform": description.get("platform"),
             "poll_group": description.get("poll_group"),
+            "device_role": description.get("device_role"),
+            "client_role": description.get("client_role"),
+            "address": description.get("address"),
+            "register_count": description.get("length"),
             "unsupported": source_register in unsupported,
         }
         _LOGGER.debug(
             "API completed domain=%s service=%s register=%s available=%s "
-            "value=%r updated_at=%s",
+            "subscribed=%s reason=%s value=%r updated_at=%s",
             call.domain,
             call.service,
             register_name,
             result["available"],
+            result["subscribed"],
+            result["availability_reason"],
             result["value"],
             result["updated_at"],
         )

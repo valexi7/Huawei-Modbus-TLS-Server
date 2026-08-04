@@ -53,7 +53,7 @@ Use the Home Assistant Device Registry ID. Open the Huawei EMMA device page and 
 last component of its URL:
 
 ```text
-/config/devices/device/0123456789abcdef0123456789abcdef
+/config/devices/device/abcd1234abcd1234abcd1234abcd1234
                        └──────────── device_id ────────────┘
 ```
 
@@ -71,7 +71,7 @@ Use `return_response` because `read_controls` always returns data:
 curl --request POST \
   --header "Authorization: Bearer $HA_TOKEN" \
   --header "Content-Type: application/json" \
-  --data '{"device_id":"0123456789abcdef0123456789abcdef"}' \
+  --data '{"device_id":"abcd1234abcd1234abcd1234abcd1234"}' \
   'https://HOME_ASSISTANT/api/services/huawei_emma/read_controls?return_response'
 ```
 
@@ -82,7 +82,7 @@ Home Assistant wraps the result in `service_response`:
   "changed_states": [],
   "service_response": {
     "device": {
-      "device_id": "0123456789abcdef0123456789abcdef",
+      "device_id": "abcd1234abcd1234abcd1234abcd1234",
       "name": "Huawei EMMA-A02",
       "model": "EMMA-A02",
       "serial_number": "TESTEMMA0001",
@@ -121,15 +121,21 @@ catalog and should be preferred over hard-coded values.
 ```yaml
 action: huawei_emma.read_value
 data:
-  device_id: 0123456789abcdef0123456789abcdef
+  device_id: abcd1234abcd1234abcd1234abcd1234
   register_name: storage_maximum_charging_power
 response_variable: emma_value
 ```
 
-The response contains `value`, `available`, `updated_at`, `unit`, `platform`,
-`poll_group`, the resolved Home Assistant device, and the source register name. If only
-one Huawei EMMA entry is loaded, `device_id` may be omitted; **Fill example data** uses
-the entry's real registry ID automatically.
+The response contains `value`, `available`, `availability_reason`, `subscribed`,
+`updated_at`, `unit`, `platform`, `poll_group`, target device/client roles, Modbus
+address/count, the resolved Home Assistant device, and the source register name.
+`read_value` returns the connector's latest cached state; it does not temporarily
+subscribe to or directly poll a disabled entity. Enable that entity when
+`availability_reason` is `not_subscribed_enable_the_entity`.
+
+If only one Huawei EMMA entry is loaded, `device_id` may be omitted. **Fill example
+data** discovers the entry's real Device Registry ID at runtime; the synthetic ID in
+this guide is not embedded in the integration.
 
 ## Read native EMMA TOU schedule
 
@@ -156,7 +162,7 @@ curl --request POST \
   --header "Authorization: Bearer $HA_TOKEN" \
   --header "Content-Type: application/json" \
   --data '{
-    "device_id": "0123456789abcdef0123456789abcdef",
+    "device_id": "abcd1234abcd1234abcd1234abcd1234",
     "register_name": "storage_maximum_charging_power",
     "value": 5000
   }' \
@@ -205,7 +211,7 @@ curl --request POST \
   --header "Authorization: Bearer $HA_TOKEN" \
   --header "Content-Type: application/json" \
   --data '{
-    "device_id": "0123456789abcdef0123456789abcdef",
+    "device_id": "abcd1234abcd1234abcd1234abcd1234",
     "structured_periods": [
       {
         "start_time": "00:00",
@@ -236,7 +242,7 @@ Consumers using the LUNA text format can call the administrator-only
 ```yaml
 action: huawei_emma.set_tou_periods
 data:
-  device_id: 0123456789abcdef0123456789abcdef
+  device_id: abcd1234abcd1234abcd1234abcd1234
   periods: |-
     00:00-03:59/1234567/+
     07:00-09:59/1234567/-
@@ -255,7 +261,7 @@ An empty string clears the schedule:
 ```yaml
 action: huawei_emma.set_tou_periods
 data:
-  device_id: 0123456789abcdef0123456789abcdef
+  device_id: abcd1234abcd1234abcd1234abcd1234
   periods: ""
 ```
 
@@ -269,7 +275,7 @@ Discover controls:
 ```yaml
 action: huawei_emma.read_controls
 data:
-  device_id: 0123456789abcdef0123456789abcdef
+  device_id: abcd1234abcd1234abcd1234abcd1234
 response_variable: emma_controls
 ```
 
@@ -278,7 +284,7 @@ Set a switch or select:
 ```yaml
 action: huawei_emma.set_value
 data:
-  device_id: 0123456789abcdef0123456789abcdef
+  device_id: abcd1234abcd1234abcd1234abcd1234
   register_name: storage_charge_from_grid_function
   value: true
 response_variable: emma_result
@@ -289,7 +295,7 @@ Read the BESS-compatible schedule:
 ```yaml
 action: huawei_emma.read_time_segments
 data:
-  device_id: 0123456789abcdef0123456789abcdef
+  device_id: abcd1234abcd1234abcd1234abcd1234
 response_variable: emma_time_segments
 ```
 
@@ -298,7 +304,7 @@ Update one BESS-compatible slot:
 ```yaml
 action: huawei_emma.update_time_segment
 data:
-  device_id: 0123456789abcdef0123456789abcdef
+  device_id: abcd1234abcd1234abcd1234abcd1234
   segment_id: 1
   batt_mode: battery_first
   start_time: "00:00"

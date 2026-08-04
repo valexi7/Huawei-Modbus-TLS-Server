@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.14.8
+
+- Report connector subscription state, routing metadata, Modbus address, and a precise
+  availability reason from `huawei_emma.read_value`.
+- Detect ESP32/Linux connector restarts using a per-process instance ID and automatically
+  reassert Home Assistant's Entity Registry-derived polling subscriptions. Older
+  connectors are reconciled when their reported subscription count differs.
+- Replace installation-specific Home Assistant device IDs in tracked examples with a
+  synthetic `abcd1234...` value and add regression coverage for polling metadata.
+
 ## 0.14.7
 
 - Add `huawei_emma.read_value` with automatic single-entry device resolution, dynamic

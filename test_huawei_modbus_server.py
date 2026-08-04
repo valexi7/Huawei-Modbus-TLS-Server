@@ -8,6 +8,7 @@ import tempfile
 import unittest
 import ipaddress
 import importlib.util
+import re
 import sys
 import types
 from types import SimpleNamespace
@@ -82,6 +83,8 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertIn("ActivityKind::API_TX", source)
         self.assertIn("Polling subscription added group=%s name=%s", source)
         self.assertIn("subscribed=%u requested=%u batches=%u", source)
+        self.assertIn('\\"connector_instance_id\\"', source)
+        self.assertIn("esp_random()", source)
         self.assertIn("CONF_CERTIFICATE", schema)
         self.assertIn("CONF_PRIVATE_KEY", schema)
         self.assertIn("huawei_emma_reverse:", device_yaml)
@@ -120,12 +123,31 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertIn("async_sync_polling_subscriptions", source)
         self.assertIn("external_read_value_schema", source)
         self.assertIn('"source_register_name": source_register', source)
+        self.assertIn('"availability_reason": availability_reason', source)
+        self.assertIn('"subscribed": subscribed', source)
+        coordinator = Path(
+            "custom_components/huawei_emma_management/coordinator.py"
+        ).read_text(encoding="utf-8")
+        self.assertIn("_async_reconcile_connector_subscriptions", coordinator)
+        self.assertIn('source=f"connector_{reason}"', coordinator)
         services = Path(
             "custom_components/huawei_emma_management/services.yaml"
         ).read_text(encoding="utf-8")
         self.assertNotIn("set_tou_periods:", services)
         self.assertNotIn("read_time_segments:", services)
         self.assertNotIn("update_time_segment:", services)
+
+    def test_documentation_uses_synthetic_device_registry_ids(self):
+        synthetic_device_id = "abcd1234abcd1234abcd1234abcd1234"
+        pattern = re.compile(
+            r'(?:device_id["\']?\s*:\s*["\']?'
+            r'|/config/devices/device/)([0-9a-f]{32})',
+            re.IGNORECASE,
+        )
+        for path in (Path("README.md"), Path("docs/huawei-emma-api.md")):
+            matches = pattern.findall(path.read_text(encoding="utf-8"))
+            self.assertTrue(matches, f"No device ID example found in {path}")
+            self.assertEqual(set(matches), {synthetic_device_id})
 
     def test_config_flow_port_fields_use_serializable_ha_validator(self):
         source = Path(
@@ -230,6 +252,15 @@ async def ignore_states(_session, _states):
 
 
 class FrameTests(unittest.IsolatedAsyncioTestCase):
+    async def test_runtime_health_identifies_connector_process(self):
+        first = RuntimeState()
+        second = RuntimeState()
+        self.assertRegex(first.connector_instance_id, r"^[0-9a-f]{16}$")
+        self.assertNotEqual(first.connector_instance_id, second.connector_instance_id)
+        self.assertEqual(
+            first.health()["connector_instance_id"], first.connector_instance_id
+        )
+
     async def test_managed_tls_server_generates_material_and_stops(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             cert_dir = Path(temp_dir)
@@ -703,6 +734,19 @@ class DecoderTests(unittest.TestCase):
             catalog[str(rn.EMMA_TOU_PERIODS)].entity_category, "diagnostic"
         )
         self.assertFalse(catalog[str(rn.EMMA_TOU_PERIODS)].enabled_default)
+        for register_name in (rn.STATE_1, rn.STATE_2, rn.STATE_3):
+            description = catalog[str(register_name)]
+            self.assertEqual(description.poll_group, "fast")
+            self.assertEqual(description.device_role, "inverter")
+            self.assertEqual(description.client_role, "inverter")
+            self.assertFalse(description.enabled_default)
+        for register_name in (rn.ALARM_1, rn.ALARM_2, rn.ALARM_3):
+            description = catalog[str(register_name)]
+            self.assertEqual(description.poll_group, "medium")
+            self.assertEqual(description.entity_category, "diagnostic")
+            self.assertEqual(description.device_role, "inverter")
+            self.assertEqual(description.client_role, "inverter")
+            self.assertFalse(description.enabled_default)
         self.assertEqual(
             catalog[str(rn.EMMA_MAXIMUM_FEED_GRID_POWER_PERCENT)].platform,
             "number",

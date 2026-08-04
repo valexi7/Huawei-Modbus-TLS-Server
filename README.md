@@ -33,6 +33,8 @@ Modbus TCP server cannot handle its private `0x41` startup frame or this reverse
 - 740 generated register definitions from pinned `huawei-solar` 3.0.6
 - disabled-by-default optional entities; enabling an entity starts its polling
 - address-coalesced fast (30 s), medium (5 min), and slow (30 min) polling
+- automatic reapplication of Entity Registry-derived polling subscriptions after an
+  ESP32 or Linux connector restart
 - device-role routing for EMMA, inverter/LUNA, charger, SDongle, and SmartLogger
 - scalar, enum, boolean, timestamp, bitfield, string, and structured-period decoding
 - safe enum, boolean, datetime, bounded-number, and Huawei TOU writes with readback
@@ -252,7 +254,7 @@ Read all safe controls:
 ```yaml
 action: huawei_emma.read_controls
 data:
-  device_id: 1ef2da1cca18dcec9ee5a4db36ac9800
+  device_id: abcd1234abcd1234abcd1234abcd1234
 ```
 
 The response includes the resolved Home Assistant device ID, device name/model/serial,
@@ -264,10 +266,16 @@ Read one mapped value:
 ```yaml
 action: huawei_emma.read_value
 data:
-  device_id: 1ef2da1cca18dcec9ee5a4db36ac9800
+  device_id: abcd1234abcd1234abcd1234abcd1234
   register_name: storage_maximum_charging_power
 response_variable: emma_value
 ```
+
+The response distinguishes a disabled entity (`subscribed: false` and
+`availability_reason: not_subscribed_enable_the_entity`) from a subscribed register
+that is still awaiting its first device poll. It also reports the poll group, target
+device role, Modbus address, and register count. This action reads cached connector
+state; enable the entity to start continuous polling.
 
 When exactly one EMMA entry is loaded, `device_id` may be omitted. **Fill example data**
 inserts the actual installation-specific device ID and the example register name.
@@ -287,7 +295,7 @@ Write a safe mapped register:
 ```yaml
 action: huawei_emma.set_value
 data:
-  device_id: 1ef2da1cca18dcec9ee5a4db36ac9800
+  device_id: abcd1234abcd1234abcd1234abcd1234
   register_name: storage_maximum_charging_power
   value: 8000
 ```
@@ -297,7 +305,7 @@ Write TOU using LUNA text:
 ```yaml
 action: huawei_emma.set_tou_periods
 data:
-  device_id: 1ef2da1cca18dcec9ee5a4db36ac9800
+  device_id: abcd1234abcd1234abcd1234abcd1234
   periods: |-
     00:00-03:59/1234567/+
     07:00-09:59/1234567/-
@@ -313,7 +321,7 @@ Or structured periods:
 ```yaml
 action: huawei_emma.set_tou_periods
 data:
-  device_id: 1ef2da1cca18dcec9ee5a4db36ac9800
+  device_id: abcd1234abcd1234abcd1234abcd1234
   structured_periods:
     - start_time: "00:00"
       end_time: "23:59"
