@@ -9,9 +9,8 @@
   "issue_tracker": "https://github.com/valexi7/Huawei-Modbus-TLS-Server/issues",
   "loggers": ["huawei_solar", "tmodbus"],
   "requirements": [
-    "cryptography>=42",
     "huawei-solar==3.0.6",
-    "tmodbus==0.4.1"
+    "tmodbus>=0.6.2"
   ],
   "version": "0.14.9"
 }
