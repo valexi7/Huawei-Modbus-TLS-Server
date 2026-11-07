@@ -1439,6 +1439,7 @@ class ServerConfig:
     log_raw: bool = False
     once: bool = False
     generate_certificates: bool = True
+    use_tls: bool = True
 
 
 class ReverseModbusTlsServer:
@@ -1459,6 +1460,39 @@ class ReverseModbusTlsServer:
     async def async_start(self) -> None:
         if self.running:
             return
+        ssl_context: ssl.SSLContext | None = None
+        if self.config.use_tls:
+            await self._async_prepare_certificates()
+            ssl_context = build_ssl_context(self.config)
+        else:
+            log.warning(
+                "TLS is disabled: EMMA Modbus traffic on port %d is unencrypted "
+                "plain TCP. Use this only on a trusted, isolated network.",
+                self.config.port,
+            )
+        self._server = await asyncio.start_server(
+            self._handle_emma,
+            self.config.host,
+            self.config.port,
+            ssl=ssl_context,
+        )
+        addresses = ", ".join(
+            str(sock.getsockname()) for sock in self._server.sockets or []
+        )
+        if ssl_context is None:
+            log.info(
+                "Huawei reverse Modbus/TCP listener ready on %s (TLS disabled)",
+                addresses,
+            )
+        else:
+            log.info(
+                "Huawei reverse Modbus/TLS listener ready on %s using cert=%s key=%s",
+                addresses,
+                self.config.certfile,
+                self.config.keyfile,
+            )
+
+    async def _async_prepare_certificates(self) -> None:
         self.certificate_status = await asyncio.to_thread(
             ensure_certificates,
             self.config.certfile,
@@ -1488,23 +1522,6 @@ class ReverseModbusTlsServer:
         )
         if self.days_remaining < 30:
             log.warning("TLS server certificate expires in %d days", self.days_remaining)
-
-        ssl_context = build_ssl_context(self.config)
-        self._server = await asyncio.start_server(
-            self._handle_emma,
-            self.config.host,
-            self.config.port,
-            ssl=ssl_context,
-        )
-        addresses = ", ".join(
-            str(sock.getsockname()) for sock in self._server.sockets or []
-        )
-        log.info(
-            "Huawei reverse Modbus/TLS listener ready on %s using cert=%s key=%s",
-            addresses,
-            self.config.certfile,
-            self.config.keyfile,
-        )
 
     async def _handle_emma(
         self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter
@@ -1542,7 +1559,7 @@ class ReverseModbusTlsServer:
             self.state.connected_at = _now_iso()
             self.state.reconnect_count += 1
             log.info(
-                "TLS client connected from %s; management system is now Modbus master",
+                "EMMA client connected from %s; management system is now Modbus master",
                 peer,
             )
             try:
@@ -1550,7 +1567,7 @@ class ReverseModbusTlsServer:
             finally:
                 if self.state.active_session is session:
                     self.state.active_session = None
-                log.info("TLS client disconnected from %s", peer)
+                log.info("EMMA client disconnected from %s", peer)
         finally:
             if task is not None:
                 self._handlers.discard(task)
@@ -1576,7 +1593,7 @@ class ReverseModbusTlsServer:
             if pending:
                 await asyncio.gather(*pending, return_exceptions=True)
         self._handlers.clear()
-        log.info("Huawei reverse Modbus/TLS listener stopped")
+        log.info("Huawei reverse Modbus listener stopped")
 
 
 class CommandApi:
@@ -1825,6 +1842,13 @@ def parse_args() -> argparse.Namespace:
         help="DNS name or IP used by EMMA for certificate validation",
     )
     parser.add_argument("--cafile", type=Path, default=None)
+    parser.add_argument(
+        "--tls",
+        action=argparse.BooleanOptionalAction,
+        default=os.environ.get("EMMA_USE_TLS", "true").lower()
+        not in ("0", "false", "no", "off"),
+        help="Use TLS for the EMMA listener (--no-tls or EMMA_USE_TLS=false for plain TCP)",
+    )
     parser.add_argument("--password", default=None, help="Encrypted private-key password")
     parser.add_argument(
         "--poll-interval",
@@ -1910,29 +1934,37 @@ def build_ssl_context(args: argparse.Namespace) -> ssl.SSLContext:
 
 
 async def async_main(args: argparse.Namespace) -> None:
-    status = ensure_certificates(
-        args.certfile,
-        args.keyfile,
-        args.ca_certfile,
-        args.ca_keyfile,
-        args.cert_name,
-        args.password,
-    )
-    if status.created_ca:
-        log.warning(
-            "Created local TLS CA at %s (SHA-256 %s). Import this CA in EMMA's "
-            "third-party management system trust settings.",
+    ssl_context: ssl.SSLContext | None = None
+    if args.tls:
+        status = ensure_certificates(
+            args.certfile,
+            args.keyfile,
             args.ca_certfile,
-            status.fingerprint,
+            args.ca_keyfile,
+            args.cert_name,
+            args.password,
         )
-    if status.created_server:
-        log.info("Created/renewed TLS server certificate at %s", args.certfile)
-    days_remaining = certificate_days_remaining(args.certfile)
-    log.info("TLS certificate validation passed; %d days remaining", days_remaining)
-    if days_remaining < 30:
-        log.warning("TLS server certificate expires in %d days", days_remaining)
+        if status.created_ca:
+            log.warning(
+                "Created local TLS CA at %s (SHA-256 %s). Import this CA in EMMA's "
+                "third-party management system trust settings.",
+                args.ca_certfile,
+                status.fingerprint,
+            )
+        if status.created_server:
+            log.info("Created/renewed TLS server certificate at %s", args.certfile)
+        days_remaining = certificate_days_remaining(args.certfile)
+        log.info("TLS certificate validation passed; %d days remaining", days_remaining)
+        if days_remaining < 30:
+            log.warning("TLS server certificate expires in %d days", days_remaining)
+        ssl_context = build_ssl_context(args)
+    else:
+        log.warning(
+            "TLS is disabled: EMMA Modbus traffic on port %d is unencrypted "
+            "plain TCP. Use this only on a trusted, isolated network.",
+            args.port,
+        )
 
-    ssl_context = build_ssl_context(args)
     publisher = None
     if args.legacy_ha_rest:
         publisher = HomeAssistantPublisher(
@@ -1971,13 +2003,13 @@ async def async_main(args: argparse.Namespace) -> None:
         state.active_session = session
         state.connected_at = _now_iso()
         state.reconnect_count += 1
-        log.info("TLS client connected from %s; management system is now Modbus master", peer)
+        log.info("EMMA client connected from %s; management system is now Modbus master", peer)
         try:
             await session.run()
         finally:
             if state.active_session is session:
                 state.active_session = None
-            log.info("TLS client disconnected from %s", peer)
+            log.info("EMMA client disconnected from %s", peer)
 
     tls_server = await asyncio.start_server(
         handle_emma,
@@ -1986,12 +2018,15 @@ async def async_main(args: argparse.Namespace) -> None:
         ssl=ssl_context,
     )
     addresses = ", ".join(str(socket.getsockname()) for socket in tls_server.sockets or [])
-    log.info(
-        "Huawei reverse Modbus/TLS listener ready on %s using cert=%s key=%s",
-        addresses,
-        args.certfile,
-        args.keyfile,
-    )
+    if ssl_context is None:
+        log.info("Huawei reverse Modbus/TCP listener ready on %s (TLS disabled)", addresses)
+    else:
+        log.info(
+            "Huawei reverse Modbus/TLS listener ready on %s using cert=%s key=%s",
+            addresses,
+            args.certfile,
+            args.keyfile,
+        )
 
     api_server = None
     if args.api_port is not None:

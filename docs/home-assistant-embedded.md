@@ -50,6 +50,11 @@ connection and configure:
 - TLS: enabled
 - trusted CA: the generated or custom issuing CA
 
+To run without TLS, disable TLS in EMMA and untick **Use TLS** in the integration
+(setup or options). The listener then accepts plain TCP and ignores all certificate
+settings. Modbus traffic, including control writes, is unencrypted; use this only on a
+trusted, isolated network. The standalone server uses `--no-tls` or `EMMA_USE_TLS=false`.
+
 EMMA initiates the TCP/TLS connection. Once connected, Home Assistant acts as Modbus
 master over that socket and discovers EMMA topology automatically.
 

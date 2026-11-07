@@ -264,9 +264,13 @@ def tls_context(ca_file: Path | None, insecure: bool) -> ssl.SSLContext:
 
 
 async def run_connection(args: argparse.Namespace, device: EmmaMockDevice) -> None:
-    context = tls_context(args.ca_file, args.insecure)
+    if args.no_tls:
+        context = None
+        server_hostname = None
+    else:
+        context = tls_context(args.ca_file, args.insecure)
+        server_hostname = None if args.insecure else (args.server_name or args.host)
     local_address = (args.local_address, 0) if args.local_address else None
-    server_hostname = None if args.insecure else (args.server_name or args.host)
     LOG.info("Connecting mock EMMA to %s:%d", args.host, args.port)
     reader, writer = await asyncio.open_connection(
         args.host,
@@ -277,7 +281,10 @@ async def run_connection(args: argparse.Namespace, device: EmmaMockDevice) -> No
     )
     peer = writer.get_extra_info("peername")
     cipher = writer.get_extra_info("cipher")
-    LOG.info("TLS connected peer=%s cipher=%s", peer, cipher[0] if cipher else "unknown")
+    if context is None:
+        LOG.info("Plain TCP connected peer=%s (TLS disabled)", peer)
+    else:
+        LOG.info("TLS connected peer=%s cipher=%s", peer, cipher[0] if cipher else "unknown")
     startup = await write_frame(writer, 0, 0, build_startup_pdu())
     LOG.info("TX mock -> ESP32 Huawei startup model=EMMA-A02 serial=MOCK-EMMA-0001")
     if args.log_raw:
@@ -334,6 +341,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--port", type=int, default=16100, help="ESP32 Modbus/TLS port")
     parser.add_argument("--ca-file", type=Path, help="CA certificate that signed the ESP32 server certificate")
     parser.add_argument("--insecure", action="store_true", help="disable certificate verification for isolated lab testing")
+    parser.add_argument("--no-tls", action="store_true", help="connect with plain TCP for a server started without TLS")
     parser.add_argument("--server-name", help="certificate DNS/IP name when it differs from --host")
     parser.add_argument("--local-address", help="Armbian source address on the EMMA test network")
     parser.add_argument("--pv-power", type=int, default=3400, help="base mock PV power in watts")
@@ -347,6 +355,8 @@ def parse_args() -> argparse.Namespace:
     args = parser.parse_args()
     if args.insecure and args.ca_file:
         parser.error("--insecure and --ca-file are mutually exclusive")
+    if args.no_tls and (args.insecure or args.ca_file or args.server_name):
+        parser.error("--no-tls cannot be combined with --insecure, --ca-file or --server-name")
     if not 1 <= args.port <= 65535:
         parser.error("--port must be between 1 and 65535")
     if args.delay_ms < 0 or args.disconnect_after < 0:

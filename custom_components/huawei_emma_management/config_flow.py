@@ -32,9 +32,11 @@ from .const import (
     CONF_PRIVATE_KEY_PATH,
     CONF_TLS_PORT,
     CONF_TOKEN,
+    CONF_USE_TLS,
     DEFAULT_ACCEPT_EXTERNAL_GROWATT_CONTROLS,
     DEFAULT_PORT,
     DEFAULT_TLS_PORT,
+    DEFAULT_USE_TLS,
     DOMAIN,
     MODE_EMBEDDED,
     MODE_EXTERNAL,
@@ -84,7 +86,10 @@ class HuaweiEmmaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     ):
         errors: dict[str, str] = {}
         if user_input is not None:
-            if user_input[CONF_CERTIFICATE_MODE] == CERTIFICATE_CUSTOM:
+            if (
+                user_input.get(CONF_USE_TLS, DEFAULT_USE_TLS)
+                and user_input[CONF_CERTIFICATE_MODE] == CERTIFICATE_CUSTOM
+            ):
                 cert_path = _config_path(
                     self.hass, user_input.get(CONF_CERTIFICATE_PATH, "")
                 )
@@ -127,6 +132,7 @@ class HuaweiEmmaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         schema = vol.Schema(
             {
+                    vol.Required(CONF_USE_TLS, default=DEFAULT_USE_TLS): bool,
                     vol.Required(CONF_TLS_PORT, default=DEFAULT_TLS_PORT): cv.port,
                     vol.Required(
                         CONF_CERTIFICATE_MODE, default=CERTIFICATE_AUTOMATIC
@@ -200,9 +206,11 @@ class HuaweiEmmaOptionsFlow(config_entries.OptionsFlowWithReload):
         mode = self.config_entry.data.get(CONF_MODE, MODE_EXTERNAL)
         errors: dict[str, str] = {}
         if user_input is not None:
-            if mode == MODE_EMBEDDED and user_input.get(
-                CONF_CERTIFICATE_MODE
-            ) == CERTIFICATE_CUSTOM:
+            if (
+                mode == MODE_EMBEDDED
+                and user_input.get(CONF_USE_TLS, DEFAULT_USE_TLS)
+                and user_input.get(CONF_CERTIFICATE_MODE) == CERTIFICATE_CUSTOM
+            ):
                 cert_value = user_input.get(CONF_CERTIFICATE_PATH, "")
                 key_value = user_input.get(CONF_PRIVATE_KEY_PATH, "")
                 cert_path = _config_path(self.hass, cert_value)
@@ -235,6 +243,7 @@ class HuaweiEmmaOptionsFlow(config_entries.OptionsFlowWithReload):
                 updated_data = dict(self.config_entry.data)
                 if mode == MODE_EMBEDDED:
                     for key in (
+                        CONF_USE_TLS,
                         CONF_TLS_PORT,
                         CONF_CERTIFICATE_MODE,
                         CONF_CERTIFICATE_NAME,
@@ -272,6 +281,12 @@ class HuaweiEmmaOptionsFlow(config_entries.OptionsFlowWithReload):
         if mode == MODE_EMBEDDED:
             fields.update(
                 {
+                    vol.Required(
+                        CONF_USE_TLS,
+                        default=self.config_entry.data.get(
+                            CONF_USE_TLS, DEFAULT_USE_TLS
+                        ),
+                    ): bool,
                     vol.Required(
                         CONF_TLS_PORT,
                         default=self.config_entry.data.get(

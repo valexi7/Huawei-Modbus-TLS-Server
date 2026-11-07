@@ -16,7 +16,8 @@
         "title": "Run the EMMA TLS server in Home Assistant",
         "description": "Choose the TLS port EMMA will connect to. Automatic mode creates a private local CA and server certificate under /config/huawei_emma_management. For custom mode, enter paths relative to /config or absolute paths such as /ssl/fullchain.pem.",
         "data": {
-          "tls_port": "EMMA TLS port",
+          "use_tls": "Use TLS",
+          "tls_port": "EMMA listener port",
           "certificate_mode": "Certificate source",
           "certificate_name": "Certificate DNS name or IP address",
           "certificate_path": "Custom certificate path",
@@ -24,6 +25,7 @@
           "private_key_password": "Private-key password"
         },
         "data_description": {
+          "use_tls": "Disable only if EMMA's management-system TLS option is also disabled. Modbus traffic is then sent unencrypted; use only on a trusted, isolated network. Certificate settings are ignored.",
           "certificate_name": "Use the exact fixed IP address or DNS name configured as the management server in EMMA.",
           "certificate_path": "Required only when Certificate source is custom.",
           "private_key_path": "Required only when Certificate source is custom.",
@@ -61,7 +63,8 @@
         "description": "Changes restart this integration entry. Embedded mode can change its listener port and certificate name; external mode can update its server address and API key.",
         "data": {
           "accept_external_growatt_controls": "Accept External Growatt Controls",
-          "tls_port": "EMMA TLS port",
+          "use_tls": "Use TLS",
+          "tls_port": "EMMA listener port",
           "certificate_mode": "Certificate source",
           "certificate_name": "Certificate DNS name or IP address",
           "certificate_path": "Custom certificate path",
@@ -72,6 +75,7 @@
           "token": "EMMA API key"
         },
         "data_description": {
+          "use_tls": "Disable only if EMMA's management-system TLS option is also disabled. Modbus traffic is then sent unencrypted; use only on a trusted, isolated network. Certificate settings are ignored.",
           "accept_external_growatt_controls": "When disabled, growatt_server.update_time_segment is rejected. Reading and native Huawei controls remain available.",
           "certificate_name": "Changing this automatically renews an integration-managed leaf certificate while retaining the same local CA.",
           "certificate_path": "Required only when Certificate source is custom.",
