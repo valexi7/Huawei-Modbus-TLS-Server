@@ -102,6 +102,9 @@ class EmmaSensor(EmmaEntity, SensorEntity):
             return {
                 "periods": periods,
                 **tou_period_attributes(periods),
+                # False in EMMA read-only mode: the schedule is readable but
+                # battery control belongs to an external provider.
+                "control_available": not self.coordinator.read_only,
                 "updated_at": self.coordinator.data.get("updated_at", {}).get(
                     self.description["register_name"]
                 ),

@@ -78,6 +78,7 @@ class FakeConnector:
                 "feed_in_power": -500,
                 "battery_charge_discharge_power": 800,
                 "smartguard_status": "on_grid",
+                "emma_ess_control_mode": "maximum_self_consumption",
                 "emma_tou_periods": copy.deepcopy(self.tou),
             },
             "updated_at": {},
@@ -299,6 +300,153 @@ async def test_overlapping_periods_are_rejected(hass: HomeAssistant, value: str)
             "huawei_emma",
             "set_tou_periods",
             {"device_id": parent.id, "periods": value},
+            blocking=True,
+            return_response=True,
+        )
+    assert connector.tou_writes == []
+
+
+def _read_only_entry(enabled: bool = True) -> MockConfigEntry:
+    entry = _entry()
+    return MockConfigEntry(
+        domain=DOMAIN,
+        version=2,
+        minor_version=2,
+        unique_id=SERIAL,
+        data={**entry.data, "read_only": enabled},
+    )
+
+
+async def test_read_only_mode_rejects_every_control(hass: HomeAssistant) -> None:
+    from homeassistant.exceptions import HomeAssistantError
+
+    connector = FakeConnector()
+    writes: list[tuple[str, Any]] = []
+
+    async def record_set_value(register_name: str, value: Any) -> Any:
+        writes.append((register_name, value))
+        return value
+
+    connector.set_value = record_set_value
+    await _setup(hass, _read_only_entry(), connector)
+
+    # Telemetry, discovery and SmartGuard subscriptions continue.
+    assert "smartguard_status" in connector.subscriptions
+    assert hass.states.get(_entity_id(hass, "binary_sensor", "smartguard_grid_connected")).state == "on"
+    read_only = hass.states.get(_entity_id(hass, "binary_sensor", "read_only_mode"))
+    assert read_only.state == "on"
+    assert read_only.attributes["control_available"] is False
+    tou = hass.states.get(_entity_id(hass, "sensor", "emma_tou_periods"))
+    assert tou.attributes["Period 1"] == "00:00-03:59/1234567/+"
+    assert tou.attributes["control_available"] is False
+
+    parent = _parent_device(hass)
+    with pytest.raises(HomeAssistantError, match="read-only mode"):
+        await hass.services.async_call(
+            "huawei_emma",
+            "set_tou_periods",
+            {"device_id": parent.id, "periods": "00:00-03:59/1234567/+"},
+            blocking=True,
+            return_response=True,
+        )
+    with pytest.raises(HomeAssistantError, match="read-only mode"):
+        await hass.services.async_call(
+            "growatt_server",
+            "update_time_segment",
+            {
+                "device_id": parent.id,
+                "segment_id": 1,
+                "batt_mode": "battery_first",
+                "start_time": "00:00",
+                "end_time": "03:59",
+                "enabled": True,
+            },
+            blocking=True,
+        )
+    select_id = _entity_id(hass, "select", "emma_ess_control_mode")
+    assert hass.states.get(select_id).state not in ("unavailable", None)
+    with pytest.raises(HomeAssistantError, match="read-only mode"):
+        await hass.services.async_call(
+            "select",
+            "select_option",
+            {"entity_id": select_id, "option": hass.states.get(select_id).attributes["options"][0]},
+            blocking=True,
+        )
+    # The TOU editor exists only to write and is unavailable.
+    editor = _entity_id(hass, "button", "tou_apply_schedule")
+    assert hass.states.get(editor).state == "unavailable"
+    assert connector.tou_writes == []
+    assert writes == []
+
+
+async def test_switching_read_only_mode_keeps_entities(hass: HomeAssistant) -> None:
+    connector = FakeConnector()
+    entry = _entry()
+    await _setup(hass, entry, connector)
+    registry = er.async_get(hass)
+    before = {
+        item.entity_id for item in er.async_entries_for_config_entry(registry, entry.entry_id)
+    }
+    subscriptions = set(connector.subscriptions)
+
+    with patch(
+        "custom_components.huawei_emma_management.EmmaApiClient",
+        return_value=connector,
+    ):
+        result = await hass.config_entries.options.async_init(entry.entry_id)
+        defaults = {
+            key.schema: key.default() for key in result["data_schema"].schema
+            if hasattr(key, "default") and callable(key.default)
+        }
+        result = await hass.config_entries.options.async_configure(
+            result["flow_id"], {**defaults, "read_only": True}
+        )
+        await hass.async_block_till_done()
+    assert result["type"] == "create_entry"
+    assert hass.states.get(_entity_id(hass, "binary_sensor", "read_only_mode")).state == "on"
+    after = {
+        item.entity_id for item in er.async_entries_for_config_entry(registry, entry.entry_id)
+    }
+    assert after == before
+    assert connector.subscriptions == subscriptions
+
+    with patch(
+        "custom_components.huawei_emma_management.EmmaApiClient",
+        return_value=connector,
+    ):
+        result = await hass.config_entries.options.async_init(entry.entry_id)
+        result = await hass.config_entries.options.async_configure(
+            result["flow_id"], {**defaults, "read_only": False}
+        )
+        await hass.async_block_till_done()
+    assert hass.states.get(_entity_id(hass, "binary_sensor", "read_only_mode")).state == "off"
+    await hass.services.async_call(
+        "huawei_emma",
+        "set_tou_periods",
+        {"device_id": _parent_device(hass).id, "periods": "00:00-03:59/1234567/+"},
+        blocking=True,
+        return_response=True,
+    )
+    assert len(connector.tou_writes) == 1
+
+
+async def test_connector_reported_read_only_blocks_writes(hass: HomeAssistant) -> None:
+    from homeassistant.exceptions import HomeAssistantError
+
+    connector = FakeConnector()
+    original_health = connector.health
+
+    async def read_only_health() -> dict[str, Any]:
+        return {**(await original_health()), "read_only": True}
+
+    connector.health = read_only_health
+    await _setup(hass, _entry(), connector)
+    assert hass.states.get(_entity_id(hass, "binary_sensor", "read_only_mode")).state == "on"
+    with pytest.raises(HomeAssistantError, match="read-only mode"):
+        await hass.services.async_call(
+            "huawei_emma",
+            "set_tou_periods",
+            {"device_id": _parent_device(hass).id, "periods": ""},
             blocking=True,
             return_response=True,
         )

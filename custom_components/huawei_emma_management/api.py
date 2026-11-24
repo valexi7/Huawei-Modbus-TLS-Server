@@ -8,7 +8,7 @@ from aiohttp import ClientError, ClientSession
 from homeassistant.exceptions import HomeAssistantError
 
 from .connector_contract import API_PREFIX
-from .embedded_server import RuntimeState
+from .embedded_server import ReadOnlyModeError, RuntimeState
 
 
 _LOGGER = logging.getLogger(__name__)
@@ -24,6 +24,17 @@ class EmmaApiAuthError(EmmaApiError):
 
 class EmmaApiConnectionError(EmmaApiError):
     pass
+
+
+class EmmaReadOnlyError(EmmaApiError):
+    """A control action was rejected because EMMA read-only mode is enabled."""
+
+    def __init__(self, message: str | None = None) -> None:
+        super().__init__(
+            message
+            or "EMMA read-only mode is enabled: battery and EMMA control is "
+            "disabled because an external provider controls the system"
+        )
 
 
 class EmmaApiClient:
@@ -59,6 +70,8 @@ class EmmaApiClient:
                         message = f"{message}: {detail}"
                     if response.status == 401:
                         raise EmmaApiAuthError(message)
+                    if response.status == 423:
+                        raise EmmaReadOnlyError(detail or None)
                     raise EmmaApiError(message)
                 return value
         except (ClientError, TimeoutError) as error:
@@ -148,6 +161,8 @@ class EmbeddedEmmaApiClient:
         )
         try:
             result = await self._state.set_value(register_name, value)
+        except ReadOnlyModeError as error:
+            raise EmmaReadOnlyError(str(error)) from error
         except ValueError as error:
             raise EmmaApiError(str(error)) from error
         except (ConnectionError, TimeoutError) as error:
@@ -163,6 +178,8 @@ class EmbeddedEmmaApiClient:
         _LOGGER.debug("Embedded TOU command periods=%r", periods)
         try:
             result = await self._state.set_tou_periods(periods)
+        except ReadOnlyModeError as error:
+            raise EmmaReadOnlyError(str(error)) from error
         except ValueError as error:
             raise EmmaApiError(str(error)) from error
         except (ConnectionError, TimeoutError) as error:

@@ -66,6 +66,11 @@ class EmmaEntity(CoordinatorEntity[EmmaCoordinator]):
             "source_register_name", self.description["register_name"]
         )
         data = self.coordinator.data or {}
+        if self.coordinator.read_only and self.description.get("register_name", "").startswith(
+            "tou_"
+        ) and self.description.get("platform") != "sensor":
+            # The TOU editor only exists to write schedules.
+            return False
         return (
             super().available
             and bool(data.get("health", {}).get("connected"))

@@ -10,7 +10,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import DOMAIN
+from .const import DOMAIN, READ_ONLY_ENTITY_KEY
 from .embedded_catalog import (
     SMARTGUARD_BINARY_DESCRIPTIONS,
     SMARTGUARD_STATUS_CATEGORIES,
@@ -24,8 +24,13 @@ async def async_setup_entry(
 ) -> None:
     coordinator = hass.data[DOMAIN][entry.entry_id]
     async_add_entities(
-        SmartGuardStatusBinarySensor(coordinator, description)
-        for description in SMARTGUARD_BINARY_DESCRIPTIONS.values()
+        [
+            *(
+                SmartGuardStatusBinarySensor(coordinator, description)
+                for description in SMARTGUARD_BINARY_DESCRIPTIONS.values()
+            ),
+            ReadOnlyModeBinarySensor(coordinator),
+        ]
     )
 
 
@@ -54,4 +59,43 @@ class SmartGuardStatusBinarySensor(EmmaEntity, BinarySensorEntity):
             "status_category": SMARTGUARD_STATUS_CATEGORIES.get(status)
             if isinstance(status, str)
             else None,
+        }
+
+
+READ_ONLY_DESCRIPTION: dict[str, Any] = {
+    "register_name": READ_ONLY_ENTITY_KEY,
+    "name": "Read-Only Mode",
+    "platform": "binary_sensor",
+    "device_role": "emma",
+    "client_role": "emma",
+    "entity_category": "diagnostic",
+    "icon": "mdi:lock",
+    "enabled_default": True,
+}
+
+
+class ReadOnlyModeBinarySensor(EmmaEntity, BinarySensorEntity):
+    """On when EMMA read-only mode blocks every control action.
+
+    Automations and BESS Manager integrations can use it to see that battery
+    control is unavailable while telemetry continues.
+    """
+
+    def __init__(self, coordinator: Any) -> None:
+        super().__init__(coordinator, dict(READ_ONLY_DESCRIPTION))
+
+    @property
+    def available(self) -> bool:
+        return self.coordinator.last_update_success
+
+    @property
+    def is_on(self) -> bool:
+        return self.coordinator.read_only
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        return {
+            "control_available": not self.coordinator.read_only,
+            "integration_option": self.coordinator.read_only_option,
+            "connector_reported": self.coordinator.connector_read_only,
         }

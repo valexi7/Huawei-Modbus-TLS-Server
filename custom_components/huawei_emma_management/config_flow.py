@@ -30,11 +30,13 @@ from .const import (
     CONF_MODE,
     CONF_PRIVATE_KEY_PASSWORD,
     CONF_PRIVATE_KEY_PATH,
+    CONF_READ_ONLY,
     CONF_TLS_PORT,
     CONF_TOKEN,
     CONFIG_ENTRY_MINOR_VERSION,
     DEFAULT_ACCEPT_EXTERNAL_GROWATT_CONTROLS,
     DEFAULT_PORT,
+    DEFAULT_READ_ONLY,
     DEFAULT_TLS_PORT,
     DOMAIN,
     MODE_EMBEDDED,
@@ -140,6 +142,7 @@ class HuaweiEmmaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     vol.Optional(CONF_CERTIFICATE_PATH, default=""): str,
                     vol.Optional(CONF_PRIVATE_KEY_PATH, default=""): str,
                     vol.Optional(CONF_PRIVATE_KEY_PASSWORD, default=""): str,
+                    vol.Optional(CONF_READ_ONLY, default=DEFAULT_READ_ONLY): bool,
             }
         )
         if user_input is not None:
@@ -186,6 +189,7 @@ class HuaweiEmmaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     vol.Required(CONF_HOST): str,
                     vol.Required(CONF_PORT, default=DEFAULT_PORT): cv.port,
                     vol.Required(CONF_TOKEN, default=self._external_token): str,
+                    vol.Optional(CONF_READ_ONLY, default=DEFAULT_READ_ONLY): bool,
             }
         )
         if user_input is not None:
@@ -263,6 +267,13 @@ class HuaweiEmmaOptionsFlow(config_entries.OptionsFlowWithReload):
                 return self.async_create_entry(data=user_input)
 
         fields: dict[Any, Any] = {
+            vol.Required(
+                CONF_READ_ONLY,
+                default=self.config_entry.options.get(
+                    CONF_READ_ONLY,
+                    self.config_entry.data.get(CONF_READ_ONLY, DEFAULT_READ_ONLY),
+                ),
+            ): bool,
             vol.Required(
                 CONF_ACCEPT_EXTERNAL_GROWATT_CONTROLS,
                 default=self.config_entry.options.get(

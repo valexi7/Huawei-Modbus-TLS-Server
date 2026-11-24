@@ -50,3 +50,6 @@ huawei_emma_reverse:
   certificate: !secret emma_tls_certificate
   private_key: !secret emma_tls_private_key
   log_raw: false
+  # Set to true when an external reserve provider controls EMMA and the
+  # battery: telemetry continues, every write is rejected.
+  read_only: false

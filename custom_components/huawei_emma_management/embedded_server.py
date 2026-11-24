@@ -380,6 +380,22 @@ def expand_subscriptions(register_names: set[str]) -> set[str]:
     return {name for name in effective if name in ENTITY_CATALOG}
 
 
+# Modbus function codes that change device state. Read-only mode blocks them
+# at the lowest request layer, so no code path can write by accident.
+MODBUS_WRITE_FUNCTION_CODES = frozenset({0x05, 0x06, 0x0F, 0x10, 0x15, 0x16, 0x17})
+READ_ONLY_MESSAGE = (
+    "EMMA read-only mode is enabled: writes are disabled because EMMA and the "
+    "battery are controlled by an external provider"
+)
+
+
+class ReadOnlyModeError(PermissionError):
+    """A write was attempted while EMMA read-only mode is enabled."""
+
+    def __init__(self, message: str = READ_ONLY_MESSAGE) -> None:
+        super().__init__(message)
+
+
 class WriteVerificationError(RuntimeError):
     """The device accepted a write but the readback does not match."""
 
@@ -704,7 +720,9 @@ class ReverseModbusSession:
         subscribed_registers: set[str] | None = None,
         log_raw: bool = False,
         once: bool = False,
+        read_only: bool = False,
     ):
+        self.read_only = read_only
         self.reader = reader
         self.writer = writer
         self.request_timeout = request_timeout
@@ -859,6 +877,11 @@ class ReverseModbusSession:
         log.warning("Ignoring unsolicited Modbus frame: %s", describe_frame(frame))
 
     async def request(self, unit_id: int, pdu: bytes) -> ModbusFrame:
+        if self.read_only and pdu and pdu[0] in MODBUS_WRITE_FUNCTION_CODES:
+            log.warning(
+                "Blocked Modbus write fc=0x%02X unit=%d: read-only mode", pdu[0], unit_id
+            )
+            raise ReadOnlyModeError()
         if self.closed:
             raise ConnectionError("EMMA connection is closed")
 
@@ -982,6 +1005,8 @@ class ReverseModbusSession:
         requested value. A TOU schedule identical to a fresh readback is not
         rewritten, which keeps EMMA flash writes idempotent.
         """
+        if self.read_only:
+            raise ReadOnlyModeError()
         description = ENTITY_CATALOG.get(register_name)
         if description is None or not description.writeable:
             raise ValueError(f"Register is unknown or read-only: {register_name}")
@@ -1053,6 +1078,8 @@ class ReverseModbusSession:
         return await self.set_register_value(str(rn.EMMA_TOU_PERIODS), periods)
 
     async def execute_command(self, name: str, value: Any) -> None:
+        if self.read_only:
+            raise ReadOnlyModeError()
         if name == "ess_control_mode":
             integer = _require_integer(value, {2, 4, 5, 6})
             await self.huawei_client.set(
@@ -1591,6 +1618,14 @@ class RuntimeState:
     subscribed_registers: set[str] = field(
         default_factory=lambda: expand_subscriptions(default_subscriptions())
     )
+    read_only: bool = False
+
+    def set_read_only(self, enabled: bool) -> None:
+        """Switch read-only mode without reconnecting or losing subscriptions."""
+        self.read_only = bool(enabled)
+        if self.active_session is not None:
+            self.active_session.read_only = self.read_only
+        log.info("EMMA read-only mode %s", "enabled" if self.read_only else "disabled")
 
     async def update_states(
         self,
@@ -1623,6 +1658,7 @@ class RuntimeState:
             "registers_stale": len(self.stale_registers()),
             "catalog_sha256": CATALOG_SHA256,
             "runtime": "python",
+            "read_only": self.read_only,
         }
 
     def stale_registers(self) -> list[str]:
@@ -1666,7 +1702,21 @@ class RuntimeState:
             "catalog_entities": len(ENTITY_CATALOG),
             "connected": session is not None and not session.closed,
             "devices": session.device_details if session else {},
-            "capabilities": session.capabilities() if session else {},
+            "read_only": self.read_only,
+            "control_available": not self.read_only,
+            "capabilities": {
+                **(session.capabilities() if session else {}),
+                "writes": not self.read_only,
+            },
+            "control_registers_unavailable": (
+                sorted(
+                    name
+                    for name in session.unsupported_registers
+                    if ENTITY_CATALOG[name].writeable
+                )
+                if session
+                else []
+            ),
             "subscriptions": subscriptions,
             "registers_subscribed": len(self.subscribed_registers),
             "registers_unsupported": (
@@ -1755,6 +1805,8 @@ class RuntimeState:
 
     async def set_value(self, register_name: str, value: Any) -> Any:
         """Validate, write and cache a register value."""
+        if self.read_only:
+            raise ReadOnlyModeError()
         session = self.connected_session()
         result = await session.set_register_value(register_name, value)
         self.latest_values[register_name] = result
@@ -1763,6 +1815,8 @@ class RuntimeState:
 
     async def set_tou_periods(self, periods: Any) -> Any:
         """Validate, write and cache the full EMMA TOU schedule."""
+        if self.read_only:
+            raise ReadOnlyModeError()
         session = self.connected_session()
         result = await session.set_tou_periods(periods)
         register_name = str(rn.EMMA_TOU_PERIODS)
@@ -1791,6 +1845,7 @@ class ServerConfig:
     log_raw: bool = False
     once: bool = False
     generate_certificates: bool = True
+    read_only: bool = False
 
 
 class ReverseModbusTlsServer:
@@ -1798,7 +1853,7 @@ class ReverseModbusTlsServer:
 
     def __init__(self, config: ServerConfig) -> None:
         self.config = config
-        self.state = RuntimeState()
+        self.state = RuntimeState(read_only=config.read_only)
         self.certificate_status: CertificateStatus | None = None
         self.days_remaining: int | None = None
         self._server: asyncio.Server | None = None
@@ -1889,6 +1944,7 @@ class ReverseModbusTlsServer:
                 subscribed_registers=self.state.subscribed_registers,
                 log_raw=self.config.log_raw,
                 once=self.config.once,
+                read_only=self.state.read_only,
             )
             self.state.active_session = session
             self.state.connected_at = _now_iso()
@@ -2050,6 +2106,8 @@ class CommandApi:
                     raise HttpError(400, "JSON body must contain a value field")
                 try:
                     value = await self.state.set_value(register_name, payload["value"])
+                except ReadOnlyModeError as error:
+                    raise HttpError(423, str(error)) from error
                 except ValueError as error:
                     raise HttpError(400, str(error)) from error
                 except (
@@ -2065,6 +2123,8 @@ class CommandApi:
                 payload = _decode_json_object(body)
                 try:
                     value = await self.state.set_tou_periods(payload.get("periods"))
+                except ReadOnlyModeError as error:
+                    raise HttpError(423, str(error)) from error
                 except ValueError as error:
                     raise HttpError(400, str(error)) from error
                 except (
@@ -2084,11 +2144,15 @@ class CommandApi:
                     raise HttpError(400, "Request body must be JSON") from error
                 if not isinstance(payload, dict) or "value" not in payload:
                     raise HttpError(400, "JSON body must contain a value field")
+                if self.state.read_only:
+                    raise HttpError(423, READ_ONLY_MESSAGE)
                 session = self.state.active_session
                 if session is None or session.closed:
                     raise HttpError(503, "EMMA is not connected")
                 try:
                     await session.execute_command(command, payload["value"])
+                except ReadOnlyModeError as error:
+                    raise HttpError(423, str(error)) from error
                 except ValueError as error:
                     raise HttpError(400, str(error)) from error
                 except (
@@ -2152,6 +2216,7 @@ HTTP_REASONS = {
     401: "Unauthorized",
     404: "Not Found",
     413: "Content Too Large",
+    423: "Locked",
     431: "Request Header Fields Too Large",
     500: "Internal Server Error",
     502: "Bad Gateway",
@@ -2201,6 +2266,16 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--request-timeout", type=float, default=5.0)
     parser.add_argument("--log-raw", action="store_true", help="Log complete Modbus frames")
     parser.add_argument("--once", action="store_true", help="Poll once, then disconnect")
+    parser.add_argument(
+        "--read-only",
+        action="store_true",
+        default=os.environ.get("EMMA_READ_ONLY", "").lower() in {"1", "true", "yes", "on"},
+        help=(
+            "EMMA read-only mode: keep telemetry and discovery but never send a "
+            "Modbus write (for EMMA controlled by an external reserve provider). "
+            "Also set by EMMA_READ_ONLY=true"
+        ),
+    )
     parser.add_argument(
         "--ha-url",
         default=os.environ.get("HA_URL"),
@@ -2305,7 +2380,7 @@ async def async_main(args: argparse.Namespace) -> None:
             args.ha_ca_file,
         )
 
-    state = RuntimeState()
+    state = RuntimeState(read_only=args.read_only)
 
     async def handle_emma(reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
         peer = writer.get_extra_info("peername")
@@ -2330,6 +2405,7 @@ async def async_main(args: argparse.Namespace) -> None:
             subscribed_registers=state.subscribed_registers,
             log_raw=args.log_raw,
             once=args.once,
+            read_only=state.read_only,
         )
         state.active_session = session
         state.connected_at = _now_iso()
