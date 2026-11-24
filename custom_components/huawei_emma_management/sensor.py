@@ -9,9 +9,14 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import DOMAIN
-from .embedded_catalog import VIRTUAL_ENTITY_DESCRIPTIONS
+from .embedded_catalog import (
+    DERIVED_ENTITY_DESCRIPTIONS,
+    VIRTUAL_ENTITY_DESCRIPTIONS,
+    derived_power_value,
+    timestamp_epoch,
+)
 from .entity import EmmaEntity
-from .tou import format_tou_schedule
+from .tou import format_tou_schedule, tou_period_attributes
 
 
 TOU_ACTIVE_DESCRIPTION = VIRTUAL_ENTITY_DESCRIPTIONS["emma_tou_schedule_text"]
@@ -34,6 +39,11 @@ async def async_setup_entry(
             EmmaSensor(coordinator, TOU_ACTIVE_DESCRIPTION),
             EmmaSensor(coordinator, TOU_PLANNED_DESCRIPTION),
         ]
+    )
+    entities.extend(
+        EmmaDerivedPowerSensor(coordinator, description)
+        for description in DERIVED_ENTITY_DESCRIPTIONS.values()
+        if description["platform"] == "sensor"
     )
     async_add_entities(entities)
 
@@ -68,13 +78,35 @@ class EmmaSensor(EmmaEntity, SensorEntity):
                 else f"{len(lines)} periods; see schedule_text attribute"
             )
         if self.description.get("device_class") == "timestamp" and value is not None:
-            return datetime.fromtimestamp(float(value), tz=timezone.utc)
+            epoch = timestamp_epoch(
+                self.description["register_name"],
+                self.coordinator.data.get("values", {}),
+                # Connectors older than 0.15.0 do not publish the timestamp
+                # format; their two timestamp registers were treated as UTC.
+                self.description.get("format") or "timestamp_utc",
+            )
+            return (
+                datetime.fromtimestamp(epoch, tz=timezone.utc)
+                if epoch is not None
+                else None
+            )
         return value
 
     @property
     def extra_state_attributes(self) -> dict[str, Any] | None:
         if self.description.get("format") == "tou_periods":
-            return {"periods": self.register_value}
+            # "Period N" attributes use the LUNA text format read by BESS
+            # Manager (same contract as huawei_solar's TOU sensor). The sensor
+            # is unavailable, never an empty schedule, when no readback exists.
+            periods = self.register_value
+            return {
+                "periods": periods,
+                **tou_period_attributes(periods),
+                "updated_at": self.coordinator.data.get("updated_at", {}).get(
+                    self.description["register_name"]
+                ),
+                "register_address": self.description["address"],
+            }
         if self.description.get("format") in (
             "tou_active_schedule_text",
             "tou_planned_schedule_text",
@@ -85,15 +117,56 @@ class EmmaSensor(EmmaEntity, SensorEntity):
                 else self.register_value
             )
             schedule, lines = format_tou_schedule(periods)
-            return {
+            attributes = {
                 "schedule_text": schedule,
                 "schedule_lines": lines,
                 "periods": periods,
                 "modified": self.coordinator.tou_dirty,
+            }
+            if self.description.get("format") == "tou_active_schedule_text":
+                attributes.update(tou_period_attributes(periods))
+            return attributes
+        flags = self.description.get("flags")
+        if flags and isinstance(self.register_value, int):
+            return {
+                "register_address": self.description["address"],
+                "register_count": self.description.get("length", 1),
+                "modbus_device_role": self.description.get("client_role", "emma"),
+                "poll_group": self.description["poll_group"],
+                "active_flags": [
+                    flag["key"]
+                    for flag in flags
+                    if self.register_value & (1 << int(flag["bit"]))
+                ],
             }
         return {
             "register_address": self.description["address"],
             "register_count": self.description.get("length", 1),
             "modbus_device_role": self.description.get("client_role", "emma"),
             "poll_group": self.description["poll_group"],
+        }
+
+
+class EmmaDerivedPowerSensor(EmmaEntity, SensorEntity):
+    """Directional power derived from an already polled signed register.
+
+    No additional Modbus request is made: the value is computed from the
+    source register in the latest connector state, and the sensor is
+    unavailable whenever the source value is unavailable or stale.
+    """
+
+    _attr_device_class = SensorDeviceClass.POWER
+    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_native_unit_of_measurement = "W"
+
+    @property
+    def native_value(self) -> float | None:
+        return derived_power_value(self.description, self.register_value)
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        return {
+            "source_register": self.description["source_register_name"],
+            "source_polarity": self.description["source_polarity"],
+            "derived": True,
         }

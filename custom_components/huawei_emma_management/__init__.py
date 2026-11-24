@@ -6,7 +6,11 @@ from typing import Any
 
 import voluptuous as vol
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.exceptions import ConfigEntryNotReady, ServiceValidationError
+from homeassistant.exceptions import (
+    ConfigEntryNotReady,
+    HomeAssistantError,
+    ServiceValidationError,
+)
 from homeassistant.helpers.update_coordinator import UpdateFailed
 from homeassistant.const import CONF_HOST, CONF_PORT
 from homeassistant.core import (
@@ -32,7 +36,9 @@ from .const import (
     CONF_MODE,
     CONF_PRIVATE_KEY_PASSWORD,
     CONF_PRIVATE_KEY_PATH,
+    CONF_SMARTGUARD_DEFAULTS_APPLIED,
     CONF_TLS_PORT,
+    CONFIG_ENTRY_MINOR_VERSION,
     CONF_TOKEN,
     DEFAULT_ACCEPT_EXTERNAL_GROWATT_CONTROLS,
     DOMAIN,
@@ -47,7 +53,8 @@ from .const import (
     MODE_EXTERNAL,
 )
 from .coordinator import EmmaCoordinator
-from .embedded_server import ReverseModbusTlsServer, ServerConfig
+from .embedded_catalog import DEMOTED_LEGACY_CONTROLS, SMARTGUARD_BINARY_DESCRIPTIONS
+from .embedded_server import ENTITY_CATALOG, ReverseModbusTlsServer, ServerConfig
 from .tou import decode_luna_tou_periods, encode_luna_tou_periods
 
 
@@ -389,14 +396,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 registry_entry.entity_id,
                 disabled_by=None,
             )
-        elif (
-            unique_id.endswith("_emma_tou_periods")
-            and registry_entry.disabled_by is None
-        ):
-            entity_registry.async_update_entity(
-                registry_entry.entity_id,
-                disabled_by=er.RegistryEntryDisabler.INTEGRATION,
-            )
+    if coordinator.has_device_role("smartguard") and not entry.data.get(
+        CONF_SMARTGUARD_DEFAULTS_APPLIED
+    ):
+        _async_enable_smartguard_entities(entity_registry, entry)
+        hass.config_entries.async_update_entry(
+            entry, data={**entry.data, CONF_SMARTGUARD_DEFAULTS_APPLIED: True}
+        )
     await coordinator.async_sync_polling_subscriptions(
         source="post_registry_migration"
     )
@@ -507,9 +513,16 @@ def _configured_coordinators(hass: HomeAssistant) -> list[EmmaCoordinator]:
 def _parent_device_id_for_coordinator(
     hass: HomeAssistant, coordinator: EmmaCoordinator
 ) -> str | None:
-    device = dr.async_get(hass).async_get_device(
-        identifiers={(DOMAIN, coordinator.parent_identifier)}
-    )
+    registry = dr.async_get(hass)
+    identifier = (DOMAIN, coordinator.parent_identifier)
+    if hasattr(registry, "async_get_device_by_identifier") and coordinator.entry_id:
+        # Home Assistant 2026.10+ deprecated async_get_device(identifiers=...)
+        # because identifiers are only unique per config entry.
+        device = registry.async_get_device_by_identifier(
+            identifier, coordinator.entry_id
+        )
+    else:
+        device = registry.async_get_device(identifiers={identifier})
     return device.id if device is not None else None
 
 
@@ -1263,7 +1276,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 
 async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Mark pre-dual-mode entries as external connector configurations."""
+    """Migrate config entries and their entity registry entries."""
     if entry.version > 2:
         return False
     if entry.version == 1:
@@ -1273,7 +1286,105 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             version=2,
         )
         _LOGGER.info("Migrated Huawei EMMA config entry to external mode")
+    if entry.minor_version < 2:
+        _async_migrate_registry_0_15(er.async_get(hass), entry)
+        hass.config_entries.async_update_entry(
+            entry, minor_version=CONFIG_ENTRY_MINOR_VERSION
+        )
+        _LOGGER.info("Migrated Huawei EMMA entity registry to 0.15 layout")
     return True
+
+
+def _registry_register_name(unique_id: str) -> str | None:
+    """Return the catalog register a ``<prefix>_<register>`` unique ID refers to."""
+    matches = [
+        name for name in ENTITY_CATALOG if unique_id.endswith(f"_{name}")
+    ]
+    return max(matches, key=len) if matches else None
+
+
+@callback
+def _async_migrate_registry_0_15(
+    entity_registry: er.EntityRegistry, entry: ConfigEntry
+) -> None:
+    """Apply one-time 0.14.x -> 0.15 registry changes.
+
+    * 0.14.x force-disabled the native EMMA TOU sensor. BESS Manager reads its
+      ``Period N`` attributes, so re-enable it once unless the user disabled it.
+    * Unreviewed legacy controls became read-only sensors. Move each registry
+      entry to the sensor domain with the same unique ID, keeping the user's
+      enabled/disabled/hidden choice and the object ID.
+    """
+    for registry_entry in list(
+        er.async_entries_for_config_entry(entity_registry, entry.entry_id)
+    ):
+        unique_id = registry_entry.unique_id
+        register_name = _registry_register_name(unique_id)
+        if (
+            register_name == TOU_REGISTER_NAME
+            and registry_entry.domain == "sensor"
+            and registry_entry.disabled_by == er.RegistryEntryDisabler.INTEGRATION
+        ):
+            entity_registry.async_update_entity(
+                registry_entry.entity_id, disabled_by=None
+            )
+            continue
+        if (
+            register_name is None
+            or DEMOTED_LEGACY_CONTROLS.get(register_name) != registry_entry.domain
+        ):
+            continue
+        object_id = registry_entry.entity_id.split(".", 1)[1]
+        disabled_by = registry_entry.disabled_by
+        hidden_by = registry_entry.hidden_by
+        entity_registry.async_remove(registry_entry.entity_id)
+        if entity_registry.async_get_entity_id("sensor", DOMAIN, unique_id):
+            continue
+        new_entry = entity_registry.async_get_or_create(
+            "sensor",
+            DOMAIN,
+            unique_id,
+            config_entry=entry,
+            device_id=registry_entry.device_id,
+            suggested_object_id=object_id,
+            disabled_by=disabled_by,
+            hidden_by=hidden_by,
+        )
+        if registry_entry.name:
+            entity_registry.async_update_entity(
+                new_entry.entity_id, name=registry_entry.name
+            )
+        _LOGGER.info(
+            "Converted unreviewed control %s to read-only %s", registry_entry.entity_id,
+            new_entry.entity_id,
+        )
+
+
+@callback
+def _async_enable_smartguard_entities(
+    entity_registry: er.EntityRegistry, entry: ConfigEntry
+) -> None:
+    """Enable integration-disabled SmartGuard entities once SmartGuard is found.
+
+    Entities created before SmartGuard was discovered are disabled by the
+    integration. User-disabled entities (``disabled_by=user``) are left alone.
+    """
+    for registry_entry in er.async_entries_for_config_entry(
+        entity_registry, entry.entry_id
+    ):
+        if registry_entry.disabled_by != er.RegistryEntryDisabler.INTEGRATION:
+            continue
+        unique_id = registry_entry.unique_id
+        register_name = _registry_register_name(unique_id)
+        if (
+            register_name is not None
+            and ENTITY_CATALOG[register_name].client_role == "smartguard"
+        ) or any(
+            unique_id.endswith(f"_{name}") for name in SMARTGUARD_BINARY_DESCRIPTIONS
+        ):
+            entity_registry.async_update_entity(
+                registry_entry.entity_id, disabled_by=None
+            )
 
 
 def _config_path(hass: HomeAssistant, value: str) -> Path:

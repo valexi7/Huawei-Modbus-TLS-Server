@@ -5,6 +5,7 @@ import logging
 from typing import Any
 
 from aiohttp import ClientError, ClientSession
+from homeassistant.exceptions import HomeAssistantError
 
 from .connector_contract import API_PREFIX
 from .embedded_server import RuntimeState
@@ -13,8 +14,8 @@ from .embedded_server import RuntimeState
 _LOGGER = logging.getLogger(__name__)
 
 
-class EmmaApiError(RuntimeError):
-    pass
+class EmmaApiError(HomeAssistantError, RuntimeError):
+    """Connector command failed; shown to the user instead of an unknown error."""
 
 
 class EmmaApiAuthError(EmmaApiError):
@@ -78,6 +79,15 @@ class EmmaApiClient:
     async def states(self) -> dict[str, Any]:
         return await self._request("GET", "/states")
 
+    async def diagnostics(self) -> dict[str, Any]:
+        """Return connector diagnostics; empty for connectors older than 0.15."""
+        try:
+            return await self._request("GET", "/diagnostics")
+        except EmmaApiAuthError:
+            raise
+        except EmmaApiError:
+            return {}
+
     async def set_subscriptions(self, register_names: list[str]) -> list[str]:
         payload = await self._request(
             "POST", "/subscriptions", {"register_names": register_names}
@@ -122,6 +132,9 @@ class EmbeddedEmmaApiClient:
 
     async def states(self) -> dict[str, Any]:
         return self._state.states()
+
+    async def diagnostics(self) -> dict[str, Any]:
+        return self._state.diagnostics()
 
     async def set_subscriptions(self, register_names: list[str]) -> list[str]:
         try:

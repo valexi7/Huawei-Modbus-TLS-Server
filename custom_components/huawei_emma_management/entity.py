@@ -24,7 +24,12 @@ class EmmaEntity(CoordinatorEntity[EmmaCoordinator]):
         category = description.get("entity_category")
         if category:
             self._attr_entity_category = EntityCategory(category)
-        self._attr_entity_registry_enabled_default = description.get("enabled_default", True)
+        enabled_default = description.get("enabled_default", True)
+        if description.get("client_role") == "smartguard":
+            # Native SmartGuard entities are enabled by default only when a
+            # SmartGuard was discovered in the EMMA topology.
+            enabled_default = enabled_default and coordinator.has_device_role("smartguard")
+        self._attr_entity_registry_enabled_default = enabled_default
 
     @property
     def device_info(self) -> DeviceInfo:
@@ -60,11 +65,14 @@ class EmmaEntity(CoordinatorEntity[EmmaCoordinator]):
         source_register = self.description.get(
             "source_register_name", self.description["register_name"]
         )
+        data = self.coordinator.data or {}
         return (
             super().available
-            and bool(self.coordinator.data.get("health", {}).get("connected"))
+            and bool(data.get("health", {}).get("connected"))
             and source_register not in unsupported
-            and source_register in self.coordinator.data.get("values", {})
+            and source_register not in data.get("not_applicable", [])
+            and source_register not in data.get("stale", [])
+            and source_register in data.get("values", {})
         )
 
     @property

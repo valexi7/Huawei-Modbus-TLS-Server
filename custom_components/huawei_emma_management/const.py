@@ -8,6 +8,7 @@ from .connector_contract import (
 DOMAIN = "huawei_emma_management"
 PLATFORMS = [
     "sensor",
+    "binary_sensor",
     "select",
     "switch",
     "number",
@@ -38,3 +39,5 @@ GROWATT_COMPAT_DOMAIN = "growatt_server"
 HUAWEI_EXTERNAL_API_DOMAIN = "huawei_emma"
 GROWATT_MAX_SEGMENTS = 9
 GROWATT_BATTERY_MODES = ("load_first", "battery_first", "grid_first")
+CONF_SMARTGUARD_DEFAULTS_APPLIED = "smartguard_defaults_applied"
+CONFIG_ENTRY_MINOR_VERSION = 2

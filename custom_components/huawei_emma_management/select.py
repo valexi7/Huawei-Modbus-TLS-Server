@@ -5,6 +5,7 @@ from typing import Any
 from homeassistant.components.select import SelectEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import DOMAIN, TOU_MAX_PERIODS
@@ -28,18 +29,43 @@ async def async_setup_entry(
 class EmmaSelect(EmmaEntity, SelectEntity):
     def __init__(self, coordinator: Any, description: dict[str, Any]) -> None:
         super().__init__(coordinator, description)
+        # Connectors from 0.15 send the reviewed raw values that may be written;
+        # older connectors send none, in which case every option is offered.
+        allowed = set(description.get("allowed_values") or ())
         self._key_to_label = {
+            option["key"]: option["label"]
+            for option in description["options"]
+            if not allowed or option.get("value") in allowed
+        }
+        self._all_labels = {
             option["key"]: option["label"] for option in description["options"]
         }
         self._label_to_key = {label: key for key, label in self._key_to_label.items()}
-        self._attr_options = list(self._label_to_key)
+
+    @property
+    def options(self) -> list[str]:
+        """Writable options, plus the current device value when outside them."""
+        options = list(self._label_to_key)
+        current = self.current_option
+        if current is not None and current not in options:
+            options.append(current)
+        return options
 
     @property
     def current_option(self) -> str | None:
         value = self.register_value
-        return self._key_to_label.get(str(value), str(value)) if value is not None else None
+        if value is None:
+            return None
+        return self._key_to_label.get(str(value)) or self._all_labels.get(
+            str(value), str(value)
+        )
 
     async def async_select_option(self, option: str) -> None:
+        if option not in self._label_to_key:
+            raise ServiceValidationError(
+                f"{option} is not a reviewed writable value for "
+                f"{self.description['register_name']}"
+            )
         await self.coordinator.async_set_value(
             self.description["register_name"],
             self._label_to_key[option],
