@@ -9,6 +9,8 @@ from __future__ import annotations
 
 
 CONTRACT_VERSION = 2
+# Release of the connector runtimes (Python, embedded and ESPHome firmware).
+CONNECTOR_VERSION = "0.15.0"
 API_PREFIX = "/api/v1"
 DEFAULT_API_PORT = 8088
 DEFAULT_TLS_PORT = 16100
@@ -34,5 +36,6 @@ API_PATHS = {
     "states": "/states",
     "subscriptions": "/subscriptions",
     "tou_periods": "/tou-periods",
+    "diagnostics": "/diagnostics",
     "entity_value_template": "/entities/{register_name}/value",
 }

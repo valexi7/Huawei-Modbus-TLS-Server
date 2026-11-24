@@ -21,6 +21,7 @@ from huawei_solar.register_definitions import Result
 from huawei_solar.exceptions import ReadException
 
 from huawei_modbus_server import (
+    CATALOG_SHA256,
     CommandApi,
     CORE_REGISTER_NAMES,
     ENTITY_CATALOG,
@@ -77,7 +78,7 @@ class RepositoryContractTests(unittest.TestCase):
             "generated_register_catalog.h",
             (component / "huawei_emma_reverse.h").read_text(encoding="utf-8"),
         )
-        self.assertIn("GENERATED_ENTITY_COUNT = 740", generated)
+        self.assertIn("GENERATED_ENTITY_COUNT = 915", generated)
         self.assertIn("GENERATED_CONTRACT_VERSION = 2", generated)
         self.assertIn('"emma_tou_periods"', generated)
         self.assertIn("GENERATED_CATALOG_SHA256", source)
@@ -96,9 +97,21 @@ class RepositoryContractTests(unittest.TestCase):
         migration = json.loads(
             Path("esphome/entity-migration-map.json").read_text(encoding="utf-8")
         )
-        self.assertEqual(migration["physical_entity_count"], 740)
-        self.assertEqual(migration["virtual_entity_count"], 10)
-        self.assertEqual(migration["firmware_supported_count"], 740)
+        self.assertEqual(migration["physical_entity_count"], 915)
+        self.assertEqual(migration["virtual_entity_count"], 18)
+        self.assertEqual(migration["firmware_supported_count"], 915)
+        # Same catalog hash in every runtime, and no hardcoded library version.
+        self.assertEqual(migration["catalog_sha256"], CATALOG_SHA256)
+        self.assertIn(f'GENERATED_CATALOG_SHA256[] = "{CATALOG_SHA256}"', generated)
+        import importlib.metadata as metadata
+        self.assertEqual(
+            migration["source"]["register_library"],
+            f"huawei-solar=={metadata.version('huawei-solar')}",
+        )
+        self.assertIn('"smart_ac_gun"', source)
+        self.assertIn("GeneratedValueType::IPV4", source)
+        self.assertIn("GENERATED_PATH_DIAGNOSTICS", source)
+        self.assertNotIn("role[0] == '\\0'", source)
         check = subprocess.run(
             [sys.executable, "tools/generate_esphome_catalog.py", "--check"],
             check=False,

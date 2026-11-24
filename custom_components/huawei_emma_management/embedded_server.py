@@ -46,6 +46,7 @@ from tmodbus.transport.async_base import AsyncBaseTransport
 try:
     from .connector_contract import (
         API_PREFIX,
+        CONNECTOR_VERSION,
         DEFAULT_API_PORT,
         DEFAULT_TLS_PORT,
         MAX_HTTP_REQUEST_BODY,
@@ -75,6 +76,7 @@ try:
 except ImportError:  # Standalone external-server launcher.
     from connector_contract import (
         API_PREFIX,
+        CONNECTOR_VERSION,
         DEFAULT_API_PORT,
         DEFAULT_TLS_PORT,
         MAX_HTTP_REQUEST_BODY,
@@ -105,7 +107,6 @@ except ImportError:  # Standalone external-server launcher.
 log = logging.getLogger(__name__)
 
 # Connector runtime version; kept equal to the Home Assistant manifest version.
-CONNECTOR_VERSION = "0.15.0"
 
 
 def _package_version(package: str) -> str | None:

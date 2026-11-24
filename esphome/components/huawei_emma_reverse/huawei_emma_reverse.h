@@ -61,6 +61,7 @@ struct CachedEntityValue {
   bool valid{false};
   bool subscribed{false};
   bool unsupported{false};
+  bool not_applicable{false};
 };
 
 class HuaweiEmmaReverse : public Component {
@@ -125,6 +126,12 @@ class HuaweiEmmaReverse : public Component {
   std::string entities_json_();
   std::string states_json_();
   std::string tou_json_(const std::vector<TouPeriod> &periods);
+  std::string diagnostics_json_();
+  int8_t capability_state_(size_t capability_index) const;
+  bool stale_(size_t index, uint32_t now) const;
+  void apply_hardware_filters_();
+  void expand_subscriptions_();
+  static bool same_schedule_(const std::vector<TouPeriod> &left, const std::vector<TouPeriod> &right);
   bool parse_tou_json_(const std::string &body, std::vector<TouPeriod> &periods, std::string &error);
 
   void signal_activity_(ActivityKind kind);
@@ -179,6 +186,8 @@ class HuaweiEmmaReverse : public Component {
   uint32_t reconnect_count_{0};
   uint32_t connected_at_ms_{0};
   uint32_t last_poll_ms_{0};
+  std::string last_verified_write_;
+  uint32_t last_verified_write_ms_{0};
 };
 
 }  // namespace esphome::huawei_emma_reverse
