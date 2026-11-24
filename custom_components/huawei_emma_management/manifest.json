@@ -1,16 +1,21 @@
 {
   "domain": "huawei_emma_management",
   "name": "Huawei EMMA Management",
-  "codeowners": ["@valexi7"],
+  "codeowners": [
+    "@valexi7"
+  ],
   "config_flow": true,
   "documentation": "https://github.com/valexi7/Huawei-Modbus-TLS-Server",
   "integration_type": "hub",
   "iot_class": "local_polling",
   "issue_tracker": "https://github.com/valexi7/Huawei-Modbus-TLS-Server/issues",
-  "loggers": ["huawei_solar", "tmodbus"],
-  "requirements": [
-    "huawei-solar==3.0.6",
-    "tmodbus>=0.6.2"
+  "loggers": [
+    "huawei_solar",
+    "tmodbus"
   ],
-  "version": "0.14.9"
+  "requirements": [
+    "huawei-solar==3.2.4",
+    "tmodbus>=1.1.0,<2"
+  ],
+  "version": "0.15.0"
 }
