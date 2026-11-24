@@ -110,6 +110,7 @@ Hardware-shape options:
 | `--write-failure exception` | Rejects every write with a Modbus exception |
 | `--write-failure ignore` | Accepts writes but keeps the old value, so readback verification fails |
 | `--unknown-enum` | Reports an undefined SmartGuard status value |
+| `--no-tls` | Connects with plain TCP, for a server started with TLS disabled |
 
 The same mock runs in-process in `tests/connector/test_simulated_emma.py`, which
 drives the real reverse TLS server through discovery, polling, TOU writes, outages,

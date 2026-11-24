@@ -37,9 +37,17 @@ CLOCK_UTC = 1_767_225_600
 
 
 class SimulatedEmma:
-    def __init__(self, device: EmmaMockDevice, *, disconnect_after: int = 0) -> None:
+    def __init__(
+        self,
+        device: EmmaMockDevice,
+        *,
+        disconnect_after: int = 0,
+        server_tls: bool = True,
+        client_tls: bool = True,
+    ) -> None:
         self.device = device
         self.disconnect_after = disconnect_after
+        self.client_tls = client_tls
         self.temp = tempfile.TemporaryDirectory()
         certs = Path(self.temp.name)
         self.server = ReverseModbusTlsServer(
@@ -55,8 +63,10 @@ class SimulatedEmma:
                 medium_interval=0.4,
                 slow_interval=0.6,
                 request_timeout=2.0,
+                use_tls=server_tls,
             )
         )
+        self.certs = certs
         self.task: asyncio.Task | None = None
         self.connections = 0
         self.stopping = False
@@ -72,7 +82,8 @@ class SimulatedEmma:
             host="127.0.0.1",
             port=port,
             ca_file=None,
-            insecure=True,
+            insecure=self.client_tls,
+            no_tls=not self.client_tls,
             server_name=None,
             local_address=None,
             log_raw=False,
@@ -85,7 +96,7 @@ class SimulatedEmma:
                 self.connections += 1
                 try:
                     await run_connection(args, self.device)
-                except (OSError, asyncio.IncompleteReadError):
+                except (OSError, asyncio.IncompleteReadError, ConnectionError):
                     pass
                 await asyncio.sleep(0.2)
 
@@ -270,6 +281,35 @@ class SimulatedEmmaTests(unittest.IsolatedAsyncioTestCase):
             await emma.wait_for(lambda: emma.state.reconnect_count >= 2, timeout=30)
             await emma.wait_for(lambda: "smartguard_status" in emma.state.latest_values)
             self.assertEqual(emma.state.subscribed_registers, subscriptions)
+
+
+
+class OptionalTlsTests(unittest.IsolatedAsyncioTestCase):
+    async def test_plain_tcp_only_when_explicitly_disabled(self):
+        async with SimulatedEmma(EmmaMockDevice(), server_tls=False, client_tls=False) as emma:
+            await emma.ready()
+            self.assertFalse(emma.state.health()["tls"])
+            # No certificate handling at all without TLS.
+            self.assertFalse((emma.certs / "server-cert.pem").exists())
+            self.assertFalse((emma.certs / "ca-cert.pem").exists())
+
+    async def test_tls_is_the_default(self):
+        async with SimulatedEmma(EmmaMockDevice()) as emma:
+            await emma.ready()
+            self.assertTrue(emma.state.health()["tls"])
+            self.assertTrue((emma.certs / "server-cert.pem").exists())
+
+    async def test_tls_listener_never_falls_back_to_plain_tcp(self):
+        async with SimulatedEmma(EmmaMockDevice(), client_tls=False) as emma:
+            await asyncio.sleep(1.5)
+            self.assertGreaterEqual(emma.connections, 2)
+            self.assertIsNone(emma.state.active_session)
+            self.assertEqual(emma.state.latest_values, {})
+
+    async def test_plain_listener_rejects_tls_clients(self):
+        async with SimulatedEmma(EmmaMockDevice(), server_tls=False) as emma:
+            await asyncio.sleep(1.5)
+            self.assertEqual(emma.state.latest_values, {})
 
 
 if __name__ == "__main__":

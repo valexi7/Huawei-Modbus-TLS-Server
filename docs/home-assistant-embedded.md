@@ -50,6 +50,19 @@ connection and configure:
 - TLS: enabled
 - trusted CA: the generated or custom issuing CA
 
+### Running without TLS
+
+TLS is on by default and is the recommended setting. Plain TCP is available only by
+explicit opt-in: disable TLS in EMMA **and** untick **Use TLS** in the integration
+(setup or **Configure**). The listener then accepts plain TCP only and ignores the
+certificate settings. Modbus traffic, including every control write, is unencrypted,
+so use this only on a trusted, isolated network.
+
+There is no automatic fallback. A TLS listener never accepts a plain TCP client, and a
+plain TCP listener never accepts a TLS client; a mismatch shows up as EMMA failing to
+connect. `/api/v1/health` reports `tls: true` or `tls: false`. The standalone server
+uses `--no-tls` or `EMMA_USE_TLS=false`. The ESPHome firmware always uses TLS.
+
 EMMA initiates the TCP/TLS connection. Once connected, Home Assistant acts as Modbus
 master over that socket and discovers EMMA topology automatically.
 
