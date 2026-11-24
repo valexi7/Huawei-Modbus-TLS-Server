@@ -24,14 +24,106 @@ jobs:
       - uses: actions/checkout@v7
       - uses: home-assistant/actions/hassfest@master
 
-  tests:
+  connector:
+    name: Connector (Python ${{ matrix.python-version }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12", "3.13", "3.14"]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+      - run: python -m pip install -r requirements.txt
+      - run: python -m pip check
+      - name: Generated ESPHome catalog is fresh
+        run: python tools/generate_esphome_catalog.py --check
+      - name: Unit tests
+        run: python -m unittest -v
+      - name: Simulated EMMA and read-only tests
+        run: python -m unittest discover -v -s tests/connector
+
+  ha-dependencies:
+    name: HA dependency resolution (${{ matrix.ha-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # Minimum from hacs.json and the current release line.
+        ha-version: ["2026.3.0", "2026.11.3"]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.14"
+      - run: python -m pip install uv
+      - run: python tools/check_ha_dependencies.py ${{ matrix.ha-version }}
+
+  ha-tests:
+    name: Home Assistant integration tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.14"
+          cache: pip
+      - run: python -m pip install pytest-homeassistant-custom-component -r requirements.txt
+      - run: python -m pytest -v tests/ha
+
+  firmware-changes:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      firmware: ${{ steps.filter.outputs.firmware }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            firmware:
+              - 'esphome/**'
+              - 'tools/generate_esphome_catalog.py'
+              - 'custom_components/huawei_emma_management/embedded_catalog.py'
+              - 'custom_components/huawei_emma_management/tou_codec.py'
+              - '.github/workflows/validate.yml'
+
+  firmware:
+    name: ESPHome firmware compile (read_only=${{ matrix.read-only }})
+    needs: firmware-changes
+    if: needs.firmware-changes.outputs.firmware == 'true' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        read-only: ["false", "true"]
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
         with:
           python-version: "3.13"
           cache: pip
-      - run: python -m pip install -r requirements.txt
-      - run: python tools/generate_esphome_catalog.py --check
-      - run: python -m unittest -v
+      - run: python -m pip install esphome==2026.11.0
+      - name: Throwaway TLS certificate
+        working-directory: esphome
+        run: |
+          openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:prime256v1 -nodes \
+            -keyout key.pem -out cert.pem -days 2 -subj "/CN=ci-build"
+          {
+            echo "emma_tls_certificate: |"; sed 's/^/  /' cert.pem
+            echo "emma_tls_private_key: |"; sed 's/^/  /' key.pem
+          } > secrets.yaml
+      - name: Compile
+        working-directory: esphome
+        run: esphome -s read_only ${{ matrix.read-only }} compile ci-build.yaml
+      - name: Firmware size
+        working-directory: esphome
+        run: |
+          find .esphome/build -name firmware.bin -exec ls -l {} \;
+          find .esphome/build -name firmware.elf -exec size {} \;
