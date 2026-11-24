@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import json
-import re
 from typing import Any
+
+from . import tou_codec
 
 from .const import (
     GROWATT_BATTERY_MODES,
@@ -102,120 +103,32 @@ def decode_tou_plan_json(value: str) -> list[dict[str, Any]]:
     return periods
 
 
-_LUNA_TOU_LINE = re.compile(
-    r"^(?P<start>\d{2}:\d{2})-(?P<end>\d{2}:\d{2})/"
-    r"(?P<days>[1-7]+)/(?P<flag>[+-])$"
-)
-
-
 def decode_luna_tou_periods(value: str) -> list[dict[str, Any]]:
-    """Decode LUNA schedule text accepted by the external API.
+    """Decode LUNA schedule text accepted by the public TOU action.
 
-    Newlines are the canonical separator. Home Assistant's "Fill example data"
-    action editor currently serializes a multiline text example as a space-separated
-    YAML scalar, so a whitespace-separated list of otherwise valid periods is also
-    accepted for that generated action only.
+    Returns Monday-first ``days`` periods. Inert periods that apply to no
+    weekday, such as BESS Manager's clear command ``00:00-00:14//+``, are
+    accepted and removed, so they become a genuinely empty native schedule.
+    Active periods in the same text are preserved. Overlaps are rejected.
     """
-    if not isinstance(value, str):
-        raise ValueError("LUNA TOU periods must be a string")
-    if not value.strip():
-        return []
-
-    lines = [line.strip() for line in value.splitlines() if line.strip()]
-    if len(lines) == 1:
-        whitespace_parts = lines[0].split()
-        if len(whitespace_parts) > 1 and all(
-            _LUNA_TOU_LINE.fullmatch(part) is not None for part in whitespace_parts
-        ):
-            lines = whitespace_parts
-    if len(lines) > TOU_MAX_PERIODS:
-        raise ValueError(f"LUNA TOU schedule accepts at most {TOU_MAX_PERIODS} periods")
-
-    periods: list[dict[str, Any]] = []
-    for index, raw_line in enumerate(lines, start=1):
-        line = raw_line.strip()
-        match = _LUNA_TOU_LINE.fullmatch(line)
-        if match is None:
-            raise ValueError(
-                f"LUNA TOU line {index} must use HH:MM-HH:MM/DAYS/+ or -"
-            )
-        start = parse_time_minutes(match.group("start"), f"line {index} start")
-        end = parse_time_minutes(match.group("end"), f"line {index} end")
-        if not 0 <= start < end <= 1440:
-            raise ValueError(f"LUNA TOU line {index} must have start before end")
-
-        day_text = match.group("days")
-        if len(set(day_text)) != len(day_text) or day_text != "".join(sorted(day_text)):
-            raise ValueError(
-                f"LUNA TOU line {index} days must be unique and ordered from 1 to 7"
-            )
-        selected_days = set(day_text)
-        periods.append(
-            {
-                "start_time": start,
-                "end_time": end,
-                "action": "charge" if match.group("flag") == "+" else "discharge",
-                "days": [str(day) in selected_days for day in range(1, 8)],
-            }
-        )
-    return periods
+    decoded = tou_codec.decode_luna_text(value)
+    active = [period for period in decoded if any(period["days"])]
+    tou_codec.normalize_periods(active)
+    return active
 
 
 def encode_luna_tou_periods(periods: Any) -> str:
     """Encode an EMMA TOU readback using the LUNA text service format."""
-    if not isinstance(periods, list):
-        return ""
+    return tou_codec.encode_luna_text(periods)
 
-    lines: list[str] = []
-    for index, period in enumerate(periods, start=1):
-        if not isinstance(period, dict):
-            continue
-        start = parse_time_minutes(period.get("start_time"), f"period {index} start")
-        end = parse_time_minutes(period.get("end_time"), f"period {index} end")
-        days = period.get("days", period.get("days_effective", [True] * 7))
-        if (
-            not isinstance(days, list)
-            or len(days) != 7
-            or any(not isinstance(day, bool) for day in days)
-        ):
-            raise ValueError(f"TOU period {index} days must contain seven booleans")
-        day_text = "".join(
-            str(day_number)
-            for day_number, enabled in enumerate(days, start=1)
-            if enabled
-        )
-        if not day_text:
-            continue
-        mode = str(period.get("action", period.get("charge_flag", "discharge"))).lower()
-        flag = "+" if mode in ("charge", "c", "0") else "-"
-        lines.append(
-            f"{format_time_minutes(start)}-{format_time_minutes(end)}/{day_text}/{flag}"
-        )
-    return "\n".join(lines)
+
+def tou_period_attributes(periods: Any) -> dict[str, str]:
+    """Return huawei_solar-compatible ``Period N`` readback attributes."""
+    return tou_codec.numbered_period_attributes(periods)
 
 
 def parse_time_minutes(value: Any, field: str = "time") -> int:
-    if isinstance(value, str) and ":" in value:
-        try:
-            parts = value.split(":")
-            if len(parts) not in (2, 3):
-                raise ValueError
-            hour, minute = int(parts[0]), int(parts[1])
-            second = int(parts[2]) if len(parts) == 3 else 0
-        except ValueError as error:
-            raise ValueError(f"{field} must be minutes, HH:MM, or HH:MM:SS") from error
-        if (
-            not 0 <= hour <= 24
-            or not 0 <= minute < 60
-            or not 0 <= second < 60
-            or (hour == 24 and (minute or second))
-        ):
-            raise ValueError(f"{field} must be minutes, HH:MM, or HH:MM:SS")
-        return hour * 60 + minute
-    try:
-        return int(value)
-    except (TypeError, ValueError) as error:
-        raise ValueError(f"{field} must be minutes, HH:MM, or HH:MM:SS") from error
+    return tou_codec.parse_time_minutes(value, field)
 
 
 def growatt_mode_to_tou_mode(batt_mode: str) -> str:
