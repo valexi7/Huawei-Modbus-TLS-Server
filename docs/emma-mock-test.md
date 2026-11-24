@@ -78,9 +78,12 @@ python3 tools/emma_mock_client.py \
 
 Add `--log-raw` to print complete transmitted and received frames. The mock:
 
-- sends the captured-shape Huawei private `0x41` startup frame;
-- returns four paged device-identification responses for mock EMMA, SmartGuard, and
-  SUN2000 devices;
+- sends the captured-shape Huawei private `0x41` startup frame (EMMA-A02);
+- returns paged device-identification responses for EMMA (unit 0, model name
+  `SmartHEMS` at register 30000 like a real EMMA), SmartGuard (unit 2), SUN2000/LUNA
+  (unit 3), and optionally an SCharger (unit 4);
+- answers each unit from its own register bank, so routing mistakes show up as
+  wrong or missing values instead of silently reading EMMA registers;
 - returns slowly changing PV, load, feed-in, battery, inverter, and SOC values;
 - exposes a two-period TOU schedule;
 - validates and retains TOU writes so the ESP32 can read them back;
@@ -96,6 +99,22 @@ python3 tools/emma_mock_client.py --host 192.168.88.20 --insecure --delay-ms 750
 # Disconnect after ten requests, wait five seconds, and reconnect.
 python3 tools/emma_mock_client.py --host 192.168.88.20 --insecure --disconnect-after 10
 ```
+
+Hardware-shape options:
+
+| Option | Effect |
+|---|---|
+| `--smartguard-phase single\|three` | SmartGuard phase type; single-phase hides phase B/C entities as not applicable |
+| `--grid-outage` | SmartGuard reports off-grid backup supply |
+| `--scharger` | Adds a FusionCharge SCharger at unit 4 |
+| `--write-failure exception` | Rejects every write with a Modbus exception |
+| `--write-failure ignore` | Accepts writes but keeps the old value, so readback verification fails |
+| `--unknown-enum` | Reports an undefined SmartGuard status value |
+
+The same mock runs in-process in `tests/connector/test_simulated_emma.py`, which
+drives the real reverse TLS server through discovery, polling, TOU writes, outages,
+delays, disconnects, and read-only mode. Those tests are simulated hardware only;
+they do not replace a test against a real EMMA.
 
 ## 4. Watch ESP32 behavior
 

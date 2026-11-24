@@ -117,7 +117,12 @@ huawei_emma_reverse:
   api_token: !secret emma_connector_api_token
   certificate: !secret emma_tls_certificate
   private_key: !secret emma_tls_private_key
+  read_only: false
 ```
+
+Set `read_only: true` when an external reserve provider controls EMMA and the battery.
+The firmware then refuses every Modbus write and answers control requests with
+`423 Locked`; telemetry continues. See [read-only mode](read-only-mode.md).
 
 Configure the Home Assistant integration in **external** mode using the ESP32 Wi-Fi IP,
 port `8088`, and `emma_connector_api_token`. Configure EMMA's third-party management
@@ -129,7 +134,7 @@ The connector provides:
 
 - a single-client TLS 1.2 listener bound specifically to the W5500 address;
 - Huawei `0x41` startup parsing and paged `0x2B` topology discovery;
-- subscription-aware fast/medium/slow polling for the complete generated 740-register
+- subscription-aware fast/medium/slow polling for the complete generated 915-entity
   catalog, with adjacent-address grouping and topology-unit routing;
 - scalar, enum, mapping, boolean, bitfield, timestamp, string, and structured-period
   decoding;
@@ -162,7 +167,8 @@ The canonical logical ID is the Huawei register name. The generated mapping defi
   address, length, and whether the current firmware supports the register.
 
 [`esphome/entity-migration-map.json`](../esphome/entity-migration-map.json) contains all
-740 physical catalog entities and the ten virtual TOU editor entities. The generated C++
+915 physical catalog entities and 18 virtual entities (TOU editor, derived power,
+and SmartGuard status). The generated C++
 table includes every physical register; Home Assistant subscriptions determine which
 ones use ESP32 RAM and Modbus bandwidth at runtime.
 
