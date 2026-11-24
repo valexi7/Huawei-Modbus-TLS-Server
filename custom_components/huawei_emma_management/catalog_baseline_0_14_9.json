@@ -1,0 +1,5933 @@
+{
+"entities": {
+"P_max": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"P Max"
+],
+"P_max_real": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"P Max Real"
+],
+"Q_max_in": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Q Max In"
+],
+"Q_max_out": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Q Max Out"
+],
+"S_max": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"S Max"
+],
+"S_max_real": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"S Max Real"
+],
+"ac_terminal_1_2_3_max_temp": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"AC Terminal 1 2 3 Max Temp"
+],
+"accumulated_yield_energy": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Accumulated Yield Energy"
+],
+"active_grid_A_B_voltage": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Active Grid A-B Voltage"
+],
+"active_grid_A_current": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Active Grid A Current"
+],
+"active_grid_A_power": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Active Grid A Power"
+],
+"active_grid_B_C_voltage": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Active Grid B-C Voltage"
+],
+"active_grid_B_current": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Active Grid B Current"
+],
+"active_grid_B_power": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Active Grid B Power"
+],
+"active_grid_C_A_voltage": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Active Grid C-A Voltage"
+],
+"active_grid_C_current": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Active Grid C Current"
+],
+"active_grid_C_power": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Active Grid C Power"
+],
+"active_grid_frequency": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Active Grid Frequency"
+],
+"active_grid_power_factor": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Active Grid Power Factor"
+],
+"active_power": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Active Power"
+],
+"active_power_adjustment_command": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Active Power Adjustment Command"
+],
+"active_power_adjustment_mode": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Active Power Adjustment Mode"
+],
+"active_power_adjustment_value": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Active Power Adjustment Value"
+],
+"active_power_built_in_energy": [
+"sensor",
+true,
+"emma",
+"emma",
+"medium",
+"Built-in Meter Active Power"
+],
+"active_power_control_mode": [
+"select",
+false,
+"inverter",
+"inverter",
+"medium",
+"Active Power Control Mode"
+],
+"active_power_external_energy": [
+"sensor",
+false,
+"external_meter",
+"emma",
+"medium",
+"External Meter Active Power"
+],
+"active_power_fast": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Active Power Fast"
+],
+"active_power_fixed_value_derating": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Active Power Fixed Value Derating"
+],
+"active_power_percentage_derating": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Active Power Percentage Derating"
+],
+"afci_2_version": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"slow",
+"Afci 2 Version"
+],
+"afci_version": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"slow",
+"Afci Version"
+],
+"alarm_1": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Alarm 1"
+],
+"alarm_2": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Alarm 2"
+],
+"alarm_3": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Alarm 3"
+],
+"annual_energy_consumption": [
+"sensor",
+true,
+"emma",
+"emma",
+"medium",
+"Annual Energy Consumption"
+],
+"anti_reverse_module_1_temp": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Anti Reverse Module 1 Temp"
+],
+"anti_reverse_module_2_temp": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Anti Reverse Module 2 Temp"
+],
+"apparent_power_built_in_energy": [
+"sensor",
+true,
+"emma",
+"emma",
+"medium",
+"Built-in Meter Apparent Power"
+],
+"apparent_power_external_energy": [
+"sensor",
+false,
+"external_meter",
+"emma",
+"medium",
+"External Meter Apparent Power"
+],
+"average_pv_negative_voltage_to_ground": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Average PV Negative Voltage To Ground"
+],
+"backup_power_state_of_charge": [
+"sensor",
+true,
+"smartguard",
+"emma",
+"fast",
+"Backup Power State Of Charge"
+],
+"backup_switch_to_off_grid": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Backup Switch To Off Grid"
+],
+"backup_time_notification_threshold": [
+"sensor",
+true,
+"emma",
+"emma",
+"medium",
+"Backup Time Notification Threshold"
+],
+"backup_voltage_independent_operation": [
+"select",
+false,
+"inverter",
+"inverter",
+"medium",
+"Backup Voltage Independent Operation"
+],
+"battery_charge_discharge_power": [
+"sensor",
+true,
+"emma",
+"emma",
+"fast",
+"Battery Charge Discharge Power"
+],
+"builtin_pid_running_status": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Builtin Pid Running Status"
+],
+"builtin_pid_version": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"slow",
+"Builtin Pid Version"
+],
+"bus_negative_voltage_to_ground": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Bus Negative Voltage To Ground"
+],
+"capbank_running_time": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Capbank Running Time"
+],
+"characteristic_curve_reactive_power_adjustment_time": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Characteristic Curve Reactive Power Adjustment Time"
+],
+"charger_model": [
+"sensor",
+false,
+"charger",
+"charger",
+"slow",
+"Charger Model"
+],
+"charger_phase_a_voltage": [
+"sensor",
+false,
+"charger",
+"charger",
+"fast",
+"Charger Phase A Voltage"
+],
+"charger_phase_b_voltage": [
+"sensor",
+false,
+"charger",
+"charger",
+"fast",
+"Charger Phase B Voltage"
+],
+"charger_phase_c_voltage": [
+"sensor",
+false,
+"charger",
+"charger",
+"fast",
+"Charger Phase C Voltage"
+],
+"charger_rated_power": [
+"sensor",
+false,
+"charger",
+"charger",
+"slow",
+"Charger Rated Power"
+],
+"charger_serial_number": [
+"sensor",
+false,
+"charger",
+"charger",
+"slow",
+"Charger Serial Number"
+],
+"charger_software_version": [
+"sensor",
+false,
+"charger",
+"charger",
+"slow",
+"Charger Software Version"
+],
+"charger_temperature": [
+"sensor",
+false,
+"charger",
+"charger",
+"medium",
+"Charger Temperature"
+],
+"charger_total_energy_charged": [
+"sensor",
+false,
+"charger",
+"charger",
+"medium",
+"Charger Total Energy Charged"
+],
+"consumption_today": [
+"sensor",
+true,
+"emma",
+"emma",
+"medium",
+"Consumption Today"
+],
+"cpld_version": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"slow",
+"Cpld Version"
+],
+"cumulative_dc_energy_yield_mppt1": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Cumulative DC Energy Yield Mppt1"
+],
+"cumulative_dc_energy_yield_mppt10": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Cumulative DC Energy Yield Mppt10"
+],
+"cumulative_dc_energy_yield_mppt2": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Cumulative DC Energy Yield Mppt2"
+],
+"cumulative_dc_energy_yield_mppt3": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Cumulative DC Energy Yield Mppt3"
+],
+"cumulative_dc_energy_yield_mppt4": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Cumulative DC Energy Yield Mppt4"
+],
+"cumulative_dc_energy_yield_mppt5": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Cumulative DC Energy Yield Mppt5"
+],
+"cumulative_dc_energy_yield_mppt6": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Cumulative DC Energy Yield Mppt6"
+],
+"cumulative_dc_energy_yield_mppt7": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Cumulative DC Energy Yield Mppt7"
+],
+"cumulative_dc_energy_yield_mppt8": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Cumulative DC Energy Yield Mppt8"
+],
+"cumulative_dc_energy_yield_mppt9": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Cumulative DC Energy Yield Mppt9"
+],
+"current_electricity_generation_statistics_time": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Current Electricity Generation Statistics Time"
+],
+"daily_yield_energy": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Daily Yield Energy"
+],
+"day_active_power_peak": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Day Active Power Peak"
+],
+"daylight_saving_time": [
+"switch",
+false,
+"inverter",
+"inverter",
+"medium",
+"Daylight Saving Time"
+],
+"dc_mbus_version": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"slow",
+"DC Mbus Version"
+],
+"dc_terminal_1_2_max_temp": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"DC Terminal 1 2 Max Temp"
+],
+"default_active_power_change_gradient": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Default Active Power Change Gradient"
+],
+"default_maximum_feed_in_power": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Default Maximum Feed In Power"
+],
+"device_status": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Device Status"
+],
+"dongle_plant_maximum_charge_from_grid_power": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Dongle Plant Maximum Charge From Grid Power"
+],
+"efficiency": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Efficiency"
+],
+"el_module_version": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"slow",
+"El Module Version"
+],
+"emma": [
+"switch",
+false,
+"inverter",
+"inverter",
+"medium",
+"EMMA"
+],
+"emma_3phase_imbalance_control": [
+"switch",
+true,
+"emma",
+"emma",
+"medium",
+"EMMA 3Phase Imbalance Control"
+],
+"emma_consider_mains_faulty_if": [
+"select",
+true,
+"emma",
+"emma",
+"medium",
+"EMMA Consider Mains Faulty If"
+],
+"emma_dst_state": [
+"sensor",
+true,
+"emma",
+"emma",
+"fast",
+"EMMA Dst State"
+],
+"emma_ess_control_mode": [
+"select",
+true,
+"emma",
+"emma",
+"medium",
+"EMMA ESS Control Mode"
+],
+"emma_external_meter_active_power": [
+"sensor",
+false,
+"external_meter",
+"emma",
+"fast",
+"EMMA External Meter Active Power"
+],
+"emma_external_meter_apparent_power": [
+"sensor",
+false,
+"external_meter",
+"emma",
+"fast",
+"EMMA External Meter Apparent Power"
+],
+"emma_external_meter_line_voltage_a_b": [
+"sensor",
+false,
+"external_meter",
+"emma",
+"fast",
+"EMMA External Meter Line Voltage A-B"
+],
+"emma_external_meter_line_voltage_b_c": [
+"sensor",
+false,
+"external_meter",
+"emma",
+"fast",
+"EMMA External Meter Line Voltage B-C"
+],
+"emma_external_meter_line_voltage_c_a": [
+"sensor",
+false,
+"external_meter",
+"emma",
+"fast",
+"EMMA External Meter Line Voltage C-A"
+],
+"emma_external_meter_phase_a_active_power": [
+"sensor",
+false,
+"external_meter",
+"emma",
+"fast",
+"EMMA External Meter Phase A Active Power"
+],
+"emma_external_meter_phase_a_current": [
+"sensor",
+false,
+"external_meter",
+"emma",
+"fast",
+"EMMA External Meter Phase A Current"
+],
+"emma_external_meter_phase_a_voltage": [
+"sensor",
+false,
+"external_meter",
+"emma",
+"fast",
+"EMMA External Meter Phase A Voltage"
+],
+"emma_external_meter_phase_b_active_power": [
+"sensor",
+false,
+"external_meter",
+"emma",
+"fast",
+"EMMA External Meter Phase B Active Power"
+],
+"emma_external_meter_phase_b_current": [
+"sensor",
+false,
+"external_meter",
+"emma",
+"fast",
+"EMMA External Meter Phase B Current"
+],
+"emma_external_meter_phase_b_voltage": [
+"sensor",
+false,
+"external_meter",
+"emma",
+"fast",
+"EMMA External Meter Phase B Voltage"
+],
+"emma_external_meter_phase_c_active_power": [
+"sensor",
+false,
+"external_meter",
+"emma",
+"fast",
+"EMMA External Meter Phase C Active Power"
+],
+"emma_external_meter_phase_c_current": [
+"sensor",
+false,
+"external_meter",
+"emma",
+"fast",
+"EMMA External Meter Phase C Current"
+],
+"emma_external_meter_phase_c_voltage": [
+"sensor",
+false,
+"external_meter",
+"emma",
+"fast",
+"EMMA External Meter Phase C Voltage"
+],
+"emma_external_meter_power_factor": [
+"sensor",
+false,
+"external_meter",
+"emma",
+"fast",
+"EMMA External Meter Power Factor"
+],
+"emma_external_meter_running_status": [
+"sensor",
+false,
+"external_meter",
+"emma",
+"medium",
+"EMMA External Meter Running Status"
+],
+"emma_external_meter_total_active_energy": [
+"sensor",
+false,
+"external_meter",
+"emma",
+"medium",
+"EMMA External Meter Total Active Energy"
+],
+"emma_external_meter_total_negative_active_energy": [
+"sensor",
+false,
+"external_meter",
+"emma",
+"medium",
+"EMMA External Meter Total Negative Active Energy"
+],
+"emma_external_meter_total_positive_active_energy": [
+"sensor",
+false,
+"external_meter",
+"emma",
+"medium",
+"EMMA External Meter Total Positive Active Energy"
+],
+"emma_limitation_mode": [
+"select",
+true,
+"emma",
+"emma",
+"medium",
+"EMMA Limitation Mode"
+],
+"emma_local_time": [
+"sensor",
+true,
+"emma",
+"emma",
+"medium",
+"EMMA Local Time"
+],
+"emma_maximum_feed_grid_power_percent": [
+"number",
+true,
+"emma",
+"emma",
+"medium",
+"EMMA Maximum Feed Grid Power Percent"
+],
+"emma_maximum_feed_grid_power_watt": [
+"number",
+true,
+"emma",
+"emma",
+"medium",
+"EMMA Maximum Feed Grid Power Watt"
+],
+"emma_model": [
+"sensor",
+true,
+"emma",
+"emma",
+"slow",
+"EMMA Model"
+],
+"emma_power_control_mode_at_grid_connection_point": [
+"select",
+true,
+"emma",
+"emma",
+"medium",
+"EMMA Power Control Mode At Grid Connection Point"
+],
+"emma_power_supply_configuration": [
+"select",
+true,
+"emma",
+"emma",
+"medium",
+"EMMA Power Supply Configuration"
+],
+"emma_software_version": [
+"sensor",
+true,
+"emma",
+"emma",
+"slow",
+"EMMA Software Version"
+],
+"emma_system_time": [
+"datetime",
+true,
+"emma",
+"emma",
+"medium",
+"EMMA System Time"
+],
+"emma_tou_maximum_power_for_charging_batteries_from_grid": [
+"number",
+true,
+"emma",
+"emma",
+"medium",
+"EMMA TOU Maximum Power For Charging Batteries From Grid"
+],
+"emma_tou_periods": [
+"sensor",
+false,
+"emma",
+"emma",
+"medium",
+"EMMA TOU Periods"
+],
+"emma_tou_preferred_use_of_surplus_pv_power": [
+"select",
+true,
+"emma",
+"emma",
+"medium",
+"PV Power Priority"
+],
+"energy_charged_this_month": [
+"sensor",
+true,
+"emma",
+"emma",
+"medium",
+"Energy Charged This Month"
+],
+"energy_charged_today": [
+"sensor",
+true,
+"emma",
+"emma",
+"medium",
+"Energy Charged Today"
+],
+"energy_discharged_this_month": [
+"sensor",
+true,
+"emma",
+"emma",
+"medium",
+"Energy Discharged This Month"
+],
+"energy_discharged_today": [
+"sensor",
+true,
+"emma",
+"emma",
+"medium",
+"Energy Discharged Today"
+],
+"ess_chargeable_capacity": [
+"sensor",
+true,
+"emma",
+"emma",
+"medium",
+"ESS Chargeable Capacity"
+],
+"ess_chargeable_energy": [
+"sensor",
+true,
+"emma",
+"emma",
+"medium",
+"ESS Chargeable Energy"
+],
+"ess_dischargeable_capacity": [
+"sensor",
+true,
+"emma",
+"emma",
+"medium",
+"ESS Dischargeable Capacity"
+],
+"ess_dischargeable_energy": [
+"sensor",
+true,
+"emma",
+"emma",
+"medium",
+"ESS Dischargeable Energy"
+],
+"fault_code": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Fault Code"
+],
+"feature_mask_1": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"slow",
+"Feature Mask 1"
+],
+"feature_mask_2": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"slow",
+"Feature Mask 2"
+],
+"feature_mask_3": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"slow",
+"Feature Mask 3"
+],
+"feature_mask_4": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"slow",
+"Feature Mask 4"
+],
+"feed_in_power": [
+"sensor",
+true,
+"emma",
+"emma",
+"fast",
+"Feed In Power"
+],
+"feed_in_to_grid_today": [
+"sensor",
+true,
+"emma",
+"emma",
+"fast",
+"Feed In To Grid Today"
+],
+"firmware_version": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"slow",
+"Firmware Version"
+],
+"fixed_reactive_power_at_night": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Fixed Reactive Power At Night"
+],
+"forcible_charge_discharge_write": [
+"select",
+true,
+"inverter",
+"inverter",
+"medium",
+"Forced Charge/Discharge"
+],
+"grid_A_voltage": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Grid A Voltage"
+],
+"grid_B_voltage": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Grid B Voltage"
+],
+"grid_C_voltage": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Grid C Voltage"
+],
+"grid_accumulated_energy": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Grid Accumulated Energy"
+],
+"grid_accumulated_reactive_power": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Grid Accumulated Reactive Power"
+],
+"grid_code": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Grid Code"
+],
+"grid_current": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Grid Current"
+],
+"grid_exported_energy": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Grid Exported Energy"
+],
+"grid_frequency": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Grid Frequency"
+],
+"grid_standard_code_protocol_version": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"slow",
+"Grid Standard Code Protocol Version"
+],
+"grid_voltage": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Grid Voltage"
+],
+"hardware_functional_unit_conf_id": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Hardware Functional Unit Conf Id"
+],
+"hardware_version": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"slow",
+"Hardware Version"
+],
+"hourly_yield_energy": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Hourly Yield Energy"
+],
+"input_power": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Input Power"
+],
+"insulation_resistance": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Insulation Resistance"
+],
+"internal_fan_1_running_time": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Internal Fan 1 Running Time"
+],
+"internal_temperature": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Internal Temperature"
+],
+"inv_module_a_temp": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Inv Module A Temp"
+],
+"inv_module_b_temp": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Inv Module B Temp"
+],
+"inv_module_c_temp": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Inv Module C Temp"
+],
+"inverter_active_power": [
+"sensor",
+true,
+"inverter",
+"emma",
+"fast",
+"Inverter Active Power"
+],
+"inverter_energy_yield_today": [
+"sensor",
+true,
+"inverter",
+"emma",
+"medium",
+"Inverter Energy Yield Today"
+],
+"inverter_rated_power": [
+"sensor",
+true,
+"inverter",
+"emma",
+"slow",
+"Inverter Rated Power"
+],
+"inverter_to_pe_voltage_tolerance": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Inverter To Pe Voltage Tolerance"
+],
+"inverter_total_absorbed_energy": [
+"sensor",
+true,
+"inverter",
+"emma",
+"medium",
+"Inverter Total Absorbed Energy"
+],
+"inverter_total_energy_yield": [
+"sensor",
+true,
+"inverter",
+"emma",
+"medium",
+"Inverter Total Energy Yield"
+],
+"iso_feature_information": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Iso Feature Information"
+],
+"latest_active_alarm_sn": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Latest Active Alarm Sn"
+],
+"latest_historical_alarm_sn": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Latest Historical Alarm Sn"
+],
+"leakage_current_rcd": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Leakage Current Rcd"
+],
+"line_voltage_A_B": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Line Voltage A-B"
+],
+"line_voltage_B_C": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Line Voltage B-C"
+],
+"line_voltage_C_A": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Line Voltage C-A"
+],
+"line_voltage_a_b_built_in_energy": [
+"sensor",
+true,
+"emma",
+"emma",
+"medium",
+"Built-in Meter Line Voltage A-B"
+],
+"line_voltage_a_b_external_energy": [
+"sensor",
+false,
+"external_meter",
+"emma",
+"medium",
+"External Meter Line Voltage A-B"
+],
+"line_voltage_b_c_built_in_energy": [
+"sensor",
+true,
+"emma",
+"emma",
+"medium",
+"Built-in Meter Line Voltage B-C"
+],
+"line_voltage_b_c_external_energy": [
+"sensor",
+false,
+"external_meter",
+"emma",
+"medium",
+"External Meter Line Voltage B-C"
+],
+"line_voltage_c_a_built_in_energy": [
+"sensor",
+true,
+"emma",
+"emma",
+"medium",
+"Built-in Meter Line Voltage C-A"
+],
+"line_voltage_c_a_external_energy": [
+"sensor",
+false,
+"external_meter",
+"emma",
+"medium",
+"External Meter Line Voltage C-A"
+],
+"load_power": [
+"sensor",
+true,
+"emma",
+"emma",
+"fast",
+"Load Power"
+],
+"local_time_year": [
+"number",
+true,
+"emma",
+"emma",
+"medium",
+"Local Time Year"
+],
+"master_dsp_version": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"slow",
+"Master Dsp Version"
+],
+"max_pv_negative_voltage_to_ground": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Max PV Negative Voltage To Ground"
+],
+"max_pv_voltage": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Max PV Voltage"
+],
+"maximum_active_power": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Maximum Active Power"
+],
+"maximum_feed_grid_power_percent": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Maximum Feed Grid Power Percent"
+],
+"maximum_feed_grid_power_watt": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Maximum Feed Grid Power Watt"
+],
+"meter_status": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Meter Status"
+],
+"meter_type": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Meter Type"
+],
+"meter_type_check": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Meter Type Check"
+],
+"min_pv_negative_voltage_to_ground": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Min PV Negative Voltage To Ground"
+],
+"min_pv_voltage": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Min PV Voltage"
+],
+"model_id": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"slow",
+"Model Id"
+],
+"model_name": [
+"sensor",
+true,
+"emma",
+"emma",
+"slow",
+"Model Name"
+],
+"monitoring_board_sn": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"slow",
+"Monitoring Board Sn"
+],
+"monitoring_software_version": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"slow",
+"Monitoring Software Version"
+],
+"monthly_energy_consumption": [
+"sensor",
+true,
+"emma",
+"emma",
+"medium",
+"Monthly Energy Consumption"
+],
+"monthly_feed_in_to_grid": [
+"sensor",
+true,
+"emma",
+"emma",
+"fast",
+"Monthly Feed In To Grid"
+],
+"monthly_supply_from_grid": [
+"sensor",
+true,
+"emma",
+"emma",
+"fast",
+"Monthly Supply From Grid"
+],
+"monthly_yield_energy": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Monthly Yield Energy"
+],
+"mppt_multimodal_scanning": [
+"switch",
+false,
+"inverter",
+"inverter",
+"medium",
+"Mppt Multimodal Scanning"
+],
+"mppt_predicted_power": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Mppt Predicted Power"
+],
+"mppt_scanning_interval": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Mppt Scanning Interval"
+],
+"nb_mpp_tracks": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"slow",
+"Nb MPP Tracks"
+],
+"nb_online_optimizers": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"slow",
+"Nb Online Optimizers"
+],
+"nb_optimizers": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"slow",
+"Nb Optimizers"
+],
+"nb_pv_strings": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"slow",
+"Nb PV Strings"
+],
+"negative_bus_voltage": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Negative Bus Voltage"
+],
+"number_of_chargers_found": [
+"sensor",
+true,
+"emma",
+"emma",
+"slow",
+"Number Of Chargers Found"
+],
+"number_of_inverters_found": [
+"sensor",
+true,
+"emma",
+"emma",
+"slow",
+"Number Of Inverters Found"
+],
+"number_of_packages_to_be_upgraded": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"slow",
+"Number Of Packages To Be Upgraded"
+],
+"offering_name_of_southbound_device_1": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"slow",
+"Offering Name Of Southbound Device 1"
+],
+"offering_name_of_southbound_device_2": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"slow",
+"Offering Name Of Southbound Device 2"
+],
+"offering_name_of_southbound_device_3": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"slow",
+"Offering Name Of Southbound Device 3"
+],
+"output_board_relay_ambient_temp_max": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Output Board Relay Ambient Temp Max"
+],
+"percent_apparent_power": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Percent Apparent Power"
+],
+"phase_A_current": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Phase A Current"
+],
+"phase_A_voltage": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Phase A Voltage"
+],
+"phase_B_current": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Phase B Current"
+],
+"phase_B_voltage": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Phase B Voltage"
+],
+"phase_C_current": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Phase C Current"
+],
+"phase_C_voltage": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Phase C Voltage"
+],
+"phase_a_active_power_built_in_energy": [
+"sensor",
+true,
+"emma",
+"emma",
+"medium",
+"Built-in Meter Phase A Active Power"
+],
+"phase_a_active_power_external_energy": [
+"sensor",
+false,
+"external_meter",
+"emma",
+"medium",
+"External Meter Phase A Active Power"
+],
+"phase_a_current_built_in_energy": [
+"sensor",
+true,
+"emma",
+"emma",
+"medium",
+"Built-in Meter Phase A Current"
+],
+"phase_a_current_external_energy": [
+"sensor",
+false,
+"external_meter",
+"emma",
+"medium",
+"External Meter Phase A Current"
+],
+"phase_a_dc_component_dci": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Phase A DC Component Dci"
+],
+"phase_a_voltage_built_in_energy": [
+"sensor",
+true,
+"emma",
+"emma",
+"medium",
+"Built-in Meter Phase A Voltage"
+],
+"phase_a_voltage_external_energy": [
+"sensor",
+false,
+"external_meter",
+"emma",
+"medium",
+"External Meter Phase A Voltage"
+],
+"phase_b_active_power_built_in_energy": [
+"sensor",
+true,
+"emma",
+"emma",
+"medium",
+"Built-in Meter Phase B Active Power"
+],
+"phase_b_active_power_external_energy": [
+"sensor",
+false,
+"external_meter",
+"emma",
+"medium",
+"External Meter Phase B Active Power"
+],
+"phase_b_current_built_in_energy": [
+"sensor",
+true,
+"emma",
+"emma",
+"medium",
+"Built-in Meter Phase B Current"
+],
+"phase_b_current_external_energy": [
+"sensor",
+false,
+"external_meter",
+"emma",
+"medium",
+"External Meter Phase B Current"
+],
+"phase_b_dc_component_dci": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Phase B DC Component Dci"
+],
+"phase_b_voltage_built_in_energy": [
+"sensor",
+true,
+"emma",
+"emma",
+"medium",
+"Built-in Meter Phase B Voltage"
+],
+"phase_b_voltage_external_energy": [
+"sensor",
+false,
+"external_meter",
+"emma",
+"medium",
+"External Meter Phase B Voltage"
+],
+"phase_c_active_power_built_in_energy": [
+"sensor",
+true,
+"emma",
+"emma",
+"medium",
+"Built-in Meter Phase C Active Power"
+],
+"phase_c_active_power_external_energy": [
+"sensor",
+false,
+"external_meter",
+"emma",
+"medium",
+"External Meter Phase C Active Power"
+],
+"phase_c_current_built_in_energy": [
+"sensor",
+true,
+"emma",
+"emma",
+"medium",
+"Built-in Meter Phase C Current"
+],
+"phase_c_current_external_energy": [
+"sensor",
+false,
+"external_meter",
+"emma",
+"medium",
+"External Meter Phase C Current"
+],
+"phase_c_dc_component_dci": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Phase C DC Component Dci"
+],
+"phase_c_voltage_built_in_energy": [
+"sensor",
+true,
+"emma",
+"emma",
+"medium",
+"Built-in Meter Phase C Voltage"
+],
+"phase_c_voltage_external_energy": [
+"sensor",
+false,
+"external_meter",
+"emma",
+"medium",
+"External Meter Phase C Voltage"
+],
+"pn": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"slow",
+"PN"
+],
+"positive_bus_voltage": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Positive Bus Voltage"
+],
+"power_factor": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Power Factor"
+],
+"power_factor_2": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Power Factor 2"
+],
+"power_factor_built_in_energy": [
+"sensor",
+true,
+"emma",
+"emma",
+"medium",
+"Built-in Meter Power Factor"
+],
+"power_factor_external_energy": [
+"sensor",
+false,
+"external_meter",
+"emma",
+"medium",
+"External Meter Power Factor"
+],
+"power_meter_active_power": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Power Meter Active Power"
+],
+"power_meter_reactive_power": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Power Meter Reactive Power"
+],
+"product_sales_area": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"slow",
+"Product Sales Area"
+],
+"product_software_number": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"slow",
+"Product Software Number"
+],
+"product_software_version_number": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"slow",
+"Product Software Version Number"
+],
+"protocol_version_modbus": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"slow",
+"Protocol Version Modbus"
+],
+"pv_01_current": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"PV 01 Current"
+],
+"pv_01_voltage": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"PV 01 Voltage"
+],
+"pv_02_current": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"PV 02 Current"
+],
+"pv_02_voltage": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"PV 02 Voltage"
+],
+"pv_03_current": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"PV 03 Current"
+],
+"pv_03_voltage": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"PV 03 Voltage"
+],
+"pv_04_current": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"PV 04 Current"
+],
+"pv_04_voltage": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"PV 04 Voltage"
+],
+"pv_05_current": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"PV 05 Current"
+],
+"pv_05_voltage": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"PV 05 Voltage"
+],
+"pv_06_current": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"PV 06 Current"
+],
+"pv_06_voltage": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"PV 06 Voltage"
+],
+"pv_07_current": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"PV 07 Current"
+],
+"pv_07_voltage": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"PV 07 Voltage"
+],
+"pv_08_current": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"PV 08 Current"
+],
+"pv_08_voltage": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"PV 08 Voltage"
+],
+"pv_09_current": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"PV 09 Current"
+],
+"pv_09_voltage": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"PV 09 Voltage"
+],
+"pv_10_current": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"PV 10 Current"
+],
+"pv_10_voltage": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"PV 10 Voltage"
+],
+"pv_11_current": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"PV 11 Current"
+],
+"pv_11_voltage": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"PV 11 Voltage"
+],
+"pv_12_current": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"PV 12 Current"
+],
+"pv_12_voltage": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"PV 12 Voltage"
+],
+"pv_13_current": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"PV 13 Current"
+],
+"pv_13_voltage": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"PV 13 Voltage"
+],
+"pv_14_current": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"PV 14 Current"
+],
+"pv_14_voltage": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"PV 14 Voltage"
+],
+"pv_15_current": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"PV 15 Current"
+],
+"pv_15_voltage": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"PV 15 Voltage"
+],
+"pv_16_current": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"PV 16 Current"
+],
+"pv_16_voltage": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"PV 16 Voltage"
+],
+"pv_17_current": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"PV 17 Current"
+],
+"pv_17_voltage": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"PV 17 Voltage"
+],
+"pv_18_current": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"PV 18 Current"
+],
+"pv_18_voltage": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"PV 18 Voltage"
+],
+"pv_19_current": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"PV 19 Current"
+],
+"pv_19_voltage": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"PV 19 Voltage"
+],
+"pv_20_current": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"PV 20 Current"
+],
+"pv_20_voltage": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"PV 20 Voltage"
+],
+"pv_21_current": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"PV 21 Current"
+],
+"pv_21_voltage": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"PV 21 Voltage"
+],
+"pv_22_current": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"PV 22 Current"
+],
+"pv_22_voltage": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"PV 22 Voltage"
+],
+"pv_23_current": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"PV 23 Current"
+],
+"pv_23_voltage": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"PV 23 Voltage"
+],
+"pv_24_current": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"PV 24 Current"
+],
+"pv_24_voltage": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"PV 24 Voltage"
+],
+"pv_negative_voltage_to_ground": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"PV Negative Voltage To Ground"
+],
+"pv_output_power": [
+"sensor",
+true,
+"emma",
+"emma",
+"fast",
+"PV Output Power"
+],
+"pv_yield_today": [
+"sensor",
+true,
+"emma",
+"emma",
+"medium",
+"PV Yield Today"
+],
+"q_u_characteristic_curve_model": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"slow",
+"Q U Characteristic Curve Model"
+],
+"q_u_scheduling_exit_power_percentage": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Q U Scheduling Exit Power Percentage"
+],
+"q_u_scheduling_trigger_power_percentage": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Q U Scheduling Trigger Power Percentage"
+],
+"rated_ess_capacity": [
+"sensor",
+true,
+"emma",
+"emma",
+"slow",
+"Rated ESS Capacity"
+],
+"rated_power": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"slow",
+"Rated Power"
+],
+"reactive_power": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Reactive Power"
+],
+"reactive_power_adjustment_time": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Reactive Power Adjustment Time"
+],
+"reactive_power_compensation": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Reactive Power Compensation"
+],
+"reactive_power_compensation_at_night": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Reactive Power Compensation At Night"
+],
+"realtime_max_active_capability": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Realtime Max Active Capability"
+],
+"realtime_max_inductive_reactive_capacity": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Realtime Max Inductive Reactive Capacity"
+],
+"regkey": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"slow",
+"Regkey"
+],
+"remote_charge_discharge_control_mode": [
+"select",
+false,
+"inverter",
+"inverter",
+"medium",
+"Remote Charge Discharge Control Mode"
+],
+"sdongle_application_layer_heartbeat_period": [
+"sensor",
+false,
+"sdongle",
+"sdongle",
+"medium",
+"Sdongle Application Layer Heartbeat Period"
+],
+"sdongle_average_daily_used_traffic_4g": [
+"sensor",
+false,
+"sdongle",
+"sdongle",
+"fast",
+"Sdongle Average Daily Used Traffic 4G"
+],
+"sdongle_card_number_4g": [
+"sensor",
+false,
+"sdongle",
+"sdongle",
+"slow",
+"Sdongle Card Number 4G"
+],
+"sdongle_carrier_4g": [
+"sensor",
+false,
+"sdongle",
+"sdongle",
+"slow",
+"Sdongle Carrier 4G"
+],
+"sdongle_change_sequence_number": [
+"sensor",
+false,
+"sdongle",
+"sdongle",
+"fast",
+"Sdongle Change Sequence Number"
+],
+"sdongle_device_operation": [
+"sensor",
+false,
+"sdongle",
+"sdongle",
+"slow",
+"Sdongle Device Operation"
+],
+"sdongle_device_operation_command": [
+"sensor",
+false,
+"sdongle",
+"sdongle",
+"slow",
+"Sdongle Device Operation Command"
+],
+"sdongle_device_search_status": [
+"sensor",
+false,
+"sdongle",
+"sdongle",
+"medium",
+"Sdongle Device Search Status"
+],
+"sdongle_grid_power": [
+"sensor",
+false,
+"sdongle",
+"sdongle",
+"fast",
+"Sdongle Grid Power"
+],
+"sdongle_imei_4g": [
+"sensor",
+false,
+"sdongle",
+"sdongle",
+"slow",
+"Sdongle Imei 4G"
+],
+"sdongle_load_power": [
+"sensor",
+false,
+"sdongle",
+"sdongle",
+"fast",
+"Sdongle Load Power"
+],
+"sdongle_maximum_devices_allowed": [
+"sensor",
+false,
+"sdongle",
+"sdongle",
+"fast",
+"Sdongle Maximum Devices Allowed"
+],
+"sdongle_monthly_remaining_traffic_4g": [
+"sensor",
+false,
+"sdongle",
+"sdongle",
+"fast",
+"Sdongle Monthly Remaining Traffic 4G"
+],
+"sdongle_monthly_used_traffic_4g": [
+"sensor",
+false,
+"sdongle",
+"sdongle",
+"fast",
+"Sdongle Monthly Used Traffic 4G"
+],
+"sdongle_monthly_used_traffic_correction_4g": [
+"sensor",
+false,
+"sdongle",
+"sdongle",
+"fast",
+"Sdongle Monthly Used Traffic Correction 4G"
+],
+"sdongle_network_mode_4g": [
+"select",
+false,
+"sdongle",
+"sdongle",
+"medium",
+"Sdongle Network Mode 4G"
+],
+"sdongle_nms_server": [
+"sensor",
+false,
+"sdongle",
+"sdongle",
+"slow",
+"Sdongle Nms Server"
+],
+"sdongle_nms_server_port1": [
+"sensor",
+false,
+"sdongle",
+"sdongle",
+"medium",
+"Sdongle Nms Server Port1"
+],
+"sdongle_nms_server_port2": [
+"sensor",
+false,
+"sdongle",
+"sdongle",
+"medium",
+"Sdongle Nms Server Port2"
+],
+"sdongle_ntp_time_synchronization": [
+"sensor",
+false,
+"sdongle",
+"sdongle",
+"medium",
+"Sdongle Ntp Time Synchronization"
+],
+"sdongle_port_mode": [
+"select",
+false,
+"sdongle",
+"sdongle",
+"medium",
+"Sdongle Port Mode"
+],
+"sdongle_registration_status": [
+"switch",
+false,
+"sdongle",
+"sdongle",
+"medium",
+"Sdongle Registration Status"
+],
+"sdongle_reported_data_record_period": [
+"switch",
+false,
+"sdongle",
+"sdongle",
+"medium",
+"Sdongle Reported Data Record Period"
+],
+"sdongle_signal_strength_4g": [
+"sensor",
+false,
+"sdongle",
+"sdongle",
+"fast",
+"Sdongle Signal Strength 4G"
+],
+"sdongle_ssl_encryption": [
+"switch",
+false,
+"sdongle",
+"sdongle",
+"medium",
+"Sdongle Ssl Encryption"
+],
+"sdongle_start_device_search": [
+"sensor",
+false,
+"sdongle",
+"sdongle",
+"fast",
+"Sdongle Start Device Search"
+],
+"sdongle_system_4g": [
+"sensor",
+false,
+"sdongle",
+"sdongle",
+"slow",
+"Sdongle System 4G"
+],
+"sdongle_tcp_heartbeat_period": [
+"sensor",
+false,
+"sdongle",
+"sdongle",
+"medium",
+"Sdongle Tcp Heartbeat Period"
+],
+"sdongle_total_active_power": [
+"sensor",
+false,
+"sdongle",
+"sdongle",
+"fast",
+"Sdongle Total Active Power"
+],
+"sdongle_total_battery_power": [
+"sensor",
+false,
+"sdongle",
+"sdongle",
+"fast",
+"Sdongle Total Battery Power"
+],
+"sdongle_total_input_power": [
+"sensor",
+false,
+"sdongle",
+"sdongle",
+"fast",
+"Sdongle Total Input Power"
+],
+"sdongle_traffic_package_4g": [
+"sensor",
+false,
+"sdongle",
+"sdongle",
+"medium",
+"Sdongle Traffic Package 4G"
+],
+"sdongle_traffic_status_4g": [
+"sensor",
+false,
+"sdongle",
+"sdongle",
+"medium",
+"Sdongle Traffic Status 4G"
+],
+"sdongle_type": [
+"sensor",
+false,
+"sdongle",
+"sdongle",
+"fast",
+"Sdongle Type"
+],
+"sdongle_unsolicited_report_interval": [
+"sensor",
+false,
+"sdongle",
+"sdongle",
+"medium",
+"Sdongle Unsolicited Report Interval"
+],
+"sdongle_wireless_route_access_signal_strength": [
+"sensor",
+false,
+"sdongle",
+"sdongle",
+"fast",
+"Sdongle Wireless Route Access Signal Strength"
+],
+"serial_number": [
+"sensor",
+true,
+"emma",
+"emma",
+"slow",
+"Serial Number"
+],
+"shutdown_time": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Shutdown Time"
+],
+"slave_dsp_version": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"slow",
+"Slave Dsp Version"
+],
+"smartlogger_a_b_line_voltage_of_grid": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"fast",
+"Smartlogger A-B Line Voltage Of Grid"
+],
+"smartlogger_active_alarm_sequence_number": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"medium",
+"Smartlogger Active Alarm Sequence Number"
+],
+"smartlogger_active_ess_power": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"fast",
+"Smartlogger Active ESS Power"
+],
+"smartlogger_active_ess_power_adjustment_in_fixed_value": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"fast",
+"Smartlogger Active ESS Power Adjustment In Fixed Value"
+],
+"smartlogger_active_ess_power_adjustment_in_percentage": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"fast",
+"Smartlogger Active ESS Power Adjustment In Percentage"
+],
+"smartlogger_active_power": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"fast",
+"Smartlogger Active Power"
+],
+"smartlogger_active_power_adjustment": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"fast",
+"Smartlogger Active Power Adjustment"
+],
+"smartlogger_active_power_adjustment_highest_priority": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"fast",
+"Smartlogger Active Power Adjustment Highest Priority"
+],
+"smartlogger_active_power_adjustment_in_percentage": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"fast",
+"Smartlogger Active Power Adjustment In Percentage"
+],
+"smartlogger_active_power_adjustment_target": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"fast",
+"Smartlogger Active Power Adjustment Target"
+],
+"smartlogger_active_power_control_mode": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"medium",
+"Smartlogger Active Power Control Mode"
+],
+"smartlogger_active_power_control_mode_plant": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"medium",
+"Smartlogger Active Power Control Mode Plant"
+],
+"smartlogger_active_power_scheduling_in_percentage": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"fast",
+"Smartlogger Active Power Scheduling In Percentage"
+],
+"smartlogger_active_power_scheduling_target_value": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"fast",
+"Smartlogger Active Power Scheduling Target Value"
+],
+"smartlogger_active_pv_power": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"fast",
+"Smartlogger Active PV Power"
+],
+"smartlogger_active_pv_power_adjustment_in_fixed_value": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"fast",
+"Smartlogger Active PV Power Adjustment In Fixed Value"
+],
+"smartlogger_active_pv_power_adjustment_in_percentage": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"fast",
+"Smartlogger Active PV Power Adjustment In Percentage"
+],
+"smartlogger_alarm_1": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"medium",
+"Smartlogger Alarm 1"
+],
+"smartlogger_alarm_2": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"medium",
+"Smartlogger Alarm 2"
+],
+"smartlogger_alarm_3": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"medium",
+"Smartlogger Alarm 3"
+],
+"smartlogger_alarm_4": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"medium",
+"Smartlogger Alarm 4"
+],
+"smartlogger_alarm_5": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"medium",
+"Smartlogger Alarm 5"
+],
+"smartlogger_alarm_6": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"medium",
+"Smartlogger Alarm 6"
+],
+"smartlogger_alarm_7": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"medium",
+"Smartlogger Alarm 7"
+],
+"smartlogger_array_black_start": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"medium",
+"Smartlogger Array Black Start"
+],
+"smartlogger_array_black_start_status": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"medium",
+"Smartlogger Array Black Start Status"
+],
+"smartlogger_array_in_operation": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"fast",
+"Smartlogger Array In Operation"
+],
+"smartlogger_array_reset": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"medium",
+"Smartlogger Array Reset"
+],
+"smartlogger_array_shut_down": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"fast",
+"Smartlogger Array Shut Down"
+],
+"smartlogger_b_c_line_voltage_of_grid": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"fast",
+"Smartlogger B-C Line Voltage Of Grid"
+],
+"smartlogger_c_a_line_voltage_of_grid": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"fast",
+"Smartlogger C-A Line Voltage Of Grid"
+],
+"smartlogger_chargeable_capacity": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"medium",
+"Smartlogger Chargeable Capacity"
+],
+"smartlogger_city": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"medium",
+"Smartlogger City"
+],
+"smartlogger_co2_emission_reduction_coefficient": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"fast",
+"Smartlogger Co2 Emission Reduction Coefficient"
+],
+"smartlogger_co2_reduced": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"fast",
+"Smartlogger Co2 Reduced"
+],
+"smartlogger_co2_reduced_total": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"fast",
+"Smartlogger Co2 Reduced Total"
+],
+"smartlogger_communication_status": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"medium",
+"Smartlogger Communication Status"
+],
+"smartlogger_conversion_coefficient": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"fast",
+"Smartlogger Conversion Coefficient"
+],
+"smartlogger_current_error_during_scanning": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"medium",
+"Smartlogger Current Error During Scanning"
+],
+"smartlogger_date_time": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"medium",
+"Smartlogger Date Time"
+],
+"smartlogger_daylight_saving_time_dst": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"medium",
+"Smartlogger Daylight Saving Time Dst"
+],
+"smartlogger_dc_current": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"fast",
+"Smartlogger DC Current"
+],
+"smartlogger_dc_current_2": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"fast",
+"Smartlogger DC Current 2"
+],
+"smartlogger_device_access_status": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"medium",
+"Smartlogger Device Access Status"
+],
+"smartlogger_device_connection_status": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"medium",
+"Smartlogger Device Connection Status"
+],
+"smartlogger_device_list_change": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"fast",
+"Smartlogger Device List Change"
+],
+"smartlogger_device_name": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"slow",
+"Smartlogger Device Name"
+],
+"smartlogger_device_operation": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"slow",
+"Smartlogger Device Operation"
+],
+"smartlogger_di_group_state": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"fast",
+"Smartlogger Di Group State"
+],
+"smartlogger_dischargeable_capacity": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"medium",
+"Smartlogger Dischargeable Capacity"
+],
+"smartlogger_dst_offset": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"fast",
+"Smartlogger Dst Offset"
+],
+"smartlogger_dst_state": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"fast",
+"Smartlogger Dst State"
+],
+"smartlogger_energy_charged_today": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"medium",
+"Smartlogger Energy Charged Today"
+],
+"smartlogger_energy_discharged_today": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"medium",
+"Smartlogger Energy Discharged Today"
+],
+"smartlogger_equipment_serial_number_esn": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"slow",
+"Smartlogger Equipment Serial Number Esn"
+],
+"smartlogger_ess_end_of_charge_soc": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"fast",
+"Smartlogger ESS End Of Charge SOC"
+],
+"smartlogger_ess_end_of_discharge_soc": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"fast",
+"Smartlogger ESS End Of Discharge SOC"
+],
+"smartlogger_ess_pcs_in_operation": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"fast",
+"Smartlogger ESS Pcs In Operation"
+],
+"smartlogger_ess_pcs_shut_down": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"fast",
+"Smartlogger ESS Pcs Shut Down"
+],
+"smartlogger_ess_shutdown": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"medium",
+"Smartlogger ESS Shutdown"
+],
+"smartlogger_ess_startup": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"medium",
+"Smartlogger ESS Startup"
+],
+"smartlogger_external_meter_a_b_line_voltage": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"fast",
+"Smartlogger External Meter A-B Line Voltage"
+],
+"smartlogger_external_meter_active_electricity": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"medium",
+"Smartlogger External Meter Active Electricity"
+],
+"smartlogger_external_meter_active_power": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"fast",
+"Smartlogger External Meter Active Power"
+],
+"smartlogger_external_meter_apparent_power": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"fast",
+"Smartlogger External Meter Apparent Power"
+],
+"smartlogger_external_meter_b_c_line_voltage": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"fast",
+"Smartlogger External Meter B-C Line Voltage"
+],
+"smartlogger_external_meter_c_a_line_voltage": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"fast",
+"Smartlogger External Meter C-A Line Voltage"
+],
+"smartlogger_external_meter_custom_1": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"fast",
+"Smartlogger External Meter Custom 1"
+],
+"smartlogger_external_meter_custom_10": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"fast",
+"Smartlogger External Meter Custom 10"
+],
+"smartlogger_external_meter_custom_2": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"fast",
+"Smartlogger External Meter Custom 2"
+],
+"smartlogger_external_meter_custom_3": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"fast",
+"Smartlogger External Meter Custom 3"
+],
+"smartlogger_external_meter_custom_4": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"fast",
+"Smartlogger External Meter Custom 4"
+],
+"smartlogger_external_meter_custom_5": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"fast",
+"Smartlogger External Meter Custom 5"
+],
+"smartlogger_external_meter_custom_6": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"fast",
+"Smartlogger External Meter Custom 6"
+],
+"smartlogger_external_meter_custom_7": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"fast",
+"Smartlogger External Meter Custom 7"
+],
+"smartlogger_external_meter_custom_8": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"fast",
+"Smartlogger External Meter Custom 8"
+],
+"smartlogger_external_meter_custom_9": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"fast",
+"Smartlogger External Meter Custom 9"
+],
+"smartlogger_external_meter_electricity_in_negative_active_electricity_price_segment_1": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"medium",
+"Smartlogger External Meter Electricity In Negative Active Electricity Price Segment 1"
+],
+"smartlogger_external_meter_electricity_in_negative_active_electricity_price_segment_2": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"medium",
+"Smartlogger External Meter Electricity In Negative Active Electricity Price Segment 2"
+],
+"smartlogger_external_meter_electricity_in_negative_active_electricity_price_segment_3": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"medium",
+"Smartlogger External Meter Electricity In Negative Active Electricity Price Segment 3"
+],
+"smartlogger_external_meter_electricity_in_negative_active_electricity_price_segment_4": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"medium",
+"Smartlogger External Meter Electricity In Negative Active Electricity Price Segment 4"
+],
+"smartlogger_external_meter_electricity_in_positive_active_electricity_price_segment_1": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"medium",
+"Smartlogger External Meter Electricity In Positive Active Electricity Price Segment 1"
+],
+"smartlogger_external_meter_electricity_in_positive_active_electricity_price_segment_2": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"medium",
+"Smartlogger External Meter Electricity In Positive Active Electricity Price Segment 2"
+],
+"smartlogger_external_meter_electricity_in_positive_active_electricity_price_segment_3": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"medium",
+"Smartlogger External Meter Electricity In Positive Active Electricity Price Segment 3"
+],
+"smartlogger_external_meter_electricity_in_positive_active_electricity_price_segment_4": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"medium",
+"Smartlogger External Meter Electricity In Positive Active Electricity Price Segment 4"
+],
+"smartlogger_external_meter_negative_active_electricity": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"medium",
+"Smartlogger External Meter Negative Active Electricity"
+],
+"smartlogger_external_meter_negative_reactive_electricity": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"medium",
+"Smartlogger External Meter Negative Reactive Electricity"
+],
+"smartlogger_external_meter_phase_a_active_power": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"fast",
+"Smartlogger External Meter Phase A Active Power"
+],
+"smartlogger_external_meter_phase_a_current": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"fast",
+"Smartlogger External Meter Phase A Current"
+],
+"smartlogger_external_meter_phase_a_voltage": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"fast",
+"Smartlogger External Meter Phase A Voltage"
+],
+"smartlogger_external_meter_phase_b_active_power": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"fast",
+"Smartlogger External Meter Phase B Active Power"
+],
+"smartlogger_external_meter_phase_b_current": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"fast",
+"Smartlogger External Meter Phase B Current"
+],
+"smartlogger_external_meter_phase_b_voltage": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"fast",
+"Smartlogger External Meter Phase B Voltage"
+],
+"smartlogger_external_meter_phase_c_active_power": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"fast",
+"Smartlogger External Meter Phase C Active Power"
+],
+"smartlogger_external_meter_phase_c_current": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"fast",
+"Smartlogger External Meter Phase C Current"
+],
+"smartlogger_external_meter_phase_c_voltage": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"fast",
+"Smartlogger External Meter Phase C Voltage"
+],
+"smartlogger_external_meter_positive_active_electricity": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"medium",
+"Smartlogger External Meter Positive Active Electricity"
+],
+"smartlogger_external_meter_positive_active_electricity_total": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"medium",
+"Smartlogger External Meter Positive Active Electricity Total"
+],
+"smartlogger_external_meter_positive_reactive_electricity": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"medium",
+"Smartlogger External Meter Positive Reactive Electricity"
+],
+"smartlogger_external_meter_positive_reactive_electricity_total": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"medium",
+"Smartlogger External Meter Positive Reactive Electricity Total"
+],
+"smartlogger_external_meter_power_factor": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"fast",
+"Smartlogger External Meter Power Factor"
+],
+"smartlogger_external_meter_reactive_electricity": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"medium",
+"Smartlogger External Meter Reactive Electricity"
+],
+"smartlogger_external_meter_reactive_power": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"fast",
+"Smartlogger External Meter Reactive Power"
+],
+"smartlogger_external_meter_total_active_electricity": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"medium",
+"Smartlogger External Meter Total Active Electricity"
+],
+"smartlogger_external_meter_total_reactive_electricity": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"medium",
+"Smartlogger External Meter Total Reactive Electricity"
+],
+"smartlogger_fast_device_access": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"fast",
+"Smartlogger Fast Device Access"
+],
+"smartlogger_frequency_adjustment_value_for_vsg_synchronous_control": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"medium",
+"Smartlogger Frequency Adjustment Value For Vsg Synchronous Control"
+],
+"smartlogger_highest_stable_charge_power_of_ess": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"fast",
+"Smartlogger Highest Stable Charge Power Of ESS"
+],
+"smartlogger_highest_stable_discharge_power_of_ess": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"fast",
+"Smartlogger Highest Stable Discharge Power Of ESS"
+],
+"smartlogger_historical_alarm_sequence_number": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"medium",
+"Smartlogger Historical Alarm Sequence Number"
+],
+"smartlogger_i_v_curve_scanning": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"medium",
+"Smartlogger I V Curve Scanning"
+],
+"smartlogger_input_power": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"fast",
+"Smartlogger Input Power"
+],
+"smartlogger_inspection_control": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"medium",
+"Smartlogger Inspection Control"
+],
+"smartlogger_inverter_efficiency": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"fast",
+"Smartlogger Inverter Efficiency"
+],
+"smartlogger_local_time": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"medium",
+"Smartlogger Local Time"
+],
+"smartlogger_locking_status": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"medium",
+"Smartlogger Locking Status"
+],
+"smartlogger_maximum_active_power_adjustment_value": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"fast",
+"Smartlogger Maximum Active Power Adjustment Value"
+],
+"smartlogger_maximum_active_pv_power_adjustment_value": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"fast",
+"Smartlogger Maximum Active PV Power Adjustment Value"
+],
+"smartlogger_maximum_ess_charge_power": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"fast",
+"Smartlogger Maximum ESS Charge Power"
+],
+"smartlogger_maximum_ess_discharge_power": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"fast",
+"Smartlogger Maximum ESS Discharge Power"
+],
+"smartlogger_maximum_reactive_ess_power_adjustment_value": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"fast",
+"Smartlogger Maximum Reactive ESS Power Adjustment Value"
+],
+"smartlogger_maximum_reactive_power_adjustment_value": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"fast",
+"Smartlogger Maximum Reactive Power Adjustment Value"
+],
+"smartlogger_maximum_reactive_pv_power_adjustment_value": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"fast",
+"Smartlogger Maximum Reactive PV Power Adjustment Value"
+],
+"smartlogger_minimum_active_power_adjustment_value": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"fast",
+"Smartlogger Minimum Active Power Adjustment Value"
+],
+"smartlogger_minimum_reactive_ess_power_adjustment_value": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"fast",
+"Smartlogger Minimum Reactive ESS Power Adjustment Value"
+],
+"smartlogger_minimum_reactive_power_adjustment_value": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"fast",
+"Smartlogger Minimum Reactive Power Adjustment Value"
+],
+"smartlogger_minimum_reactive_pv_power_adjustment_value": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"fast",
+"Smartlogger Minimum Reactive PV Power Adjustment Value"
+],
+"smartlogger_phase_a_current_of_grid": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"fast",
+"Smartlogger Phase A Current Of Grid"
+],
+"smartlogger_phase_b_current_of_grid": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"fast",
+"Smartlogger Phase B Current Of Grid"
+],
+"smartlogger_phase_c_current_of_grid": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"fast",
+"Smartlogger Phase C Current Of Grid"
+],
+"smartlogger_plant_status": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"medium",
+"Smartlogger Plant Status"
+],
+"smartlogger_plant_status_gansu": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"medium",
+"Smartlogger Plant Status Gansu"
+],
+"smartlogger_plant_status_ningxia": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"medium",
+"Smartlogger Plant Status Ningxia"
+],
+"smartlogger_plant_status_qinghai": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"medium",
+"Smartlogger Plant Status Qinghai"
+],
+"smartlogger_plant_status_shaanxi": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"medium",
+"Smartlogger Plant Status Shaanxi"
+],
+"smartlogger_power_factor": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"fast",
+"Smartlogger Power Factor"
+],
+"smartlogger_power_factor_adjustment": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"fast",
+"Smartlogger Power Factor Adjustment"
+],
+"smartlogger_power_on_the_pcs_of_the_subarray": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"medium",
+"Smartlogger Power On The Pcs Of The Subarray"
+],
+"smartlogger_power_supply_from_grid_today": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"fast",
+"Smartlogger Power Supply From Grid Today"
+],
+"smartlogger_pv_array_pcs_working_mode": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"medium",
+"Smartlogger PV Array Pcs Working Mode"
+],
+"smartlogger_pv_inverter_in_operation": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"fast",
+"Smartlogger PV Inverter In Operation"
+],
+"smartlogger_pv_inverter_shut_down": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"fast",
+"Smartlogger PV Inverter Shut Down"
+],
+"smartlogger_pv_inverter_shutdown": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"medium",
+"Smartlogger PV Inverter Shutdown"
+],
+"smartlogger_pv_inverter_startup": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"medium",
+"Smartlogger PV Inverter Startup"
+],
+"smartlogger_pv_module_capacity": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"medium",
+"Smartlogger PV Module Capacity"
+],
+"smartlogger_quantity_of_running_ess_pcss": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"fast",
+"Smartlogger Quantity Of Running ESS Pcss"
+],
+"smartlogger_quantity_of_running_pv_inverters": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"fast",
+"Smartlogger Quantity Of Running PV Inverters"
+],
+"smartlogger_rated_ess_capacity": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"slow",
+"Smartlogger Rated ESS Capacity"
+],
+"smartlogger_rated_ess_capacity_in_ah": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"slow",
+"Smartlogger Rated ESS Capacity In Ah"
+],
+"smartlogger_rated_ess_power": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"slow",
+"Smartlogger Rated ESS Power"
+],
+"smartlogger_rated_plant_capacity": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"slow",
+"Smartlogger Rated Plant Capacity"
+],
+"smartlogger_rated_pv_power": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"slow",
+"Smartlogger Rated PV Power"
+],
+"smartlogger_reactive_ess_power": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"fast",
+"Smartlogger Reactive ESS Power"
+],
+"smartlogger_reactive_ess_power_adjustment_in_fixed_value": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"fast",
+"Smartlogger Reactive ESS Power Adjustment In Fixed Value"
+],
+"smartlogger_reactive_power": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"fast",
+"Smartlogger Reactive Power"
+],
+"smartlogger_reactive_power_adjustment": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"fast",
+"Smartlogger Reactive Power Adjustment"
+],
+"smartlogger_reactive_power_adjustment_highest_priority": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"fast",
+"Smartlogger Reactive Power Adjustment Highest Priority"
+],
+"smartlogger_reactive_power_adjustment_target": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"fast",
+"Smartlogger Reactive Power Adjustment Target"
+],
+"smartlogger_reactive_power_control_mode": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"medium",
+"Smartlogger Reactive Power Control Mode"
+],
+"smartlogger_reactive_power_control_mode_subarray": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"medium",
+"Smartlogger Reactive Power Control Mode Subarray"
+],
+"smartlogger_reactive_power_scheduling_curve_mode": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"medium",
+"Smartlogger Reactive Power Scheduling Curve Mode"
+],
+"smartlogger_reactive_power_scheduling_target_value": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"fast",
+"Smartlogger Reactive Power Scheduling Target Value"
+],
+"smartlogger_reactive_pv_power": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"fast",
+"Smartlogger Reactive PV Power"
+],
+"smartlogger_reactive_pv_power_adjustment_in_fixed_value": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"fast",
+"Smartlogger Reactive PV Power Adjustment In Fixed Value"
+],
+"smartlogger_reserved": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"fast",
+"Smartlogger Reserved"
+],
+"smartlogger_shut_down_array_upon_communication_timeout": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"medium",
+"Smartlogger Shut Down Array Upon Communication Timeout"
+],
+"smartlogger_shut_down_the_pcs_of_the_subarray": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"medium",
+"Smartlogger Shut Down The Pcs Of The Subarray"
+],
+"smartlogger_shutdown": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"medium",
+"Smartlogger Shutdown"
+],
+"smartlogger_soc": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"fast",
+"Smartlogger SOC"
+],
+"smartlogger_soe": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"fast",
+"Smartlogger SOE"
+],
+"smartlogger_soh": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"fast",
+"Smartlogger SOH"
+],
+"smartlogger_start_up_array_upon_communication_recovery": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"medium",
+"Smartlogger Start Up Array Upon Communication Recovery"
+],
+"smartlogger_startup": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"medium",
+"Smartlogger Startup"
+],
+"smartlogger_startup_shutdown": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"medium",
+"Smartlogger Startup Shutdown"
+],
+"smartlogger_startup_shutdown_ess": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"medium",
+"Smartlogger Startup Shutdown ESS"
+],
+"smartlogger_status_information": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"medium",
+"Smartlogger Status Information"
+],
+"smartlogger_subarray_pv_inverter_microgrid_adaptability": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"medium",
+"Smartlogger Subarray PV Inverter Microgrid Adaptability"
+],
+"smartlogger_system_reset": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"fast",
+"Smartlogger System Reset"
+],
+"smartlogger_system_time_day": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"medium",
+"Smartlogger System Time Day"
+],
+"smartlogger_system_time_hour": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"medium",
+"Smartlogger System Time Hour"
+],
+"smartlogger_system_time_minute": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"medium",
+"Smartlogger System Time Minute"
+],
+"smartlogger_system_time_month": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"medium",
+"Smartlogger System Time Month"
+],
+"smartlogger_system_time_second": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"medium",
+"Smartlogger System Time Second"
+],
+"smartlogger_system_time_year": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"medium",
+"Smartlogger System Time Year"
+],
+"smartlogger_the_active_power_gradient_register": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"medium",
+"Smartlogger The Active Power Gradient Register"
+],
+"smartlogger_time_for_communication_exception_detection": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"medium",
+"Smartlogger Time For Communication Exception Detection"
+],
+"smartlogger_time_zone": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"medium",
+"Smartlogger Time Zone"
+],
+"smartlogger_todays_power_generation_hours": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"fast",
+"Smartlogger Todays Power Generation Hours"
+],
+"smartlogger_total_energy_charged": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"medium",
+"Smartlogger Total Energy Charged"
+],
+"smartlogger_total_energy_discharge_d": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"medium",
+"Smartlogger Total Energy Discharge D"
+],
+"smartlogger_total_energy_yield": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"medium",
+"Smartlogger Total Energy Yield"
+],
+"smartlogger_total_power_supply_from_grid": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"fast",
+"Smartlogger Total Power Supply From Grid"
+],
+"smartlogger_total_rated_capacity_of_grid_tied_inverters": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"slow",
+"Smartlogger Total Rated Capacity Of Grid Tied Inverters"
+],
+"smartlogger_transfer_trip": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"medium",
+"Smartlogger Transfer Trip"
+],
+"smartlogger_voltage_adjustment_value_for_vsg_synchronous_control": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"medium",
+"Smartlogger Voltage Adjustment Value For Vsg Synchronous Control"
+],
+"smartlogger_working_mode": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"medium",
+"Smartlogger Working Mode"
+],
+"smartlogger_yield_today": [
+"sensor",
+false,
+"smartlogger",
+"smartlogger",
+"medium",
+"Smartlogger Yield Today"
+],
+"software_version": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"slow",
+"Software Version"
+],
+"startup_time": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Startup Time"
+],
+"state_1": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"State 1"
+],
+"state_2": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"State 2"
+],
+"state_3": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"State 3"
+],
+"state_of_capacity": [
+"sensor",
+true,
+"emma",
+"emma",
+"medium",
+"State Of Capacity"
+],
+"storage_backup_power_state_of_charge": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Storage Backup Power State Of Charge"
+],
+"storage_bus_current": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Storage Bus Current"
+],
+"storage_bus_voltage": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Storage Bus Voltage"
+],
+"storage_capacity_control_mode": [
+"select",
+false,
+"inverter",
+"inverter",
+"medium",
+"Storage Capacity Control Mode"
+],
+"storage_capacity_control_periods": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Storage Capacity Control Periods"
+],
+"storage_capacity_control_soc_peak_shaving": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Storage Capacity Control SOC Peak Shaving"
+],
+"storage_charge_discharge_power": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Storage Charge Discharge Power"
+],
+"storage_charge_from_grid_function": [
+"switch",
+true,
+"inverter",
+"inverter",
+"medium",
+"Storage Charge From Grid Function"
+],
+"storage_charging_cutoff_capacity": [
+"number",
+true,
+"inverter",
+"inverter",
+"medium",
+"Storage Charging Cutoff Capacity"
+],
+"storage_current_day_charge_capacity": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Storage Current Day Charge Capacity"
+],
+"storage_current_day_discharge_capacity": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Storage Current Day Discharge Capacity"
+],
+"storage_discharging_cutoff_capacity": [
+"number",
+true,
+"inverter",
+"inverter",
+"medium",
+"Storage Discharging Cutoff Capacity"
+],
+"storage_excess_pv_energy_use_in_tou": [
+"select",
+true,
+"inverter",
+"inverter",
+"medium",
+"PV Power Priority"
+],
+"storage_fixed_charging_and_discharging_periods": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Storage Fixed Charging And Discharging Periods"
+],
+"storage_forced_charging_and_discharging_period": [
+"number",
+true,
+"inverter",
+"inverter",
+"medium",
+"Storage Forced Charging And Discharging Period"
+],
+"storage_forced_charging_and_discharging_power": [
+"sensor",
+true,
+"inverter",
+"inverter",
+"fast",
+"Storage Forced Charging And Discharging Power"
+],
+"storage_forcible_charge_discharge_setting_mode": [
+"select",
+true,
+"inverter",
+"inverter",
+"medium",
+"Forced Charge/Discharge Target Mode"
+],
+"storage_forcible_charge_discharge_soc": [
+"number",
+true,
+"inverter",
+"inverter",
+"medium",
+"Storage Forcible Charge Discharge SOC"
+],
+"storage_forcible_charge_power": [
+"number",
+true,
+"inverter",
+"inverter",
+"medium",
+"Storage Forcible Charge Power"
+],
+"storage_forcible_discharge_power": [
+"number",
+true,
+"inverter",
+"inverter",
+"medium",
+"Storage Forcible Discharge Power"
+],
+"storage_grid_charge_cutoff_state_of_charge": [
+"number",
+true,
+"inverter",
+"inverter",
+"medium",
+"Storage Grid Charge Cutoff State Of Charge"
+],
+"storage_huawei_luna2000_time_of_use_charging_and_discharging_periods": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Storage Huawei Luna2000 Time Of Use Charging And Discharging Periods"
+],
+"storage_lcoe": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Storage Lcoe"
+],
+"storage_lg_resu_time_of_use_price_periods": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Storage Lg Resu Time Of Use Price Periods"
+],
+"storage_maximum_charge_power": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Storage Maximum Charge Power"
+],
+"storage_maximum_charging_power": [
+"number",
+true,
+"inverter",
+"inverter",
+"medium",
+"Storage Maximum Charging Power"
+],
+"storage_maximum_discharge_power": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Storage Maximum Discharge Power"
+],
+"storage_maximum_discharging_power": [
+"number",
+true,
+"inverter",
+"inverter",
+"medium",
+"Storage Maximum Discharging Power"
+],
+"storage_maximum_power_of_charge_from_grid": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Storage Maximum Power Of Charge From Grid"
+],
+"storage_power_limit_grid_tied_point": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Storage Power Limit Grid Tied Point"
+],
+"storage_power_of_charge_from_grid": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Storage Power Of Charge From Grid"
+],
+"storage_rated_capacity": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"slow",
+"Storage Rated Capacity"
+],
+"storage_running_status": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Storage Running Status"
+],
+"storage_state_of_capacity": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Storage State Of Capacity"
+],
+"storage_time_of_use_price": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Storage Time Of Use Price"
+],
+"storage_total_charge": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Storage Total Charge"
+],
+"storage_total_discharge": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Storage Total Discharge"
+],
+"storage_unit_1_battery_pack_1_charge_discharge_power": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Storage Unit 1 Battery Pack 1 Charge Discharge Power"
+],
+"storage_unit_1_battery_pack_1_current": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Storage Unit 1 Battery Pack 1 Current"
+],
+"storage_unit_1_battery_pack_1_firmware_version": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"slow",
+"Storage Unit 1 Battery Pack 1 Firmware Version"
+],
+"storage_unit_1_battery_pack_1_maximum_temperature": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Storage Unit 1 Battery Pack 1 Maximum Temperature"
+],
+"storage_unit_1_battery_pack_1_minimum_temperature": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Storage Unit 1 Battery Pack 1 Minimum Temperature"
+],
+"storage_unit_1_battery_pack_1_serial_number": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"slow",
+"Storage Unit 1 Battery Pack 1 Serial Number"
+],
+"storage_unit_1_battery_pack_1_soh_calibration_status": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Storage Unit 1 Battery Pack 1 SOH Calibration Status"
+],
+"storage_unit_1_battery_pack_1_state_of_capacity": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Storage Unit 1 Battery Pack 1 State Of Capacity"
+],
+"storage_unit_1_battery_pack_1_total_charge": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Storage Unit 1 Battery Pack 1 Total Charge"
+],
+"storage_unit_1_battery_pack_1_total_discharge": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Storage Unit 1 Battery Pack 1 Total Discharge"
+],
+"storage_unit_1_battery_pack_1_voltage": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Storage Unit 1 Battery Pack 1 Voltage"
+],
+"storage_unit_1_battery_pack_1_working_status": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Storage Unit 1 Battery Pack 1 Working Status"
+],
+"storage_unit_1_battery_pack_2_charge_discharge_power": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Storage Unit 1 Battery Pack 2 Charge Discharge Power"
+],
+"storage_unit_1_battery_pack_2_current": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Storage Unit 1 Battery Pack 2 Current"
+],
+"storage_unit_1_battery_pack_2_firmware_version": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"slow",
+"Storage Unit 1 Battery Pack 2 Firmware Version"
+],
+"storage_unit_1_battery_pack_2_maximum_temperature": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Storage Unit 1 Battery Pack 2 Maximum Temperature"
+],
+"storage_unit_1_battery_pack_2_minimum_temperature": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Storage Unit 1 Battery Pack 2 Minimum Temperature"
+],
+"storage_unit_1_battery_pack_2_serial_number": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"slow",
+"Storage Unit 1 Battery Pack 2 Serial Number"
+],
+"storage_unit_1_battery_pack_2_soh_calibration_status": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Storage Unit 1 Battery Pack 2 SOH Calibration Status"
+],
+"storage_unit_1_battery_pack_2_state_of_capacity": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Storage Unit 1 Battery Pack 2 State Of Capacity"
+],
+"storage_unit_1_battery_pack_2_total_charge": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Storage Unit 1 Battery Pack 2 Total Charge"
+],
+"storage_unit_1_battery_pack_2_total_discharge": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Storage Unit 1 Battery Pack 2 Total Discharge"
+],
+"storage_unit_1_battery_pack_2_voltage": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Storage Unit 1 Battery Pack 2 Voltage"
+],
+"storage_unit_1_battery_pack_2_working_status": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Storage Unit 1 Battery Pack 2 Working Status"
+],
+"storage_unit_1_battery_pack_3_charge_discharge_power": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Storage Unit 1 Battery Pack 3 Charge Discharge Power"
+],
+"storage_unit_1_battery_pack_3_current": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Storage Unit 1 Battery Pack 3 Current"
+],
+"storage_unit_1_battery_pack_3_firmware_version": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"slow",
+"Storage Unit 1 Battery Pack 3 Firmware Version"
+],
+"storage_unit_1_battery_pack_3_maximum_temperature": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Storage Unit 1 Battery Pack 3 Maximum Temperature"
+],
+"storage_unit_1_battery_pack_3_minimum_temperature": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Storage Unit 1 Battery Pack 3 Minimum Temperature"
+],
+"storage_unit_1_battery_pack_3_serial_number": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"slow",
+"Storage Unit 1 Battery Pack 3 Serial Number"
+],
+"storage_unit_1_battery_pack_3_soh_calibration_status": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Storage Unit 1 Battery Pack 3 SOH Calibration Status"
+],
+"storage_unit_1_battery_pack_3_state_of_capacity": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Storage Unit 1 Battery Pack 3 State Of Capacity"
+],
+"storage_unit_1_battery_pack_3_total_charge": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Storage Unit 1 Battery Pack 3 Total Charge"
+],
+"storage_unit_1_battery_pack_3_total_discharge": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Storage Unit 1 Battery Pack 3 Total Discharge"
+],
+"storage_unit_1_battery_pack_3_voltage": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Storage Unit 1 Battery Pack 3 Voltage"
+],
+"storage_unit_1_battery_pack_3_working_status": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Storage Unit 1 Battery Pack 3 Working Status"
+],
+"storage_unit_1_battery_temperature": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Storage Unit 1 Battery Temperature"
+],
+"storage_unit_1_bms_version": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"slow",
+"Storage Unit 1 Bms Version"
+],
+"storage_unit_1_bus_current": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Storage Unit 1 Bus Current"
+],
+"storage_unit_1_bus_voltage": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Storage Unit 1 Bus Voltage"
+],
+"storage_unit_1_charge_discharge_power": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Storage Unit 1 Charge Discharge Power"
+],
+"storage_unit_1_current_day_charge_capacity": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Storage Unit 1 Current Day Charge Capacity"
+],
+"storage_unit_1_current_day_discharge_capacity": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Storage Unit 1 Current Day Discharge Capacity"
+],
+"storage_unit_1_dcdc_version": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"slow",
+"Storage Unit 1 Dcdc Version"
+],
+"storage_unit_1_fault_id": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Storage Unit 1 Fault Id"
+],
+"storage_unit_1_no": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Storage Unit 1 No"
+],
+"storage_unit_1_pack_1_no": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Storage Unit 1 Pack 1 No"
+],
+"storage_unit_1_pack_2_no": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Storage Unit 1 Pack 2 No"
+],
+"storage_unit_1_pack_3_no": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Storage Unit 1 Pack 3 No"
+],
+"storage_unit_1_product_model": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"slow",
+"Storage Unit 1 Product Model"
+],
+"storage_unit_1_rated_charge_power": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"slow",
+"Storage Unit 1 Rated Charge Power"
+],
+"storage_unit_1_rated_discharge_power": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"slow",
+"Storage Unit 1 Rated Discharge Power"
+],
+"storage_unit_1_remaining_charge_dis_charge_time": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Storage Unit 1 Remaining Charge Dis Charge Time"
+],
+"storage_unit_1_running_status": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Storage Unit 1 Running Status"
+],
+"storage_unit_1_serial_number": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"slow",
+"Storage Unit 1 Serial Number"
+],
+"storage_unit_1_software_version": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"slow",
+"Storage Unit 1 Software Version"
+],
+"storage_unit_1_state_of_capacity": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Storage Unit 1 State Of Capacity"
+],
+"storage_unit_1_total_charge": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Storage Unit 1 Total Charge"
+],
+"storage_unit_1_total_discharge": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Storage Unit 1 Total Discharge"
+],
+"storage_unit_1_working_mode_b": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Storage Unit 1 Working Mode B"
+],
+"storage_unit_2_battery_pack_1_charge_discharge_power": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Storage Unit 2 Battery Pack 1 Charge Discharge Power"
+],
+"storage_unit_2_battery_pack_1_current": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Storage Unit 2 Battery Pack 1 Current"
+],
+"storage_unit_2_battery_pack_1_firmware_version": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"slow",
+"Storage Unit 2 Battery Pack 1 Firmware Version"
+],
+"storage_unit_2_battery_pack_1_maximum_temperature": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Storage Unit 2 Battery Pack 1 Maximum Temperature"
+],
+"storage_unit_2_battery_pack_1_minimum_temperature": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Storage Unit 2 Battery Pack 1 Minimum Temperature"
+],
+"storage_unit_2_battery_pack_1_serial_number": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"slow",
+"Storage Unit 2 Battery Pack 1 Serial Number"
+],
+"storage_unit_2_battery_pack_1_soh_calibration_status": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Storage Unit 2 Battery Pack 1 SOH Calibration Status"
+],
+"storage_unit_2_battery_pack_1_state_of_capacity": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Storage Unit 2 Battery Pack 1 State Of Capacity"
+],
+"storage_unit_2_battery_pack_1_total_charge": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Storage Unit 2 Battery Pack 1 Total Charge"
+],
+"storage_unit_2_battery_pack_1_total_discharge": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Storage Unit 2 Battery Pack 1 Total Discharge"
+],
+"storage_unit_2_battery_pack_1_voltage": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Storage Unit 2 Battery Pack 1 Voltage"
+],
+"storage_unit_2_battery_pack_1_working_status": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Storage Unit 2 Battery Pack 1 Working Status"
+],
+"storage_unit_2_battery_pack_2_charge_discharge_power": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Storage Unit 2 Battery Pack 2 Charge Discharge Power"
+],
+"storage_unit_2_battery_pack_2_current": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Storage Unit 2 Battery Pack 2 Current"
+],
+"storage_unit_2_battery_pack_2_firmware_version": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"slow",
+"Storage Unit 2 Battery Pack 2 Firmware Version"
+],
+"storage_unit_2_battery_pack_2_maximum_temperature": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Storage Unit 2 Battery Pack 2 Maximum Temperature"
+],
+"storage_unit_2_battery_pack_2_minimum_temperature": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Storage Unit 2 Battery Pack 2 Minimum Temperature"
+],
+"storage_unit_2_battery_pack_2_serial_number": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"slow",
+"Storage Unit 2 Battery Pack 2 Serial Number"
+],
+"storage_unit_2_battery_pack_2_soh_calibration_status": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Storage Unit 2 Battery Pack 2 SOH Calibration Status"
+],
+"storage_unit_2_battery_pack_2_state_of_capacity": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Storage Unit 2 Battery Pack 2 State Of Capacity"
+],
+"storage_unit_2_battery_pack_2_total_charge": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Storage Unit 2 Battery Pack 2 Total Charge"
+],
+"storage_unit_2_battery_pack_2_total_discharge": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Storage Unit 2 Battery Pack 2 Total Discharge"
+],
+"storage_unit_2_battery_pack_2_voltage": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Storage Unit 2 Battery Pack 2 Voltage"
+],
+"storage_unit_2_battery_pack_2_working_status": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Storage Unit 2 Battery Pack 2 Working Status"
+],
+"storage_unit_2_battery_pack_3_charge_discharge_power": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Storage Unit 2 Battery Pack 3 Charge Discharge Power"
+],
+"storage_unit_2_battery_pack_3_current": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Storage Unit 2 Battery Pack 3 Current"
+],
+"storage_unit_2_battery_pack_3_firmware_version": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"slow",
+"Storage Unit 2 Battery Pack 3 Firmware Version"
+],
+"storage_unit_2_battery_pack_3_maximum_temperature": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Storage Unit 2 Battery Pack 3 Maximum Temperature"
+],
+"storage_unit_2_battery_pack_3_minimum_temperature": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Storage Unit 2 Battery Pack 3 Minimum Temperature"
+],
+"storage_unit_2_battery_pack_3_serial_number": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"slow",
+"Storage Unit 2 Battery Pack 3 Serial Number"
+],
+"storage_unit_2_battery_pack_3_soh_calibration_status": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Storage Unit 2 Battery Pack 3 SOH Calibration Status"
+],
+"storage_unit_2_battery_pack_3_state_of_capacity": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Storage Unit 2 Battery Pack 3 State Of Capacity"
+],
+"storage_unit_2_battery_pack_3_total_charge": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Storage Unit 2 Battery Pack 3 Total Charge"
+],
+"storage_unit_2_battery_pack_3_total_discharge": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Storage Unit 2 Battery Pack 3 Total Discharge"
+],
+"storage_unit_2_battery_pack_3_voltage": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Storage Unit 2 Battery Pack 3 Voltage"
+],
+"storage_unit_2_battery_pack_3_working_status": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Storage Unit 2 Battery Pack 3 Working Status"
+],
+"storage_unit_2_battery_temperature": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Storage Unit 2 Battery Temperature"
+],
+"storage_unit_2_bus_current": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Storage Unit 2 Bus Current"
+],
+"storage_unit_2_bus_voltage": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Storage Unit 2 Bus Voltage"
+],
+"storage_unit_2_charge_discharge_power": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Storage Unit 2 Charge Discharge Power"
+],
+"storage_unit_2_current_day_charge_capacity": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Storage Unit 2 Current Day Charge Capacity"
+],
+"storage_unit_2_current_day_discharge_capacity": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Storage Unit 2 Current Day Discharge Capacity"
+],
+"storage_unit_2_no": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Storage Unit 2 No"
+],
+"storage_unit_2_pack_1_no": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Storage Unit 2 Pack 1 No"
+],
+"storage_unit_2_pack_2_no": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Storage Unit 2 Pack 2 No"
+],
+"storage_unit_2_pack_3_no": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Storage Unit 2 Pack 3 No"
+],
+"storage_unit_2_product_model": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"slow",
+"Storage Unit 2 Product Model"
+],
+"storage_unit_2_running_status": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Storage Unit 2 Running Status"
+],
+"storage_unit_2_serial_number": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"slow",
+"Storage Unit 2 Serial Number"
+],
+"storage_unit_2_software_version": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"slow",
+"Storage Unit 2 Software Version"
+],
+"storage_unit_2_state_of_capacity": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Storage Unit 2 State Of Capacity"
+],
+"storage_unit_2_total_charge": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Storage Unit 2 Total Charge"
+],
+"storage_unit_2_total_discharge": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Storage Unit 2 Total Discharge"
+],
+"storage_unit_soh_calibration_release_lower_limit_of_soc": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Storage Unit SOH Calibration Release Lower Limit Of SOC"
+],
+"storage_unit_soh_calibration_status": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Storage Unit SOH Calibration Status"
+],
+"storage_working_mode_a": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Storage Working Mode A"
+],
+"storage_working_mode_settings": [
+"select",
+true,
+"inverter",
+"inverter",
+"medium",
+"Storage Working Mode Settings"
+],
+"subdevice_in_position_flag": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Subdevice In Position Flag"
+],
+"subdevice_support_flag": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"slow",
+"Subdevice Support Flag"
+],
+"supply_from_grid_today": [
+"sensor",
+true,
+"emma",
+"emma",
+"fast",
+"Supply From Grid Today"
+],
+"system_time": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"System Time"
+],
+"system_time_raw": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"System Time Raw"
+],
+"time_zone": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Time Zone"
+],
+"total_active_energy_built_in_energy": [
+"sensor",
+true,
+"emma",
+"emma",
+"medium",
+"Built-in Meter Total Active Energy"
+],
+"total_active_energy_external_energy": [
+"sensor",
+false,
+"external_meter",
+"emma",
+"medium",
+"External Meter Total Active Energy"
+],
+"total_bus_voltage": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Total Bus Voltage"
+],
+"total_charged_energy": [
+"sensor",
+true,
+"emma",
+"emma",
+"medium",
+"Total Charged Energy"
+],
+"total_dc_input_power": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Total DC Input Power"
+],
+"total_discharged_energy": [
+"sensor",
+true,
+"emma",
+"emma",
+"medium",
+"Total Discharged Energy"
+],
+"total_energy_consumption": [
+"sensor",
+true,
+"emma",
+"emma",
+"medium",
+"Total Energy Consumption"
+],
+"total_feed_in_to_grid": [
+"sensor",
+true,
+"emma",
+"emma",
+"fast",
+"Total Feed In To Grid"
+],
+"total_negative_active_energy_built_in_energy": [
+"sensor",
+true,
+"emma",
+"emma",
+"medium",
+"Built-in Meter Total Negative Active Energy"
+],
+"total_negative_active_energy_external_energy": [
+"sensor",
+false,
+"external_meter",
+"emma",
+"medium",
+"External Meter Total Negative Active Energy"
+],
+"total_positive_active_energy_built_in_energy": [
+"sensor",
+true,
+"emma",
+"emma",
+"medium",
+"Built-in Meter Total Positive Active Energy"
+],
+"total_positive_active_energy_external_energy": [
+"sensor",
+false,
+"external_meter",
+"emma",
+"medium",
+"External Meter Total Positive Active Energy"
+],
+"total_pv_energy_yield": [
+"sensor",
+true,
+"emma",
+"emma",
+"medium",
+"Total PV Energy Yield"
+],
+"total_supply_from_grid": [
+"sensor",
+true,
+"emma",
+"emma",
+"fast",
+"Total Supply From Grid"
+],
+"unique_id_of_the_software": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"fast",
+"Unique Id Of The Software"
+],
+"wlan_wakeup": [
+"select",
+false,
+"inverter",
+"inverter",
+"medium",
+"Wlan Wakeup"
+],
+"yearly_feed_in_to_grid": [
+"sensor",
+true,
+"emma",
+"emma",
+"fast",
+"Yearly Feed In To Grid"
+],
+"yearly_supply_from_grid": [
+"sensor",
+true,
+"emma",
+"emma",
+"fast",
+"Yearly Supply From Grid"
+],
+"yearly_yield_energy": [
+"sensor",
+false,
+"inverter",
+"inverter",
+"medium",
+"Yearly Yield Energy"
+],
+"yield_this_month": [
+"sensor",
+true,
+"emma",
+"emma",
+"medium",
+"Yield This Month"
+],
+"yield_this_year": [
+"sensor",
+true,
+"emma",
+"emma",
+"medium",
+"Yield This Year"
+]
+},
+"fields": [
+"platform",
+"enabled_default",
+"device_role",
+"client_role",
+"poll_group",
+"name"
+],
+"source": "esphome/entity-migration-map.json at release 0.14.9 (huawei-solar 3.0.6)"
+}
