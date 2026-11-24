@@ -12,3 +12,4 @@ esphome/emma-secrets.generated.yaml
 certs/*.pem
 !certs/.gitkeep
 /huawei_emma_management/
+esphome/secrets.yaml
