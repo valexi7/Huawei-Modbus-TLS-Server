@@ -32,6 +32,11 @@ grep '^EMMA_API_TOKEN=' /opt/huawei-emma/.env
 
 Never commit `.env`, certificates, private keys, or tokens.
 
+Add `EMMA_READ_ONLY=true` to `.env`, or start with `--read-only`, when an external
+reserve provider controls EMMA and the battery. Every Modbus write is then refused and
+control requests return `423 Locked`; telemetry continues. See
+[read-only mode](read-only-mode.md).
+
 ## Connect Home Assistant and EMMA
 
 Configure the HACS integration in **External connector** mode with the Linux host,

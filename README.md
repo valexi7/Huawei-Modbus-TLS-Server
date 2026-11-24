@@ -20,6 +20,11 @@ mode or external host.
 - [Standalone Linux/Python connector](docs/linux-python.md)
 - [Authenticated connector API and Home Assistant actions](docs/huawei-emma-api.md)
 - [EMMA mock test workflow](docs/emma-mock-test.md)
+- [EMMA read-only mode](docs/read-only-mode.md)
+- [BESS Manager integration](docs/bess-manager.md)
+- [Peak shaving and battery diagnostics](docs/peak-shaving.md)
+- [Supported hardware](docs/supported-hardware.md)
+- [Register catalog migration report 0.15.0](docs/register-catalog-0.15.0.md)
 - [Maintenance and upgrade guidance](docs/maintenance.md)
 - [ESPHome architecture and production qualification roadmap](docs/esphome-roadmap.md)
 
@@ -30,14 +35,20 @@ Modbus TCP server cannot handle its private `0x41` startup frame or this reverse
 ## Features
 
 - Huawei private startup parsing and paged topology discovery
-- 740 generated register definitions from pinned `huawei-solar` 3.0.6
+- 925 generated register definitions from pinned `huawei-solar` 3.2.4
+  ([migration report](docs/register-catalog-0.15.0.md))
 - disabled-by-default optional entities; enabling an entity starts its polling
 - address-coalesced fast (30 s), medium (5 min), and slow (30 min) polling
 - automatic reapplication of Entity Registry-derived polling subscriptions after an
   ESP32 or Linux connector restart
-- device-role routing for EMMA, inverter/LUNA, charger, SDongle, and SmartLogger
+- device-role routing for EMMA, inverter/LUNA, SmartGuard, SCharger, Smart AC Gun,
+  SDongle, and SmartLogger, with no silent fallback to EMMA
+- native SmartGuard device with phase filtering and grid/backup status sensors
 - scalar, enum, boolean, timestamp, bitfield, string, and structured-period decoding
-- safe enum, boolean, datetime, bounded-number, and Huawei TOU writes with readback
+- a reviewed write allowlist; enum, boolean, datetime, bounded-number, and Huawei
+  TOU writes are verified by readback
+- optional [read-only mode](docs/read-only-mode.md) for installations managed by an
+  external reserve provider
 - built-in meter enabled and normally absent external meter disabled by default
 - Home Assistant TOU editor and `huawei_emma` actions
 - Growatt scheduler compatibility with an emergency disable toggle
@@ -214,7 +225,7 @@ journalctl -u huawei-emma.service -f
 ## Common entity and polling behavior
 
 The integration initially enables the useful EMMA aggregate values, built-in energy
-meter, identity data, and safe controls. The rest of the 740-register catalog is created
+meter, identity data, and safe controls. The rest of the 925-register catalog is created
 disabled. To use an optional value, open the device's **Entities** page, include disabled
 entities, and enable it. On config-entry reload Home Assistant sends the enabled names as
 the connector subscription.
@@ -368,7 +379,7 @@ Runtime-neutral values live in:
   intervals, API version
 - `custom_components/huawei_emma_management/embedded_catalog.py` — register metadata,
   ownership, categories, icons, safe controls
-- pinned `huawei-solar==3.0.6` — register addresses, types, gains, and enum mappings
+- pinned `huawei-solar==3.2.4` — register addresses, types, gains, and enum mappings
 
 Generate the ESP32 tables and public migration manifest after changing any of them:
 
@@ -434,9 +445,20 @@ successful TLS connection and API/state readback before retiring the old runtime
 Run repository tests and generated-file validation:
 
 ```bash
+python -m pip install -r requirements.txt
 python -m unittest -v test_huawei_modbus_server.py
+python -m unittest discover -v -s tests/connector   # simulated EMMA end to end
 python tools/generate_esphome_catalog.py --check
+python tools/check_ha_dependencies.py 2026.3.0      # needs uv
+
+# Home Assistant tests (Python 3.14)
+python -m pip install pytest-homeassistant-custom-component
+python -m pytest tests/ha
 ```
+
+The simulated tests run the real connector against `tools/emma_mock_client.py`. They
+cover routing, SmartGuard, outages, delays, disconnects, writes, and read-only mode,
+but they are not a substitute for a test on a real EMMA.
 
 The mock client can validate the ESP32 without Home Assistant or the real EMMA. See
 [docs/emma-mock-test.md](docs/emma-mock-test.md).

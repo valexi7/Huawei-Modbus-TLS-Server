@@ -1,5 +1,78 @@
 # Changelog
 
+## 0.15.0
+
+Upgrade notes:
+
+- **TOU weekday fix.** Huawei's TOU day bitmask is Sunday-first. 0.14.x read it as
+  Monday-first, which shifted single-weekday schedules by one day. Schedules for
+  all seven days (BESS Manager's default) were not affected. Check any
+  weekday-specific schedule after upgrading.
+- **Legacy controls became sensors.** 13 select and switch entities that were
+  never reviewed for writing are now read-only sensors. They keep their unique ID,
+  object ID, name, and disabled state, but the entity ID domain changes, for
+  example `select.<object_id>` becomes `sensor.<object_id>`. Update
+  automations that used them. See
+  [the catalog report](docs/register-catalog-0.15.0.md#platform-changes).
+- **TOU sensor enabled.** The EMMA TOU Periods sensor is enabled again (unless you
+  disabled it yourself) because BESS Manager reads the schedule back from it.
+- **External meter gains.** huawei-solar 3.2.4 corrects the external energy meter
+  voltage (gain 10) and current (gain 100) registers. Their values change by a
+  factor of ten.
+
+Dependencies:
+
+- huawei-solar 3.0.6 → 3.2.4 and tmodbus 0.4.1 → 1.1.0. The standalone connector
+  requires cryptography ≥ 50.0.1 and python-dotenv ≥ 1.2.3, < 2. Supersedes PRs
+  #7 to #10.
+
+Devices and catalog:
+
+- 925 registers (181 new, none removed). Existing entities keep their 0.14.9
+  platform, name, poll group, and default enablement; new entities are disabled
+  by default. Full list in [docs/register-catalog-0.15.0.md](docs/register-catalog-0.15.0.md).
+- Native SmartGuard device with phase filtering, status binary sensors, and
+  outage handling. Enabled by default, also on upgrade; entities you disabled stay
+  disabled.
+- SCharger and Smart AC Gun routing. Registers are routed to their device's unit
+  ID and never fall back to EMMA silently.
+- IPv4, flag, timestamp, and unknown enum values are decoded instead of failing a
+  batch. Local timestamps use the device's own clock offset, which includes
+  daylight saving time.
+- Optional derived grid import/export and battery charge/discharge power sensors.
+
+Control and safety:
+
+- An explicit write allowlist of 27 reviewed registers, with allowed values and
+  capability checks. Grid switchover, protection, network, and factory settings
+  are never writable. Every write is verified by reading it back.
+- **EMMA read-only mode** for installations where an external reserve provider
+  controls the battery. Telemetry continues and every write is refused. See
+  [docs/read-only-mode.md](docs/read-only-mode.md).
+- `huawei_emma.set_tou_periods` accepts BESS Manager's empty-schedule clear
+  (`00:00-00:14//+`), skips writes when the schedule is unchanged, and the TOU
+  sensor publishes `Period N` attributes. See [docs/bess-manager.md](docs/bess-manager.md).
+
+Fixes:
+
+- With tmodbus 1.x, a Modbus exception response (such as an illegal address
+  during discovery) ended the EMMA session.
+- Unloading the integration hung while EMMA was connected (Python 3.12.1 and
+  later).
+- The ESPHome firmware failed to link with ESPHome 2026.11 because the mbedTLS
+  TLS layer was compiled out.
+- Device registry lookups use the API that Home Assistant 2026.10 expects.
+
+Diagnostics and tooling:
+
+- `/api/v1/diagnostics` and Home Assistant config entry diagnostics, with versions,
+  catalog hash, devices, capabilities, subscriptions, and read-only state.
+- ESPHome firmware brought to parity with the Python connector.
+- Simulated EMMA test suite, Home Assistant tests, and CI on Python 3.12 to 3.14
+  with a firmware compile job.
+- Nothing in this release was verified on real hardware. See
+  [docs/supported-hardware.md](docs/supported-hardware.md#not-verified-on-real-hardware).
+
 ## 0.14.9
 
 - Auto-discover the sole Huawei EMMA Device Registry ID in **Fill example data** for
