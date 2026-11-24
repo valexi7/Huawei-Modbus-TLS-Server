@@ -20,6 +20,9 @@ PLATFORMS = [
 CONF_TOKEN = "token"
 CONF_MODE = "mode"
 CONF_TLS_PORT = "tls_port"
+# TLS is on by default; plain TCP only when the user unticks it explicitly.
+CONF_USE_TLS = "use_tls"
+DEFAULT_USE_TLS = True
 CONF_CERTIFICATE_MODE = "certificate_mode"
 CONF_CERTIFICATE_NAME = "certificate_name"
 CONF_CERTIFICATE_PATH = "certificate_path"

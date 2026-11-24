@@ -53,6 +53,13 @@ Control and safety:
   (`00:00-00:14//+`), skips writes when the schedule is unchanged, and the TOU
   sensor publishes `Period N` attributes. See [docs/bess-manager.md](docs/bess-manager.md).
 
+Optional TLS:
+
+- The embedded and standalone listeners can run without TLS, by explicit opt-in only
+  (**Use TLS** in the integration, `--no-tls` or `EMMA_USE_TLS=false`). TLS stays the
+  default, existing entries keep TLS, and there is no automatic fallback. Health
+  reports `tls`. Based on PR #12.
+
 Fixes:
 
 - With tmodbus 1.x, a Modbus exception response (such as an illegal address

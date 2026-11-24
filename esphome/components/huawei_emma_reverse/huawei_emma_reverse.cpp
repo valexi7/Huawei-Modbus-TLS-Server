@@ -1293,7 +1293,7 @@ std::string HuaweiEmmaReverse::health_json_() {
   out << available << ",\"registers_subscribed\":" << subscribed << ",\"registers_unsupported\":" << unsupported
       << ",\"registers_not_applicable\":" << not_applicable << ",\"registers_stale\":" << stale
       << ",\"catalog_sha256\":\"" << GENERATED_CATALOG_SHA256 << "\",\"runtime\":\"esphome\""
-      << ",\"read_only\":" << (this->read_only_ ? "true" : "false")
+      << ",\"read_only\":" << (this->read_only_ ? "true" : "false") << ",\"tls\":true"
       << ",\"reconnect_count\":" << this->reconnect_count_ << ",\"connected_at_ms\":" << this->connected_at_ms_
       << ",\"last_poll_ms\":" << this->last_poll_ms_ << ",\"last_error\":\""
       << json_escape_(this->last_error_) << "\"}";

@@ -41,6 +41,7 @@ from .const import (
     CONF_TLS_PORT,
     CONFIG_ENTRY_MINOR_VERSION,
     CONF_TOKEN,
+    CONF_USE_TLS,
     DEFAULT_ACCEPT_EXTERNAL_GROWATT_CONTROLS,
     DEFAULT_READ_ONLY,
     DOMAIN,
@@ -51,6 +52,7 @@ from .const import (
     PLATFORMS,
     TOU_REGISTER_NAME,
     DEFAULT_TLS_PORT,
+    DEFAULT_USE_TLS,
     MODE_EMBEDDED,
     MODE_EXTERNAL,
 )
@@ -330,13 +332,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 )
                 == CERTIFICATE_AUTOMATIC,
                 read_only=_read_only_enabled(entry),
+                use_tls=bool(entry.data.get(CONF_USE_TLS, DEFAULT_USE_TLS)),
             )
         )
         try:
             await embedded_server.async_start()
         except (OSError, RuntimeError, ValueError) as error:
             raise ConfigEntryNotReady(
-                f"Cannot start embedded EMMA TLS server: {error}"
+                f"Cannot start embedded EMMA server: {error}"
             ) from error
         api = EmbeddedEmmaApiClient(embedded_server.state)
     else:
