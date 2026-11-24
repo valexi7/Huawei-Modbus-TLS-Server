@@ -18,6 +18,10 @@ from .const import (
     TOU_MODES,
     TOU_REGISTER_NAME,
 )
+from .embedded_catalog import (
+    DERIVED_ENTITY_DESCRIPTIONS,
+    SMARTGUARD_BINARY_DESCRIPTIONS,
+)
 from .tou import (
     growatt_mode_to_tou_mode,
     growatt_time_segments,
@@ -80,6 +84,19 @@ class EmmaCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     def unique_id_prefix(self) -> str:
         return self.parent_identifier
 
+    def has_device_role(self, role: str) -> bool:
+        """Return whether the discovered topology contains a device role."""
+        return any(
+            isinstance(item, dict) and item.get("role") == role
+            for item in self.device_data.get("devices", [])
+        )
+
+    def _effective_enabled_default(self, description: dict[str, Any]) -> bool:
+        enabled = bool(description.get("enabled_default", True))
+        if description.get("client_role") == "smartguard":
+            enabled = enabled and self.has_device_role("smartguard")
+        return enabled
+
     def is_register_subscribed(self, register_name: str) -> bool:
         """Return whether the connector accepted this register subscription."""
         return bool(
@@ -102,7 +119,21 @@ class EmmaCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         async with self._subscription_sync_lock:
             registry = er.async_get(self.hass)
             enabled: set[str] = set()
-            for description in self.entity_descriptions:
+            known = {
+                description["register_name"] for description in self.entity_descriptions
+            }
+            descriptions = [
+                *self.entity_descriptions,
+                *(
+                    description
+                    for description in (
+                        *DERIVED_ENTITY_DESCRIPTIONS.values(),
+                        *SMARTGUARD_BINARY_DESCRIPTIONS.values(),
+                    )
+                    if description["source_register_name"] in known
+                ),
+            ]
+            for description in descriptions:
                 register_name = description["register_name"]
                 unique_id = f"{self.unique_id_prefix}_{register_name}"
                 entity_id = registry.async_get_entity_id(
@@ -114,10 +145,14 @@ class EmmaCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     and registry_entry.disabled_by is None
                 ) or (
                     registry_entry is None
-                    and description.get("enabled_default", True)
+                    and self._effective_enabled_default(description)
                 ):
-                    enabled.add(
-                        description.get("source_register_name", register_name)
+                    source = description.get("source_register_name", register_name)
+                    enabled.add(source)
+                    enabled.update(
+                        dependency
+                        for dependency in description.get("depends_on", ())
+                        if dependency in known
                     )
 
             # TOU powers the two schedule sensors, editor, Growatt compatibility,

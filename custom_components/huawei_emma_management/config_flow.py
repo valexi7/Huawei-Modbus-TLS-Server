@@ -32,6 +32,7 @@ from .const import (
     CONF_PRIVATE_KEY_PATH,
     CONF_TLS_PORT,
     CONF_TOKEN,
+    CONFIG_ENTRY_MINOR_VERSION,
     DEFAULT_ACCEPT_EXTERNAL_GROWATT_CONTROLS,
     DEFAULT_PORT,
     DEFAULT_TLS_PORT,
@@ -52,6 +53,7 @@ def _config_path(hass: Any, value: str) -> Path:
 
 class HuaweiEmmaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     VERSION = 2
+    MINOR_VERSION = CONFIG_ENTRY_MINOR_VERSION
 
     def __init__(self) -> None:
         self._external_token = secrets.token_urlsafe(32)
