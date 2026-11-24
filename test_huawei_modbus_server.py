@@ -38,7 +38,11 @@ from huawei_modbus_server import (
     parse_topology_devices,
     read_modbus_frame,
 )
-from emma_catalog import build_entity_catalog, register_client_role
+from emma_catalog import (
+    CAPABILITY_MASK_REGISTERS,
+    build_entity_catalog,
+    register_client_role,
+)
 from huawei_solar.registers import REGISTERS
 from runtime_setup import ensure_certificates, load_or_create_environment
 from tools.emma_mock_client import (
@@ -333,8 +337,11 @@ class FrameTests(unittest.IsolatedAsyncioTestCase):
             await writer.drain()
             response = await reader.read()
             self.assertIn(b"HTTP/1.1 200 OK", response)
-            self.assertEqual(state.subscribed_registers, {"pv_output_power"})
-            self.assertEqual(subscription_updates, [{"pv_output_power"}])
+            # Feature masks are internal subscriptions for capability-gated
+            # writes; requested entity registers are kept unchanged.
+            expected = {"pv_output_power", *CAPABILITY_MASK_REGISTERS}
+            self.assertEqual(state.subscribed_registers, expected)
+            self.assertEqual(subscription_updates, [expected])
             writer.close()
             await writer.wait_closed()
 
@@ -551,7 +558,13 @@ class DecoderTests(unittest.TestCase):
         sys.modules[package_name] = package
         component_root = Path(__file__).parent / "custom_components" / "huawei_emma_management"
         try:
-            for module_name in ("connector_contract", "const", "embedded_catalog", "tou"):
+            for module_name in (
+                "connector_contract",
+                "const",
+                "embedded_catalog",
+                "tou_codec",
+                "tou",
+            ):
                 spec = importlib.util.spec_from_file_location(
                     f"{package_name}.{module_name}", component_root / f"{module_name}.py"
                 )
@@ -612,7 +625,12 @@ class DecoderTests(unittest.TestCase):
             )
             self.assertEqual(tou.decode_luna_tou_periods(""), [])
             decoded_luna = tou.decode_luna_tou_periods(luna_text)
-            self.assertEqual(tou.encode_luna_tou_periods(decoded_luna), luna_text)
+            # Readback encoding takes canonical connector JSON (native
+            # days_effective plus Monday-first days).
+            canonical = sys.modules[f"{package_name}.tou_codec"].normalize_periods(
+                decoded_luna
+            )
+            self.assertEqual(tou.encode_luna_tou_periods(canonical), luna_text)
             self.assertEqual(
                 tou.decode_luna_tou_periods(
                     "00:00-03:59/1234567/+ 07:00-09:59/1234567/- "
@@ -623,7 +641,7 @@ class DecoderTests(unittest.TestCase):
             self.assertEqual(tou.encode_luna_tou_periods([]), "")
             with self.assertRaisesRegex(ValueError, "line 1"):
                 tou.decode_luna_tou_periods("00:00-03:59/1234567/x")
-            with self.assertRaisesRegex(ValueError, "unique and ordered"):
+            with self.assertRaisesRegex(ValueError, "unique digits"):
                 tou.decode_luna_tou_periods("00:00-03:59/113/+")
             slots = [
                 {
@@ -742,7 +760,9 @@ class DecoderTests(unittest.TestCase):
         self.assertEqual(
             catalog[str(rn.EMMA_TOU_PERIODS)].entity_category, "diagnostic"
         )
-        self.assertFalse(catalog[str(rn.EMMA_TOU_PERIODS)].enabled_default)
+        # 0.15.0: the native TOU readback sensor is BESS Manager's readback
+        # contract and is enabled by default.
+        self.assertTrue(catalog[str(rn.EMMA_TOU_PERIODS)].enabled_default)
         for register_name in (rn.STATE_1, rn.STATE_2, rn.STATE_3):
             description = catalog[str(register_name)]
             self.assertEqual(description.poll_group, "fast")

@@ -6,6 +6,7 @@ import asyncio
 import contextlib
 import hashlib
 import hmac
+import importlib.metadata
 import json
 import logging
 import os
@@ -25,7 +26,7 @@ from typing import Any, Awaitable, Callable, TypeVar
 from huawei_solar import register_names as rn
 from huawei_solar import register_values as rv
 from huawei_solar.device import create_device_instance
-from huawei_solar.exceptions import HuaweiSolarException, ReadException
+from huawei_solar.exceptions import DecodeError, HuaweiSolarException, ReadException
 from huawei_solar.modbus_client import AsyncHuaweiSolarClient
 from huawei_solar.register_definitions import Result
 from huawei_solar.register_definitions.periods import (
@@ -53,11 +54,16 @@ try:
         MAX_WRITE_REGISTERS,
     )
     from .embedded_catalog import (
+        CAPABILITY_MASK_REGISTERS,
         POLL_INTERVALS,
         EntityDescription,
         build_entity_catalog,
+        capability_state,
+        capability_states,
+        catalog_sha256,
         grouped_register_names,
         json_value,
+        timestamp_epoch,
     )
     from .embedded_runtime_setup import (
         CertificateStatus,
@@ -65,6 +71,7 @@ try:
         ensure_certificates,
         load_or_create_environment,
     )
+    from . import tou_codec
 except ImportError:  # Standalone external-server launcher.
     from connector_contract import (
         API_PREFIX,
@@ -76,11 +83,16 @@ except ImportError:  # Standalone external-server launcher.
         MAX_WRITE_REGISTERS,
     )
     from embedded_catalog import (
+        CAPABILITY_MASK_REGISTERS,
         POLL_INTERVALS,
         EntityDescription,
         build_entity_catalog,
+        capability_state,
+        capability_states,
+        catalog_sha256,
         grouped_register_names,
         json_value,
+        timestamp_epoch,
     )
     from embedded_runtime_setup import (
         CertificateStatus,
@@ -88,8 +100,19 @@ except ImportError:  # Standalone external-server launcher.
         ensure_certificates,
         load_or_create_environment,
     )
+    import tou_codec
 
 log = logging.getLogger(__name__)
+
+# Connector runtime version; kept equal to the Home Assistant manifest version.
+CONNECTOR_VERSION = "0.15.0"
+
+
+def _package_version(package: str) -> str | None:
+    try:
+        return importlib.metadata.version(package)
+    except importlib.metadata.PackageNotFoundError:
+        return None
 
 API_HEALTH = f"{API_PREFIX}/health"
 API_DEVICE = f"{API_PREFIX}/device"
@@ -97,6 +120,7 @@ API_ENTITIES = f"{API_PREFIX}/entities"
 API_STATES = f"{API_PREFIX}/states"
 API_SUBSCRIPTIONS = f"{API_PREFIX}/subscriptions"
 API_TOU_PERIODS = f"{API_PREFIX}/tou-periods"
+API_DIAGNOSTICS = f"{API_PREFIX}/diagnostics"
 
 DEFAULT_HOST = "0.0.0.0"
 DEFAULT_PORT = DEFAULT_TLS_PORT
@@ -301,10 +325,15 @@ def parse_topology_devices(objects: dict[int, bytes]) -> list[dict[str, Any]]:
 
 
 def _topology_device_role(model: str, product_type: str | None) -> str:
+    """Classify a device-list entry.
+
+    Unrecognized devices become ``accessory``. No catalog register targets that
+    role, so an unknown device is never polled and never falls back to EMMA.
+    """
     text = f"{model} {product_type or ''}".lower()
     if "emma" in text or "hems" in text:
         return "emma"
-    if "smartguard" in text or "backupbox" in text:
+    if "smartguard" in text or "backupbox" in text or "backup box" in text:
         return "smartguard"
     if "sun2000" in text or "inverter" in text:
         return "inverter"
@@ -314,9 +343,60 @@ def _topology_device_role(model: str, product_type: str | None) -> str:
         return "sdongle"
     if any(word in text for word in ("meter", "dtsu", "ddsu", "yds", "energy sensor")):
         return "external_meter"
+    if any(word in text for word in ("acgun", "ac gun", "ac-gun", "smart_ac_gun")):
+        return "smart_ac_gun"
     if "charger" in text or "wallbox" in text:
         return "charger"
     return "accessory"
+
+
+# Downstream device roles that are read through their own Modbus unit ID.
+SUBDEVICE_ROLES = (
+    "inverter",
+    "smartguard",
+    "charger",
+    "smart_ac_gun",
+    "sdongle",
+    "smartlogger",
+)
+
+
+def expand_subscriptions(register_names: set[str]) -> set[str]:
+    """Return the effective poll set for requested registers.
+
+    Adds registers needed to interpret requested ones (for example the UTC
+    clock used to normalize a local wall-clock timestamp) and the feature-mask
+    registers used for capability-gated writes. Registers of absent devices
+    are filtered later by topology, so this never adds Modbus traffic for
+    hardware that is not installed.
+    """
+    effective = set(register_names)
+    for register_name in register_names:
+        description = ENTITY_CATALOG.get(register_name)
+        if description is not None:
+            effective.update(description.depends_on)
+    effective.update(CAPABILITY_MASK_REGISTERS)
+    return {name for name in effective if name in ENTITY_CATALOG}
+
+
+class WriteVerificationError(RuntimeError):
+    """The device accepted a write but the readback does not match."""
+
+
+def _identity_transform(_register_name: Any, result: Result[Any]) -> Result[Any]:
+    return result
+
+
+def _use_raw_register_values(device: Any) -> None:
+    """Disable host-dependent upstream value transforms on a device instance.
+
+    huawei-solar 3.2 converts local wall-clock timestamps using the host time
+    zone when it happens to match the device. The connector contract instead
+    publishes raw register seconds in every runtime (Python and ESPHome) and
+    normalizes them deterministically from the device's own clock registers.
+    """
+    if device is not None:
+        device._transform_register_values = _identity_transform
 
 
 @dataclass(frozen=True, slots=True)
@@ -411,6 +491,7 @@ CORE_SENSORS = (
 
 CORE_REGISTER_NAMES = tuple(sensor.register_name for sensor in CORE_SENSORS)
 ENTITY_CATALOG = build_entity_catalog()
+CATALOG_SHA256 = catalog_sha256(ENTITY_CATALOG)
 POLL_GROUPS = grouped_register_names(ENTITY_CATALOG)
 INVERTER_RATED_LIMITED_REGISTERS = {
     str(rn.STORAGE_MAXIMUM_CHARGING_POWER),
@@ -440,8 +521,18 @@ def build_core_sensor_states(
     return result
 
 
+def normalize_register_value(register_name: str, value: Any) -> Any:
+    """Return the connector JSON value for a decoded register value."""
+    normalized = json_value(value)
+    description = ENTITY_CATALOG.get(str(register_name))
+    if description is not None and description.format == "tou_periods":
+        return tou_codec.canonical_readback(normalized)
+    return normalized
+
+
 def build_catalog_states(
     results: dict[str, Result[Any]],
+    context_values: dict[str, Any] | None = None,
 ) -> tuple[dict[str, dict[str, Any]], dict[str, Any]]:
     """Create REST-compatible sensor states and API-native register values."""
     states: dict[str, dict[str, Any]] = {}
@@ -450,8 +541,11 @@ def build_catalog_states(
         description = ENTITY_CATALOG.get(str(register_name))
         if description is None:
             continue
-        value = json_value(decoded.value)
+        value = normalize_register_value(str(register_name), decoded.value)
         values[str(register_name)] = value
+    context = {**(context_values or {}), **values}
+    for register_name, value in values.items():
+        description = ENTITY_CATALOG[register_name]
         if description.platform != "sensor":
             continue
         attributes: dict[str, Any] = {
@@ -471,9 +565,15 @@ def build_catalog_states(
         state_value = value
         if description.format == "tou_periods":
             attributes["periods"] = value
+            attributes.update(tou_codec.numbered_period_attributes(value))
             state_value = len(value) if isinstance(value, list) else None
         elif description.device_class == "timestamp" and value is not None:
-            state_value = datetime.fromtimestamp(float(value), tz=timezone.utc).isoformat()
+            epoch = timestamp_epoch(register_name, context, description.format)
+            state_value = (
+                datetime.fromtimestamp(epoch, tz=timezone.utc).isoformat()
+                if epoch is not None
+                else None
+            )
         states[f"sensor.huawei_emma_{register_name}"] = {
             "state": state_value,
             "attributes": attributes,
@@ -618,15 +718,33 @@ class ReverseModbusSession:
         self.latest_values: dict[str, Any] = {}
         self.latest_updated_at: dict[str, str] = {}
         self.unsupported_registers: set[str] = set()
-        self.subscribed_registers = set(
-            subscribed_registers
-            if subscribed_registers is not None
-            else {
-                name
-                for name, description in ENTITY_CATALOG.items()
-                if description.enabled_default
-            }
+        # Registers that exist in the catalog but do not apply to the detected
+        # hardware (for example SmartGuard phase B/C on single-phase units).
+        self.not_applicable_registers: set[str] = set()
+        # Registers whose value could not be decoded (for example an enum
+        # value unknown to huawei-solar); they are published as raw integers.
+        self.raw_value_registers: set[str] = set()
+        self.subscribed_registers = expand_subscriptions(
+            set(
+                subscribed_registers
+                if subscribed_registers is not None
+                else default_subscriptions()
+            )
         )
+        self.device_details: dict[str, dict[str, Any]] = {}
+        self.poll_stats: dict[str, dict[str, Any]] = {
+            group: {
+                "runs": 0,
+                "failures": 0,
+                "last_duration_ms": None,
+                "last_success": None,
+                "last_error": None,
+                "registers_requested": 0,
+                "registers_updated": 0,
+            }
+            for group in POLL_GROUPS
+        }
+        self.last_verified_write: dict[str, Any] | None = None
         self.last_poll_success: str | None = None
         self.last_poll_error: str | None = None
         self.device: Any | None = None
@@ -646,6 +764,7 @@ class ReverseModbusSession:
 
     def set_subscriptions(self, register_names: set[str]) -> None:
         """Replace the active poll set and wake the scheduler immediately."""
+        register_names = expand_subscriptions(set(register_names))
         added = register_names - self.subscribed_registers
         removed = self.subscribed_registers - register_names
         self.subscribed_registers = set(register_names)
@@ -839,12 +958,31 @@ class ReverseModbusSession:
             requested_object = page.next_object_id
         raise ModbusProtocolError("Device-list response exceeded 32 pages")
 
+    def capability(self, name: str) -> bool | None:
+        """Return a feature-mask capability: True/False when known, else None."""
+        return capability_state(name, self.latest_values)
+
+    def capabilities(self) -> dict[str, bool | None]:
+        return capability_states(self.latest_values)
+
     async def set_register_value(self, register_name: str, value: Any) -> Any:
+        """Validate, write and verify one allowlisted register.
+
+        Success is reported only after a readback from the device matches the
+        requested value. A TOU schedule identical to a fresh readback is not
+        rewritten, which keeps EMMA flash writes idempotent.
+        """
         description = ENTITY_CATALOG.get(register_name)
         if description is None or not description.writeable:
             raise ValueError(f"Register is unknown or read-only: {register_name}")
         definition = REGISTERS[register_name]
         converted = _convert_register_value(description, definition.unit, value)
+        for capability in description.required_capabilities:
+            if self.capability(capability) is False:
+                raise ValueError(
+                    f"{register_name} is not supported by the connected hardware "
+                    f"(feature mask capability {capability} is not present)"
+                )
         if register_name in INVERTER_RATED_LIMITED_REGISTERS:
             rated_power = self.latest_values.get(str(rn.INVERTER_RATED_POWER))
             if rated_power is not None and float(converted) > float(rated_power):
@@ -856,15 +994,49 @@ class ReverseModbusSession:
         device = self.devices_by_role.get(role)
         if client is None:
             raise ValueError(f"No connected {role} device is available")
-        if device is not None:
-            await device.set(register_name, converted)
-            decoded = await device.get(register_name)
-        else:
-            await client.set(register_name, converted)
-            decoded = await client.get(register_name)
-        normalized = json_value(decoded.value)
+        reader = device if device is not None else client
+        expected = normalize_register_value(register_name, converted)
+
+        if description.format == "tou_periods":
+            current = normalize_register_value(
+                register_name, (await reader.get(register_name)).value
+            )
+            if tou_codec.schedules_equal(current, expected):
+                log.info(
+                    "TOU schedule unchanged (%d periods); skipping EMMA write",
+                    len(expected),
+                )
+                return self._record_verified_write(register_name, current, False)
+
+        await reader.set(register_name, converted)
+        normalized: Any = None
+        for attempt in range(2):
+            decoded = await reader.get(register_name)
+            normalized = normalize_register_value(register_name, decoded.value)
+            if _readback_matches(description, expected, normalized):
+                return self._record_verified_write(register_name, normalized, True)
+            if attempt == 0:
+                await asyncio.sleep(1.0)
+        # Keep the real readback visible so consumers never see the requested
+        # value as if it had been applied.
         self.latest_values[register_name] = normalized
         self.latest_updated_at[register_name] = _now_iso()
+        raise WriteVerificationError(
+            f"Readback mismatch for {register_name}: requested {expected!r}, "
+            f"device reports {normalized!r}"
+        )
+
+    def _record_verified_write(
+        self, register_name: str, normalized: Any, written: bool
+    ) -> Any:
+        timestamp = _now_iso()
+        self.latest_values[register_name] = normalized
+        self.latest_updated_at[register_name] = timestamp
+        self.last_verified_write = {
+            "register_name": register_name,
+            "verified_at": timestamp,
+            "written": written,
+        }
         return normalized
 
     async def set_tou_periods(self, periods: Any) -> Any:
@@ -944,7 +1116,21 @@ class ReverseModbusSession:
 
         try:
             self.device = await create_device_instance(self.huawei_client)
+            _use_raw_register_values(self.device)
             self.devices_by_role["emma"] = self.device
+            self.device_details["emma"] = {
+                "unit_id": 0,
+                "model": self.device.model_name,
+                "serial_number": getattr(self.device, "serial_number", None),
+                "has_battery": getattr(self.device, "has_battery", None),
+                "battery_type": json_value(getattr(self.device, "battery_type", None)),
+                "supports_capacity_control": getattr(
+                    self.device, "supports_capacity_control", None
+                ),
+                "supports_power_limited_grid_connection": getattr(
+                    self.device, "supports_power_limited_grid_connection", None
+                ),
+            }
             self.device_info.setdefault("1", self.device.model_name)
             if getattr(self.device, "software_version", None):
                 self.device_info.setdefault("2", self.device.software_version)
@@ -959,35 +1145,7 @@ class ReverseModbusSession:
         except (TimeoutError, ConnectionError, HuaweiSolarException) as error:
             log.warning("huawei-solar device discovery failed; using generic client: %s", error)
 
-        for topology_device in self.topology_devices:
-            role = topology_device["role"]
-            unit_id = topology_device.get("unit_id")
-            if role not in (
-                "inverter",
-                "charger",
-                "sdongle",
-                "smartlogger",
-            ) or not isinstance(unit_id, int):
-                continue
-            client = AsyncHuaweiSolarClient(self.transport, unit_id=unit_id)
-            self.clients_by_role[role] = client
-            try:
-                device = await create_device_instance(client)
-                self.devices_by_role[role] = device
-                log.info(
-                    "Initialized %s subdevice unit=%d model=%s serial=%s",
-                    role,
-                    unit_id,
-                    device.model_name,
-                    getattr(device, "serial_number", topology_device.get("serial_number") or "-"),
-                )
-            except (TimeoutError, ConnectionError, HuaweiSolarException) as error:
-                log.warning(
-                    "Could not initialize %s subdevice unit=%d; individual register access will be used: %s",
-                    role,
-                    unit_id,
-                    error,
-                )
+        await self._initialize_subdevices()
 
         next_due = {name: 0.0 for name in POLL_GROUPS}
         while True:
@@ -1003,8 +1161,13 @@ class ReverseModbusSession:
                     for register_name in POLL_GROUPS[group]
                     if register_name in self.subscribed_registers
                     if register_name not in self.unsupported_registers
+                    and register_name not in self.not_applicable_registers
                     and self._register_available_by_topology(register_name)
                 ]
+                stats = self.poll_stats[group]
+                started = asyncio.get_running_loop().time()
+                stats["runs"] += 1
+                stats["registers_requested"] = len(names)
                 try:
                     decoded: dict[str, Result[Any]] = {}
                     names_by_role: dict[str, list[str]] = {}
@@ -1016,8 +1179,11 @@ class ReverseModbusSession:
                         decoded.update(
                             await self._read_registers_with_fallback(role_names)
                         )
-                    states, values = build_catalog_states(decoded)
+                    states, values = build_catalog_states(decoded, self.latest_values)
                     timestamp = _now_iso()
+                    stats["last_success"] = timestamp
+                    stats["registers_updated"] = len(values)
+                    stats["last_error"] = None
                     self.latest_states.update(states)
                     self.latest_values.update(values)
                     self.latest_updated_at.update(
@@ -1042,7 +1208,13 @@ class ReverseModbusSession:
                 ) as error:
                     cycle_error = error
                     self.last_poll_error = str(error)
+                    stats["failures"] += 1
+                    stats["last_error"] = str(error)
                     log.warning("EMMA poll group=%s failed: %s", group, error)
+                finally:
+                    stats["last_duration_ms"] = round(
+                        (asyncio.get_running_loop().time() - started) * 1000
+                    )
 
             if cycle_error is None:
                 self.last_poll_error = None
@@ -1111,6 +1283,13 @@ class ReverseModbusSession:
             for register_name in names:
                 result[register_name] = await client.get(register_name)
             return result
+        except DecodeError as error:
+            if len(names) > 1:
+                midpoint = len(names) // 2
+                first = await self._read_registers_with_fallback(names[:midpoint])
+                second = await self._read_registers_with_fallback(names[midpoint:])
+                return {**first, **second}
+            return await self._read_raw_fallback(names[0], client.unit_id, error)
         except ReadException as error:
             if structured:
                 log.warning(
@@ -1131,6 +1310,109 @@ class ReverseModbusSession:
             first = await self._read_registers_with_fallback(names[:midpoint])
             second = await self._read_registers_with_fallback(names[midpoint:])
             return {**first, **second}
+
+    async def _initialize_subdevices(self) -> None:
+        """Create clients for downstream devices reported in the device list."""
+        for topology_device in self.topology_devices:
+            role = topology_device["role"]
+            unit_id = topology_device.get("unit_id")
+            if role not in SUBDEVICE_ROLES or not isinstance(unit_id, int):
+                continue
+            if role in self.clients_by_role:
+                log.warning(
+                    "Multiple %s devices reported; using unit %d and ignoring unit %d",
+                    role,
+                    self.clients_by_role[role].unit_id,
+                    unit_id,
+                )
+                continue
+            client = AsyncHuaweiSolarClient(self.transport, unit_id=unit_id)
+            self.clients_by_role[role] = client
+            details: dict[str, Any] = {
+                "unit_id": unit_id,
+                "model": topology_device.get("model"),
+                "serial_number": topology_device.get("serial_number"),
+            }
+            self.device_details[role] = details
+            try:
+                device = await create_device_instance(client)
+                _use_raw_register_values(device)
+                self.devices_by_role[role] = device
+                details["model"] = device.model_name or details["model"]
+                log.info(
+                    "Initialized %s subdevice unit=%d model=%s serial=%s",
+                    role,
+                    unit_id,
+                    device.model_name,
+                    getattr(device, "serial_number", topology_device.get("serial_number") or "-"),
+                )
+            except (TimeoutError, ConnectionError, HuaweiSolarException) as error:
+                device = None
+                log.warning(
+                    "Could not initialize %s subdevice unit=%d; individual register access will be used: %s",
+                    role,
+                    unit_id,
+                    error,
+                )
+            if role == "smartguard":
+                self._apply_smartguard_hardware(device, details)
+
+    def _apply_smartguard_hardware(self, device: Any, details: dict[str, Any]) -> None:
+        """Record SmartGuard identity and filter phase registers by hardware."""
+        phase_type = getattr(device, "phase_type", None) if device else None
+        details["phase_type"] = json_value(phase_type)
+        details["software_version"] = getattr(device, "software_version", None) if device else None
+        details["supports_grid_switchover"] = (
+            bool(getattr(device, "supports_grid_switchover", False)) if device else None
+        )
+        if phase_type is not None and json_value(phase_type) == "single_phase":
+            filtered = {
+                name
+                for name, description in ENTITY_CATALOG.items()
+                if description.three_phase_only
+            }
+            self.not_applicable_registers.update(filtered)
+            log.info(
+                "SmartGuard is single-phase; not polling %d phase-specific registers",
+                len(filtered),
+            )
+
+    async def _read_raw_fallback(
+        self, register_name: str, unit_id: int, error: Exception
+    ) -> dict[str, Result[Any]]:
+        """Publish the raw integer of a register that upstream cannot decode.
+
+        An enum value unknown to huawei-solar must not invalidate the rest of
+        its batch, and must not be guessed. ESPHome publishes the same raw
+        number for an unmapped enum value.
+        """
+        description = ENTITY_CATALOG[register_name]
+        definition = REGISTERS[register_name]
+        if description.length not in (1, 2) or description.value_kind not in (
+            "enum",
+            "map",
+            "number",
+        ):
+            log.warning("Register %s could not be decoded: %s", register_name, error)
+            self.unsupported_registers.add(register_name)
+            return {}
+        registers = await self.read_holding_registers(
+            unit_id, description.address, description.length
+        )
+        raw = registers[0] if description.length == 1 else registers[0] << 16 | registers[1]
+        if type(definition).__name__.startswith("I"):
+            bits = 16 * description.length
+            if raw >= 1 << (bits - 1):
+                raw -= 1 << bits
+        if register_name not in self.raw_value_registers:
+            log.warning(
+                "Register %s returned undecodable value %d; publishing raw value: %s",
+                register_name,
+                raw,
+                error,
+            )
+        self.raw_value_registers.add(register_name)
+        return {register_name: Result(raw, None)}
 
     def _register_available_by_topology(self, register_name: str) -> bool:
         if not self.topology_complete:
@@ -1164,6 +1446,28 @@ class ReverseModbusSession:
             log.info("%s raw=%s", direction, packet.hex(" ").upper())
 
 
+def default_subscriptions() -> set[str]:
+    """Registers polled before Home Assistant sends its subscription set."""
+    return {
+        name for name, description in ENTITY_CATALOG.items() if description.enabled_default
+    }
+
+
+def _readback_matches(description: EntityDescription, expected: Any, actual: Any) -> bool:
+    """Compare a requested value with the device readback after a write."""
+    if description.format == "tou_periods":
+        return tou_codec.schedules_equal(expected, actual)
+    if isinstance(expected, bool) or isinstance(actual, bool) or isinstance(expected, str):
+        return expected == actual
+    if isinstance(expected, (int, float)) and isinstance(actual, (int, float)):
+        gain = getattr(REGISTERS[description.register_name], "gain", 1) or 1
+        tolerance = 1 / float(gain) + 1e-9
+        if description.register_name == str(rn.EMMA_SYSTEM_TIME):
+            tolerance = 30  # the clock keeps running between write and readback
+        return abs(float(expected) - float(actual)) <= tolerance
+    return expected == actual
+
+
 def _require_integer(value: Any, allowed: set[int]) -> int:
     if isinstance(value, bool):
         raise ValueError("Boolean is not a valid command value")
@@ -1192,65 +1496,37 @@ def _convert_register_value(
     description: EntityDescription, unit: Any, value: Any
 ) -> Any:
     if description.format == "tou_periods":
-        if not isinstance(value, list) or not 0 <= len(value) <= 14:
-            raise ValueError("TOU periods must be a JSON list containing 0 to 14 periods")
-        result: list[HUAWEI_LUNA2000_TimeOfUsePeriod] = []
-        for index, period in enumerate(value):
-            if not isinstance(period, dict):
-                raise ValueError(f"TOU period {index + 1} must be an object")
-            start = _minutes(period.get("start_time"), f"period {index + 1} start_time")
-            end = _minutes(period.get("end_time"), f"period {index + 1} end_time")
-            if not 0 <= start < end <= 1440:
-                raise ValueError(
-                    f"TOU period {index + 1} must have 0 <= start < end <= 1440"
-                )
-            action = period.get("action", period.get("charge_flag"))
-            try:
-                charge_flag = (
-                    ChargeFlag[action.upper()]
-                    if isinstance(action, str)
-                    else ChargeFlag(int(action))
-                )
-            except (KeyError, TypeError, ValueError) as error:
-                raise ValueError(
-                    f"TOU period {index + 1} action must be charge or discharge"
-                ) from error
-            days = period.get("days", period.get("days_effective"))
-            if (
-                not isinstance(days, (list, tuple))
-                or len(days) != 7
-                or any(not isinstance(day, bool) for day in days)
-            ):
-                raise ValueError(
-                    f"TOU period {index + 1} days must contain seven booleans (Mon-Sun)"
-                )
-            result.append(
-                HUAWEI_LUNA2000_TimeOfUsePeriod(
-                    start_time=start,
-                    end_time=end,
-                    charge_flag=charge_flag,
-                    days_effective=tuple(days),
-                )
+        try:
+            periods = tou_codec.normalize_periods(value)
+        except tou_codec.TouValidationError as error:
+            raise ValueError(str(error)) from error
+        return [
+            HUAWEI_LUNA2000_TimeOfUsePeriod(
+                start_time=period["start_time"],
+                end_time=period["end_time"],
+                charge_flag=(
+                    ChargeFlag.CHARGE
+                    if period["action"] == tou_codec.CHARGE
+                    else ChargeFlag.DISCHARGE
+                ),
+                days_effective=tuple(period["days_effective"]),
             )
-        return result
+            for period in periods
+        ]
 
     if isinstance(unit, type) and issubclass(unit, IntEnum):
-        if isinstance(value, str):
-            normalized = value.strip().lower().replace(" ", "_").replace("-", "_")
-            for option in description.options:
-                label = str(option["label"]).lower().replace(" ", "_")
-                if normalized in (label, option["key"]):
-                    return unit(option["value"])
-            try:
-                return unit[value.strip().upper()]
-            except KeyError as error:
-                raise ValueError(
-                    f"Value must be one of: {', '.join(str(x['label']) for x in description.options)}"
-                ) from error
-        try:
-            return unit(int(value))
-        except (TypeError, ValueError) as error:
-            raise ValueError("Invalid enum value") from error
+        member = _enum_member(description, unit, value)
+        if description.allowed_values and int(member) not in description.allowed_values:
+            allowed = [
+                str(option["label"])
+                for option in description.options
+                if option["value"] in description.allowed_values
+            ]
+            raise ValueError(
+                f"{member.name.lower()} is not an allowed value for "
+                f"{description.register_name}; use one of: {', '.join(allowed)}"
+            )
+        return member
 
     if unit is bool:
         if not isinstance(value, bool):
@@ -1266,20 +1542,25 @@ def _convert_register_value(
     raise ValueError(f"Writing {description.register_name} is not exposed safely")
 
 
-def _minutes(value: Any, field_name: str) -> int:
-    if isinstance(value, str) and ":" in value:
-        hour_text, minute_text = value.split(":", 1)
+def _enum_member(description: EntityDescription, unit: Any, value: Any) -> Any:
+    if isinstance(value, bool):
+        raise ValueError("Invalid enum value")
+    if isinstance(value, str):
+        normalized = value.strip().lower().replace(" ", "_").replace("-", "_")
+        for option in description.options:
+            label = str(option["label"]).lower().replace(" ", "_")
+            if normalized in (label, option["key"]):
+                return unit(option["value"])
         try:
-            hour, minute = int(hour_text), int(minute_text)
-        except ValueError as error:
-            raise ValueError(f"{field_name} must be HH:MM or minutes") from error
-        if not 0 <= hour <= 24 or not 0 <= minute <= 59 or (hour == 24 and minute):
-            raise ValueError(f"{field_name} is not a valid time")
-        return hour * 60 + minute
+            return unit[value.strip().upper()]
+        except KeyError as error:
+            raise ValueError(
+                f"Value must be one of: {', '.join(str(x['label']) for x in description.options)}"
+            ) from error
     try:
-        return int(value)
+        return unit(int(value))
     except (TypeError, ValueError) as error:
-        raise ValueError(f"{field_name} must be HH:MM or minutes") from error
+        raise ValueError("Invalid enum value") from error
 
 
 def _now_iso() -> str:
@@ -1298,11 +1579,7 @@ class RuntimeState:
     last_error: str | None = None
     reconnect_count: int = 0
     subscribed_registers: set[str] = field(
-        default_factory=lambda: {
-            name
-            for name, description in ENTITY_CATALOG.items()
-            if description.enabled_default
-        }
+        default_factory=lambda: expand_subscriptions(default_subscriptions())
     )
 
     async def update_states(
@@ -1330,6 +1607,69 @@ class RuntimeState:
             "registers_available": len(self.latest_values),
             "registers_unsupported": len(session.unsupported_registers) if session else 0,
             "registers_subscribed": len(self.subscribed_registers),
+            "registers_not_applicable": (
+                len(session.not_applicable_registers) if session else 0
+            ),
+            "registers_stale": len(self.stale_registers()),
+            "catalog_sha256": CATALOG_SHA256,
+            "runtime": "python",
+        }
+
+    def stale_registers(self) -> list[str]:
+        """Return values older than three poll intervals of their group.
+
+        Values are kept for diagnostics, but consumers must not present them as
+        live telemetry.
+        """
+        session = self.active_session
+        intervals = (
+            session.poll_intervals if session is not None else dict(POLL_INTERVALS)
+        )
+        now = datetime.now(timezone.utc)
+        stale: list[str] = []
+        for register_name, updated in self.updated_at.items():
+            description = ENTITY_CATALOG.get(register_name)
+            if description is None:
+                continue
+            try:
+                age = (now - datetime.fromisoformat(updated)).total_seconds()
+            except (TypeError, ValueError):
+                continue
+            if age > 3 * float(intervals.get(description.poll_group, 300)) + 60:
+                stale.append(register_name)
+        return sorted(stale)
+
+    def diagnostics(self) -> dict[str, Any]:
+        """Return connector diagnostics for support and Home Assistant."""
+        session = self.active_session
+        subscriptions: dict[str, dict[str, int]] = {}
+        for register_name in self.subscribed_registers:
+            description = ENTITY_CATALOG[register_name]
+            role = subscriptions.setdefault(description.client_role, {})
+            role[description.poll_group] = role.get(description.poll_group, 0) + 1
+        return {
+            "runtime": "python",
+            "connector_version": CONNECTOR_VERSION,
+            "huawei_solar_version": _package_version("huawei-solar"),
+            "tmodbus_version": _package_version("tmodbus"),
+            "catalog_sha256": CATALOG_SHA256,
+            "catalog_entities": len(ENTITY_CATALOG),
+            "connected": session is not None and not session.closed,
+            "devices": session.device_details if session else {},
+            "capabilities": session.capabilities() if session else {},
+            "subscriptions": subscriptions,
+            "registers_subscribed": len(self.subscribed_registers),
+            "registers_unsupported": (
+                sorted(session.unsupported_registers) if session else []
+            ),
+            "registers_not_applicable": (
+                sorted(session.not_applicable_registers) if session else []
+            ),
+            "registers_raw_values": sorted(session.raw_value_registers) if session else [],
+            "registers_stale": self.stale_registers(),
+            "poll_groups": session.poll_stats if session else {},
+            "last_poll_success": session.last_poll_success if session else self.last_success,
+            "last_verified_write": session.last_verified_write if session else None,
         }
 
     def device(self) -> dict[str, Any]:
@@ -1373,7 +1713,7 @@ class RuntimeState:
         unknown = sorted(set(register_names) - set(ENTITY_CATALOG))
         if unknown:
             raise ValueError(f"Unknown register names: {', '.join(unknown[:10])}")
-        subscriptions = set(register_names)
+        subscriptions = expand_subscriptions(set(register_names))
         removed = self.subscribed_registers - subscriptions
         self.subscribed_registers = subscriptions
         for register_name in removed:
@@ -1392,6 +1732,8 @@ class RuntimeState:
             "values": self.latest_values,
             "updated_at": self.updated_at,
             "unsupported": sorted(session.unsupported_registers) if session else [],
+            "not_applicable": sorted(session.not_applicable_registers) if session else [],
+            "stale": self.stale_registers(),
         }
 
     def connected_session(self) -> ReverseModbusSession:
@@ -1663,15 +2005,9 @@ class CommandApi:
                         session.last_poll_success if session else self.state.last_success,
                     )
                     self._last_state_summary = summary
-                await _send_json(
-                    writer,
-                    200,
-                    {
-                        "values": self.state.latest_values,
-                        "updated_at": self.state.updated_at,
-                        "unsupported": unsupported,
-                    },
-                )
+                await _send_json(writer, 200, self.state.states())
+            elif method == "GET" and path == API_DIAGNOSTICS:
+                await _send_json(writer, 200, self.state.diagnostics())
             elif method == "POST" and path == API_SUBSCRIPTIONS:
                 payload = _decode_json_object(body)
                 try:
@@ -1701,7 +2037,13 @@ class CommandApi:
                     value = await self.state.set_value(register_name, payload["value"])
                 except ValueError as error:
                     raise HttpError(400, str(error)) from error
-                except (TimeoutError, ConnectionError, ModbusProtocolError, HuaweiSolarException) as error:
+                except (
+                    TimeoutError,
+                    ConnectionError,
+                    ModbusProtocolError,
+                    HuaweiSolarException,
+                    WriteVerificationError,
+                ) as error:
                     raise HttpError(502, str(error)) from error
                 await _send_json(writer, 200, {"ok": True, "register_name": register_name, "value": value})
             elif method == "POST" and path == API_TOU_PERIODS:
@@ -1710,7 +2052,13 @@ class CommandApi:
                     value = await self.state.set_tou_periods(payload.get("periods"))
                 except ValueError as error:
                     raise HttpError(400, str(error)) from error
-                except (TimeoutError, ConnectionError, ModbusProtocolError, HuaweiSolarException) as error:
+                except (
+                    TimeoutError,
+                    ConnectionError,
+                    ModbusProtocolError,
+                    HuaweiSolarException,
+                    WriteVerificationError,
+                ) as error:
                     raise HttpError(502, str(error)) from error
                 await _send_json(writer, 200, {"ok": True, "value": value})
             elif method == "POST" and path.startswith("/commands/"):
