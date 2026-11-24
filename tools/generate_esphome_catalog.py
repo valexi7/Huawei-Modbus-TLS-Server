@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import functools
 import hashlib
+import importlib.metadata
 import json
 import re
 import sys
@@ -17,9 +18,17 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from emma_catalog import VIRTUAL_ENTITY_DESCRIPTIONS, build_entity_catalog  # noqa: E402
+from emma_catalog import (  # noqa: E402
+    CAPABILITY_MASKS,
+    DERIVED_ENTITY_DESCRIPTIONS,
+    SMARTGUARD_BINARY_DESCRIPTIONS,
+    VIRTUAL_ENTITY_DESCRIPTIONS,
+    build_entity_catalog,
+    catalog_sha256,
+)
 from connector_contract import (  # noqa: E402
     API_PREFIX,
+    CONNECTOR_VERSION,
     CONTRACT_VERSION,
     DEFAULT_API_PORT,
     DEFAULT_REQUEST_TIMEOUT_SECONDS,
@@ -34,6 +43,7 @@ from connector_contract import (  # noqa: E402
 from huawei_solar.registers import REGISTERS  # noqa: E402
 
 
+HUAWEI_SOLAR_VERSION = importlib.metadata.version("huawei-solar")
 DEFAULT_HEADER = ROOT / "esphome/components/huawei_emma_reverse/generated_register_catalog.h"
 DEFAULT_MANIFEST = ROOT / "esphome/entity-migration-map.json"
 DEFAULT_CONTRACT = ROOT / "esphome/connector-contract.json"
@@ -89,17 +99,27 @@ def build_manifest() -> dict[str, Any]:
         _entry(description.to_dict(), virtual=False)
         for description in sorted(catalog.values(), key=lambda x: (x.address, x.register_name))
     ]
-    virtual = [_entry(dict(item), virtual=True) for item in VIRTUAL_ENTITY_DESCRIPTIONS.values()]
+    virtual = [
+        _entry(dict(item), virtual=True)
+        for item in (
+            *VIRTUAL_ENTITY_DESCRIPTIONS.values(),
+            *DERIVED_ENTITY_DESCRIPTIONS.values(),
+            *SMARTGUARD_BINARY_DESCRIPTIONS.values(),
+        )
+    ]
     entities = physical + virtual
     canonical = json.dumps(entities, sort_keys=True, separators=(",", ":"))
     return {
-        "schema_version": 2,
+        "schema_version": 3,
         "connector_contract_version": CONTRACT_VERSION,
-        "catalog_sha256": hashlib.sha256(canonical.encode()).hexdigest(),
+        # Same hash as the Python connector's CATALOG_SHA256, so diagnostics
+        # from every runtime can be compared directly.
+        "catalog_sha256": catalog_sha256(catalog),
+        "manifest_sha256": hashlib.sha256(canonical.encode()).hexdigest(),
         "source": {
             "python_module": "custom_components.huawei_emma_management.embedded_catalog",
             "contract_module": "custom_components.huawei_emma_management.connector_contract",
-            "register_library": "huawei-solar==3.0.6",
+            "register_library": f"huawei-solar=={HUAWEI_SOLAR_VERSION}",
             "generator": "tools/generate_esphome_catalog.py",
         },
         "entity_policy": {
@@ -133,6 +153,7 @@ VALUE_TYPES = {
     "I32AbsoluteValueRegister": "I32_ABSOLUTE",
     "StringRegister": "STRING",
     "TimestampRegister": "TIMESTAMP",
+    "IPv4Register": "IPV4",
     "HUAWEI_LUNA2000_TimeOfUseRegisters": "TOU_HUAWEI",
     "LG_RESU_TimeOfUseRegisters": "TOU_LG",
     "ChargeDischargePeriodRegisters": "CHARGE_PERIODS",
@@ -175,9 +196,40 @@ def _mapping_rows(register_name: str, description: Any) -> list[tuple[int, str, 
     return rows
 
 
+def _extra_json(description: Any) -> str:
+    """Return 0.15 entity metadata as a JSON object fragment (leading comma).
+
+    The firmware streams this verbatim in /entities so new metadata stays in
+    exact parity with the Python connector without hand-written C++.
+    """
+    extra: dict[str, Any] = {}
+    for field in ("value_kind", "allowed_values", "required_capabilities", "depends_on", "flags"):
+        value = getattr(description, field)
+        if value:
+            extra[field] = list(value) if isinstance(value, tuple) else value
+    if description.three_phase_only:
+        extra["three_phase_only"] = True
+    if not extra:
+        return ""
+    return "," + json.dumps(extra, separators=(",", ":"), ensure_ascii=False)[1:-1]
+
+
 def build_header(manifest: dict[str, Any]) -> str:
     descriptions = build_entity_catalog()
     names = sorted(descriptions, key=lambda name: (descriptions[name].address, name))
+    index_of = {name: index for index, name in enumerate(names)}
+    capability_names = list(CAPABILITY_MASKS)
+    allowed: list[tuple[int, int]] = []
+    allowed_ranges: dict[str, tuple[int, int]] = {}
+    dependencies: list[tuple[int, int]] = []
+    dependency_ranges: dict[str, tuple[int, int]] = {}
+    for name in names:
+        values = descriptions[name].allowed_values
+        allowed_ranges[name] = (len(allowed), len(values))
+        allowed.extend((index_of[name], int(value)) for value in values)
+        depends = [dep for dep in descriptions[name].depends_on if dep in index_of]
+        dependency_ranges[name] = (len(dependencies), len(depends))
+        dependencies.extend((index_of[name], index_of[dep]) for dep in depends)
     mappings: list[tuple[int, int, str, str, str]] = []
     mapping_ranges: dict[str, tuple[int, int]] = {}
     for entity_index, name in enumerate(names):
@@ -196,7 +248,7 @@ def build_header(manifest: dict[str, Any]) -> str:
         "",
         "namespace esphome::huawei_emma_reverse {",
         "",
-        "enum class GeneratedValueType : uint8_t { U16, I16, U32, I32, U64, I64, I32_ABSOLUTE, STRING, TIMESTAMP, TOU_HUAWEI, TOU_LG, CHARGE_PERIODS, PEAK_PERIODS };",
+        "enum class GeneratedValueType : uint8_t { U16, I16, U32, I32, U64, I64, I32_ABSOLUTE, STRING, TIMESTAMP, IPV4, TOU_HUAWEI, TOU_LG, CHARGE_PERIODS, PEAK_PERIODS };",
         "enum class GeneratedUnitKind : uint8_t { PLAIN, BOOL, ENUM, MAP, BITFIELD };",
         "",
         "struct GeneratedValueMapping {",
@@ -213,6 +265,18 @@ def build_header(manifest: dict[str, Any]) -> str:
         "  uint64_t invalid_raw; bool has_invalid;",
         "  double minimum; double maximum; double step; bool has_range;",
         "  uint16_t mapping_start; uint16_t mapping_count;",
+        "  uint16_t allowed_start; uint8_t allowed_count;",
+        "  int16_t required_capability; bool three_phase_only; bool capability_mask;",
+        "  uint16_t dependency_start; uint8_t dependency_count;",
+        "  const char *extra_json;",
+        "};",
+        "",
+        "struct GeneratedCapability {",
+        "  const char *name; uint16_t mask_entity_index; uint8_t bit; bool inverted;",
+        "};",
+        "",
+        "struct GeneratedIndexPair {",
+        "  uint16_t entity_index; int64_t value;",
         "};",
         "",
         f"inline constexpr uint16_t GENERATED_CONTRACT_VERSION = {CONTRACT_VERSION};",
@@ -235,11 +299,18 @@ def build_header(manifest: dict[str, Any]) -> str:
         f"inline constexpr uint16_t GENERATED_MAX_READ_REGISTERS = {MAX_READ_REGISTERS};",
         f"inline constexpr uint16_t GENERATED_MAX_WRITE_REGISTERS = {MAX_WRITE_REGISTERS};",
         f"inline constexpr uint8_t GENERATED_TOU_MAX_PERIODS = {TOU_MAX_PERIODS};",
+        f'inline constexpr char GENERATED_PATH_DIAGNOSTICS[] = "{API_PREFIX}/diagnostics";',
+        f'inline constexpr char GENERATED_HUAWEI_SOLAR_VERSION[] = "{HUAWEI_SOLAR_VERSION}";',
+        f'inline constexpr char GENERATED_CONNECTOR_VERSION[] = "{CONNECTOR_VERSION}";',
         f"inline constexpr size_t GENERATED_ENTITY_COUNT = {len(names)};",
         f"inline constexpr size_t GENERATED_MAPPING_COUNT = {len(mappings)};",
+        f"inline constexpr size_t GENERATED_CAPABILITY_COUNT = {len(capability_names)};",
+        f"inline constexpr size_t GENERATED_ALLOWED_COUNT = {max(len(allowed), 1)};",
+        f"inline constexpr size_t GENERATED_DEPENDENCY_COUNT = {max(len(dependencies), 1)};",
         "",
         "inline constexpr std::array<GeneratedEntityMetadata, GENERATED_ENTITY_COUNT> GENERATED_ENTITIES{{",
     ]
+    mask_registers = {mask for mask, _bit, _inverted in CAPABILITY_MASKS.values()}
     for name in names:
         description = descriptions[name]
         register = REGISTERS[name]
@@ -266,13 +337,40 @@ def build_header(manifest: dict[str, Any]) -> str:
             f"{(0 if invalid is None else int(invalid) & ((1 << 64) - 1))}ULL",
             "false" if invalid is None else "true", f"{minimum:.12g}", f"{maximum:.12g}",
             f"{step:.12g}", "true" if description.minimum is not None else "false", str(start), str(count),
+            str(allowed_ranges[name][0]), str(allowed_ranges[name][1]),
+            str(_capability_index(description, capability_names)),
+            "true" if description.three_phase_only else "false",
+            "true" if name in mask_registers else "false",
+            str(dependency_ranges[name][0]), str(dependency_ranges[name][1]),
+            _cpp_string(_extra_json(description)),
         )
         lines.append("    {" + ", ".join(fields) + "},")
     lines.extend(["}};", "", "inline constexpr std::array<GeneratedValueMapping, GENERATED_MAPPING_COUNT> GENERATED_MAPPINGS{{"])
     for entity_index, raw, key, label, off_label in mappings:
         lines.append(f"    {{{entity_index}, {raw}, {_cpp_string(key)}, {_cpp_string(label)}, {_cpp_string(off_label)}}},")
+    lines.extend(["}};", "", "inline constexpr std::array<GeneratedCapability, GENERATED_CAPABILITY_COUNT> GENERATED_CAPABILITIES{{"])
+    for capability in capability_names:
+        mask, bit, inverted = CAPABILITY_MASKS[capability]
+        lines.append(
+            f"    {{{_cpp_string(capability)}, {index_of[mask]}, {bit}, {'true' if inverted else 'false'}}},"
+        )
+    lines.extend(["}};", "", "inline constexpr std::array<GeneratedIndexPair, GENERATED_ALLOWED_COUNT> GENERATED_ALLOWED_VALUES{{"])
+    for entity_index, value in allowed or [(0, 0)]:
+        lines.append(f"    {{{entity_index}, {value}}},")
+    lines.extend(["}};", "", "inline constexpr std::array<GeneratedIndexPair, GENERATED_DEPENDENCY_COUNT> GENERATED_DEPENDENCIES{{"])
+    for entity_index, dependency in dependencies or [(0, 0)]:
+        lines.append(f"    {{{entity_index}, {dependency}}},")
     lines.extend(["}};", "", "}  // namespace esphome::huawei_emma_reverse", ""])
     return "\n".join(lines)
+
+
+def _capability_index(description: Any, capability_names: list[str]) -> int:
+    capabilities = description.required_capabilities
+    if len(capabilities) > 1:
+        raise ValueError(
+            f"Firmware supports one required capability per register: {description.register_name}"
+        )
+    return capability_names.index(capabilities[0]) if capabilities else -1
 
 
 def generated_outputs() -> dict[Path, str]:
