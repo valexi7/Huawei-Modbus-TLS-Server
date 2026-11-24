@@ -79,6 +79,9 @@ class HuaweiEmmaReverse : public Component {
     this->private_key_ = private_key;
   }
   void set_log_raw(bool value) { this->log_raw_ = value; }
+  // EMMA read-only mode: telemetry and discovery continue, but no Modbus
+  // write function code is ever sent (external reserve provider in control).
+  void set_read_only(bool value) { this->read_only_ = value; }
 
   void setup() override;
   void loop() override;
@@ -156,6 +159,7 @@ class HuaweiEmmaReverse : public Component {
   std::string certificate_;
   std::string private_key_;
   bool log_raw_{false};
+  bool read_only_{false};
 
   TaskHandle_t tls_task_handle_{nullptr};
   SemaphoreHandle_t tls_mutex_{nullptr};

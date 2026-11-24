@@ -18,6 +18,7 @@ CONF_PRIVATE_KEY = "private_key"
 CONF_ACTIVITY_OUTPUT_ID = "activity_output_id"
 CONF_CONNECTED = "connected"
 CONF_LOG_RAW = "log_raw"
+CONF_READ_ONLY = "read_only"
 
 DEPENDENCIES = ["esp32", "emma_w5500"]
 AUTO_LOAD = ["binary_sensor"]
@@ -38,6 +39,9 @@ CONFIG_SCHEMA = cv.All(
             cv.Required(CONF_CERTIFICATE): cv.sensitive(cv.string_strict),
             cv.Required(CONF_PRIVATE_KEY): cv.sensitive(cv.string_strict),
             cv.Optional(CONF_LOG_RAW, default=False): cv.boolean,
+            # EMMA read-only mode for installations controlled by an external
+            # reserve market provider: telemetry only, every write rejected.
+            cv.Optional(CONF_READ_ONLY, default=False): cv.boolean,
             cv.Optional(
                 CONF_CONNECTED,
                 default={"name": "EMMA TLS Connected", "device_class": "connectivity"},
@@ -64,6 +68,7 @@ async def to_code(config):
     cg.add(var.set_api_token(config[CONF_API_TOKEN]))
     cg.add(var.set_tls_material(config[CONF_CERTIFICATE], config[CONF_PRIVATE_KEY]))
     cg.add(var.set_log_raw(config[CONF_LOG_RAW]))
+    cg.add(var.set_read_only(config[CONF_READ_ONLY]))
 
     # ESPHome 2026.11+ compiles the mbedTLS TLS stack out unless a component
     # asks for it; this connector uses mbedtls_ssl_* directly.

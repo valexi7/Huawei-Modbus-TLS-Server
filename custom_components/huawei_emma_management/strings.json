@@ -21,13 +21,15 @@
           "certificate_name": "Certificate DNS name or IP address",
           "certificate_path": "Custom certificate path",
           "private_key_path": "Custom private-key path",
-          "private_key_password": "Private-key password"
+          "private_key_password": "Private-key password",
+          "read_only": "EMMA read-only mode"
         },
         "data_description": {
           "certificate_name": "Use the exact fixed IP address or DNS name configured as the management server in EMMA.",
           "certificate_path": "Required only when Certificate source is custom.",
           "private_key_path": "Required only when Certificate source is custom.",
-          "private_key_password": "Leave empty for an unencrypted key."
+          "private_key_password": "Leave empty for an unencrypted key.",
+          "read_only": "Enable when EMMA and the battery are controlled by an external reserve market provider or another energy management system. Telemetry, discovery and SmartGuard keep working; every write (TOU, SOC limits, forced charging, peak shaving, SmartGuard switching) is rejected."
         }
       },
       "external": {
@@ -36,7 +38,11 @@
         "data": {
           "host": "Connector host",
           "port": "Connector API port",
-          "token": "EMMA API key"
+          "token": "EMMA API key",
+          "read_only": "EMMA read-only mode"
+        },
+        "data_description": {
+          "read_only": "Enable when EMMA and the battery are controlled by an external reserve market provider or another energy management system. Telemetry, discovery and SmartGuard keep working; every write (TOU, SOC limits, forced charging, peak shaving, SmartGuard switching) is rejected."
         }
       }
     },
@@ -69,14 +75,16 @@
           "private_key_password": "Private-key password",
           "host": "Connector host",
           "port": "Connector API port",
-          "token": "EMMA API key"
+          "token": "EMMA API key",
+          "read_only": "EMMA read-only mode"
         },
         "data_description": {
           "accept_external_growatt_controls": "When disabled, growatt_server.update_time_segment is rejected. Reading and native Huawei controls remain available.",
           "certificate_name": "Changing this automatically renews an integration-managed leaf certificate while retaining the same local CA.",
           "certificate_path": "Required only when Certificate source is custom.",
           "private_key_path": "Required only when Certificate source is custom.",
-          "private_key_password": "Leave empty for an unencrypted key."
+          "private_key_password": "Leave empty for an unencrypted key.",
+          "read_only": "Enable when EMMA and the battery are controlled by an external reserve market provider or another energy management system. Telemetry, discovery and SmartGuard keep working; every write (TOU, SOC limits, forced charging, peak shaving, SmartGuard switching) is rejected. Switching it reloads the entry and keeps all entities."
         }
       }
     }

@@ -63,6 +63,7 @@ void HuaweiEmmaReverse::dump_config() {
   ESP_LOGCONFIG(TAG, "  EMMA interface: %s:%u", this->ethernet_->get_ip_address().c_str(), this->tls_port_);
   ESP_LOGCONFIG(TAG, "  Home Assistant connector API port: %u", this->api_port_);
   ESP_LOGCONFIG(TAG, "  Raw Modbus logging: %s", YESNO(this->log_raw_));
+  ESP_LOGCONFIG(TAG, "  EMMA read-only mode: %s", YESNO(this->read_only_));
   ESP_LOGCONFIG(TAG, "  TLS certificate: embedded (%u bytes)", static_cast<unsigned>(this->certificate_.size()));
   ESP_LOGCONFIG(TAG, "  Activity LED: GPIO binary; timing-coded (RGB is not available on T-ETH-Elite)");
   ESP_LOGCONFIG(TAG, "  Connector contract: v%u; generated catalog: %u registers", GENERATED_CONTRACT_VERSION,
@@ -285,6 +286,12 @@ bool HuaweiEmmaReverse::read_frame_(ModbusFrame &frame) {
 bool HuaweiEmmaReverse::request_(uint8_t unit, const std::vector<uint8_t> &pdu, ModbusFrame &response) {
   if (!this->connected_.load())
     return false;
+  if (this->read_only_ && !pdu.empty() &&
+      (pdu[0] == 0x05 || pdu[0] == 0x06 || pdu[0] == 0x0F || pdu[0] == 0x10 || pdu[0] == 0x15 ||
+       pdu[0] == 0x16 || pdu[0] == 0x17)) {
+    ESP_LOGW(TAG, "Blocked Modbus write fc=0x%02X unit=%u: read-only mode", pdu[0], unit);
+    return false;
+  }
   const uint16_t transaction = this->next_transaction_++;
   const uint16_t length = static_cast<uint16_t>(pdu.size() + 1);
   std::vector<uint8_t> frame(7 + pdu.size());
@@ -1115,6 +1122,14 @@ esp_err_t HuaweiEmmaReverse::handle_http_(httpd_req_t *request) {
     }
     return this->send_json_(request, out.str());
   }
+  static const char READ_ONLY_ERROR[] =
+      "{\"error\":\"EMMA read-only mode is enabled: writes are disabled because EMMA and the battery are "
+      "controlled by an external provider\"}";
+  const bool write_request = request->method == HTTP_POST && uri != GENERATED_PATH_SUBSCRIPTIONS;
+  if (this->read_only_ && write_request) {
+    ESP_LOGI(TAG, "Connector API write rejected path=%s: read-only mode", request->uri);
+    return this->send_json_(request, READ_ONLY_ERROR, "423 Locked");
+  }
   if (request->method == HTTP_POST && uri == GENERATED_PATH_TOU) {
     std::vector<TouPeriod> periods;
     std::string error;
@@ -1278,6 +1293,7 @@ std::string HuaweiEmmaReverse::health_json_() {
   out << available << ",\"registers_subscribed\":" << subscribed << ",\"registers_unsupported\":" << unsupported
       << ",\"registers_not_applicable\":" << not_applicable << ",\"registers_stale\":" << stale
       << ",\"catalog_sha256\":\"" << GENERATED_CATALOG_SHA256 << "\",\"runtime\":\"esphome\""
+      << ",\"read_only\":" << (this->read_only_ ? "true" : "false")
       << ",\"reconnect_count\":" << this->reconnect_count_ << ",\"connected_at_ms\":" << this->connected_at_ms_
       << ",\"last_poll_ms\":" << this->last_poll_ms_ << ",\"last_error\":\""
       << json_escape_(this->last_error_) << "\"}";
@@ -1303,9 +1319,11 @@ std::string HuaweiEmmaReverse::diagnostics_json_() {
         << "\",\"unit_id\":" << static_cast<unsigned>(device.unit_id) << ",\"sw_version\":\""
         << json_escape_(device.firmware) << "\"}";
   }
-  out << "},\"capabilities\":{";
+  out << "},\"read_only\":" << (this->read_only_ ? "true" : "false")
+      << ",\"control_available\":" << (this->read_only_ ? "false" : "true") << ",\"capabilities\":{\"writes\":"
+      << (this->read_only_ ? "false" : "true");
   for (size_t index = 0; index < GENERATED_CAPABILITY_COUNT; index++) {
-    if (index) out << ',';
+    out << ',';
     const int8_t state = this->capability_state_(index);
     out << '\"' << GENERATED_CAPABILITIES[index].name << "\":" << (state < 0 ? "null" : state ? "true" : "false");
   }

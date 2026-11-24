@@ -9,7 +9,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
-from .api import EmmaApiClient, EmmaApiError
+from .api import EmmaApiClient, EmmaApiError, EmmaReadOnlyError
 from .const import (
     CONF_DISCOVERED_DEVICE,
     DOMAIN,
@@ -54,6 +54,10 @@ class EmmaCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self.entry_id = entry_id
         self.stable_identifier = stable_identifier
         self.accept_external_growatt_controls = True
+        # EMMA read-only mode from the integration options. The connector can
+        # also report read-only mode on its own (standalone --read-only or the
+        # ESPHome read_only option); either one blocks every control action.
+        self.read_only_option = False
         self.device_data: dict[str, Any] = dict(initial_device_data or {})
         self.entity_descriptions: list[dict[str, Any]] = []
         self.tou_slots = [self._new_tou_slot() for _ in range(TOU_MAX_PERIODS)]
@@ -83,6 +87,22 @@ class EmmaCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     @property
     def unique_id_prefix(self) -> str:
         return self.parent_identifier
+
+    @property
+    def connector_read_only(self) -> bool:
+        health = (self.data or {}).get("health", {})
+        return bool(isinstance(health, dict) and health.get("read_only"))
+
+    @property
+    def read_only(self) -> bool:
+        return self.read_only_option or self.connector_read_only
+
+    def _raise_if_read_only(self, source: str, target: str) -> None:
+        if self.read_only:
+            _LOGGER.info(
+                "CONTROL rejected source=%s target=%s reason=read_only_mode", source, target
+            )
+            raise EmmaReadOnlyError()
 
     def has_device_role(self, role: str) -> bool:
         """Return whether the discovered topology contains a device role."""
@@ -310,6 +330,7 @@ class EmmaCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             register_name,
             value,
         )
+        self._raise_if_read_only(source, register_name)
         try:
             value = await self.api.set_value(register_name, value)
         except EmmaApiError as error:
@@ -502,6 +523,7 @@ class EmmaCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             source,
             periods,
         )
+        self._raise_if_read_only(source, TOU_REGISTER_NAME)
         try:
             async with self._tou_write_lock:
                 value = await self.api.set_tou_periods(periods)
@@ -553,6 +575,7 @@ class EmmaCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         enabled: bool,
     ) -> list[dict[str, Any]]:
         """Update one compatibility slot and immediately commit the EMMA schedule."""
+        self._raise_if_read_only("growatt_update_time_segment", TOU_REGISTER_NAME)
         _LOGGER.debug(
             "GROWATT UPDATE received segment_id=%s batt_mode=%s start=%s end=%s "
             "enabled=%s",

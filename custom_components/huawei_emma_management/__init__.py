@@ -36,11 +36,13 @@ from .const import (
     CONF_MODE,
     CONF_PRIVATE_KEY_PASSWORD,
     CONF_PRIVATE_KEY_PATH,
+    CONF_READ_ONLY,
     CONF_SMARTGUARD_DEFAULTS_APPLIED,
     CONF_TLS_PORT,
     CONFIG_ENTRY_MINOR_VERSION,
     CONF_TOKEN,
     DEFAULT_ACCEPT_EXTERNAL_GROWATT_CONTROLS,
+    DEFAULT_READ_ONLY,
     DOMAIN,
     GROWATT_BATTERY_MODES,
     GROWATT_COMPAT_DOMAIN,
@@ -327,6 +329,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                     CONF_CERTIFICATE_MODE, CERTIFICATE_AUTOMATIC
                 )
                 == CERTIFICATE_AUTOMATIC,
+                read_only=_read_only_enabled(entry),
             )
         )
         try:
@@ -353,6 +356,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         else None,
     )
     coordinator.embedded_server = embedded_server
+    coordinator.read_only_option = _read_only_enabled(entry)
+    if coordinator.read_only_option:
+        _LOGGER.info(
+            "EMMA read-only mode is enabled for %s: telemetry only, no writes",
+            entry.title,
+        )
     coordinator.accept_external_growatt_controls = entry.options.get(
         CONF_ACCEPT_EXTERNAL_GROWATT_CONTROLS,
         DEFAULT_ACCEPT_EXTERNAL_GROWATT_CONTROLS,
@@ -1385,6 +1394,13 @@ def _async_enable_smartguard_entities(
             entity_registry.async_update_entity(
                 registry_entry.entity_id, disabled_by=None
             )
+
+
+def _read_only_enabled(entry: ConfigEntry) -> bool:
+    """Return the EMMA read-only option (options override initial setup data)."""
+    return bool(
+        entry.options.get(CONF_READ_ONLY, entry.data.get(CONF_READ_ONLY, DEFAULT_READ_ONLY))
+    )
 
 
 def _config_path(hass: HomeAssistant, value: str) -> Path:
