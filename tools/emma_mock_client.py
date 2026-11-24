@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Networked Huawei EMMA mock: TLS client and Modbus/TCP slave."""
+"""Networked Huawei EMMA mock: TLS client and multi-unit Modbus/TCP slave."""
 
 from __future__ import annotations
 
@@ -97,20 +97,167 @@ def decode_tou_periods(registers: list[int]) -> list[dict[str, int]]:
     return periods
 
 
-class EmmaMockDevice:
-    """Stateful Modbus slave implementing the subset used by the ESP32."""
+SCHARGER_INFO = (
+    "1=SCharger-7KS-S0;2=V100R022C10SPC100;3=P1.15-D5.0;"
+    "4=MOCK-CHARGER-0001;5=4;6=1.1;8=SCharger;9=0"
+)
+SMARTGUARD_UNIT = 2
+INVERTER_UNIT = 3
+SCHARGER_UNIT = 4
+# Europe/Helsinki in winter (UTC+2). EMMA's local clock register 31003 holds
+# wall-clock seconds; system time 40470 holds UTC seconds.
+DEFAULT_UTC_OFFSET = 2 * 3600
 
-    def __init__(self, pv_power: int = 3400, load_power: int = 2364) -> None:
+_WRITE_FUNCTIONS = (0x06, 0x10)
+
+
+def _register(name: str):
+    """Return the huawei-solar register definition (imported lazily)."""
+    from huawei_solar.registers import REGISTERS
+
+    return REGISTERS[name]
+
+
+def encode_register(name: str, value) -> dict[int, int]:
+    """Encode a value into raw holding registers using the library definition.
+
+    Numbers are multiplied by the register gain; enums and flags use their
+    integer value; strings are ASCII padded with NUL. The mock therefore uses
+    exactly the addresses, widths and scaling that huawei-solar expects.
+    """
+    register = _register(name)
+    kind = type(register).__name__
+    if kind == "StringRegister":
+        data = str(value).encode("ascii")[: register.length * 2].ljust(register.length * 2, b"\0")
+        words = list(struct.unpack(f">{register.length}H", data))
+    else:
+        if kind == "IPv4Register":
+            raw = int.from_bytes(bytes(int(part) for part in str(value).split(".")), "big")
+        else:
+            number = int(value) if hasattr(value, "value") else value
+            raw = round(float(number) * getattr(register, "gain", 1))
+        bits = register.length * 16
+        raw &= (1 << bits) - 1
+        words = [(raw >> (16 * (register.length - 1 - index))) & 0xFFFF for index in range(register.length)]
+    return {register.register + index: word for index, word in enumerate(words)}
+
+
+class EmmaMockDevice:
+    """Stateful multi-unit Modbus slave modelled on an EMMA-A02 installation.
+
+    Unit 0 is EMMA, unit 2 a SmartGuard, unit 3 a SUN2000 inverter with LUNA
+    battery and (optionally) unit 4 an SCharger. Every unit has its own
+    register bank, so addresses that exist on several devices (for example
+    30035, the EMMA and SmartGuard software version) return per-device data.
+    Scenario knobs: SmartGuard phase type, grid outage, unknown enum values,
+    rejected or silently ignored writes, and response delays/disconnects in
+    ``run_connection``.
+    """
+
+    def __init__(
+        self,
+        pv_power: int = 3400,
+        load_power: int = 2364,
+        *,
+        smartguard_phase: str = "single",
+        grid_outage: bool = False,
+        scharger: bool = False,
+        write_failure: str = "none",
+        unknown_enum: bool = False,
+        utc_offset: int = DEFAULT_UTC_OFFSET,
+        clock_utc: int = 1_767_225_600,  # 2026-01-01T00:00:00Z
+    ) -> None:
+        if write_failure not in ("none", "exception", "ignore"):
+            raise ValueError("write_failure must be none, exception or ignore")
         self.base_pv_power = pv_power
         self.base_load_power = load_power
         self.core_read_count = 0
         self.request_count = 0
+        self.write_failure = write_failure
+        self.scharger = scharger
+        self.writes: list[tuple[int, int, list[int]]] = []
         self.tou_registers = encode_tou_periods(
             [
                 {"start": 0, "end": 270, "charge_flag": 0, "days": 0x7F},
                 {"start": 420, "end": 1439, "charge_flag": 1, "days": 0x7F},
             ]
         )
+        self.banks: dict[int, dict[int, int]] = {0: {}, SMARTGUARD_UNIT: {}, INVERTER_UNIT: {}}
+        if scharger:
+            self.banks[SCHARGER_UNIT] = {}
+        self._populate(smartguard_phase, grid_outage, unknown_enum, utc_offset, clock_utc)
+
+    def _put(self, unit: int, name: str, value) -> None:
+        self.banks[unit].update(encode_register(name, value))
+
+    def _populate(
+        self, phase: str, outage: bool, unknown_enum: bool, utc_offset: int, clock_utc: int
+    ) -> None:
+        emma, guard, inverter = 0, SMARTGUARD_UNIT, INVERTER_UNIT
+        for name, value in (
+            ("model_name", "SmartHEMS"),  # what a real EMMA reports at 30000
+            ("serial_number", "MOCK-EMMA-0001"),
+            ("emma_software_version", "V100R025C00SPC115"),
+            ("emma_model", "EMMA-A02"),
+            ("inverter_rated_power", 10_000),
+            ("emma_ess_control_mode", 2),
+            ("emma_tou_maximum_power_for_charging_batteries_from_grid", 5_000),
+            ("backup_power_state_of_charge", 20),
+            # Feature masks: three-phase imbalance control and manual off-grid
+            # switchover present; power-limited grid connection supported
+            # (30164 is an inverted mask, so its bit 3 is clear).
+            ("emma_feature_mask_30122", 1 << 20),
+            ("emma_feature_mask_30124", 1 << 9),
+            ("emma_feature_mask_30164", 0),
+            ("emma_feature_mask_30172", 1 << 4),
+            ("emma_local_time", clock_utc + utc_offset),
+            ("emma_system_time", clock_utc),
+        ):
+            self._put(emma, name, value)
+        self.banks[emma].update({TOU_ADDRESS + i: v for i, v in enumerate(self.tou_registers)})
+
+        status = 3 if outage else 1  # off_grid_inverter / on_grid
+        for name, value in (
+            ("model_name", "SmartGuard-63A-T0"),
+            ("smartguard_software_version", "V100R024C00SPC104"),
+            ("smartguard_phase_type", 1 if phase == "three" else 0),
+            ("smartguard_feature_mask", 1),
+            ("smartguard_status", 99 if unknown_enum else status),
+            ("smartguard_grid_voltage", 0 if outage else 231.4),
+            ("smartguard_generator_voltage", 0),
+            ("smartguard_backup_load_voltage", 230.1),
+            ("smartguard_internal_temperature", 31.5),
+        ):
+            self._put(guard, name, value)
+        if phase == "three":
+            for name in (
+                "smartguard_grid_phase_a_voltage",
+                "smartguard_grid_phase_b_voltage",
+                "smartguard_grid_phase_c_voltage",
+                "smartguard_backup_load_phase_a_voltage",
+                "smartguard_backup_load_phase_b_voltage",
+                "smartguard_backup_load_phase_c_voltage",
+            ):
+                self._put(guard, name, 0 if outage and "grid" in name else 230.0)
+
+        for name, value in (
+            ("model_name", "SUN2000-10K-MAP0"),
+            ("serial_number", "MOCK-INVERTER-0001"),
+            ("rated_power", 10_000),
+            ("storage_state_of_capacity", 56.5),
+            ("storage_working_mode_settings", 5),
+            ("storage_charging_cutoff_capacity", 100),
+            ("storage_discharging_cutoff_capacity", 10),
+            ("storage_backup_power_state_of_charge", 20),
+        ):
+            self._put(inverter, name, value)
+
+        if self.scharger:
+            for name, value in (
+                ("model_name", "FusionCharge-7KS-S0"),
+                ("charger_ip_address", "192.168.88.40"),
+            ):
+                self._put(SCHARGER_UNIT, name, value)
 
     def _core_registers(self) -> dict[int, int]:
         phase = self.core_read_count * 0.35
@@ -135,26 +282,37 @@ class EmmaMockDevice:
         values[19] = 2000  # 20.00%
         return {CORE_ADDRESS + index: value for index, value in enumerate(values)}
 
-    @staticmethod
-    def _device_page(object_id: int) -> bytes:
+    def _device_page(self, object_id: int) -> bytes:
+        last = 0x8B if self.scharger else 0x8A
         pages = {
-            0x87: (0xFF, 0x88, [(0x87, b"\x03")]),
-            0x88: (0xFF, 0x89, [(0x88, EMMA_INFO.encode("ascii"))]),
-            0x89: (0xFF, 0x8A, [(0x89, SMARTGUARD_INFO.encode("ascii"))]),
-            0x8A: (0x00, 0x00, [(0x8A, INVERTER_INFO.encode("ascii"))]),
+            0x87: [(0x87, b"\x03")],
+            0x88: [(0x88, EMMA_INFO.encode("ascii"))],
+            0x89: [(0x89, SMARTGUARD_INFO.encode("ascii"))],
+            0x8A: [(0x8A, INVERTER_INFO.encode("ascii"))],
+            0x8B: [(0x8B, SCHARGER_INFO.encode("ascii"))],
         }
-        more, next_object, objects = pages.get(object_id, (0x00, 0x00, []))
+        objects = pages.get(object_id, []) if object_id <= last else []
+        more, next_object = (0xFF, object_id + 1) if objects and object_id < last else (0x00, 0x00)
         response = bytearray((0x2B, 0x0E, 0x03, 0x03, more, next_object, len(objects)))
         for current_id, value in objects:
             response.extend((current_id, len(value)))
             response.extend(value)
         return bytes(response)
 
-    def handle_pdu(self, pdu: bytes) -> bytes:
+    def bank(self, unit: int) -> dict[int, int]:
+        registers = dict(self.banks.get(unit, {}))
+        if unit == 0:
+            registers.update(self._core_registers())
+            registers.update({TOU_ADDRESS + i: v for i, v in enumerate(self.tou_registers)})
+        return registers
+
+    def handle_pdu(self, pdu: bytes, unit: int = 0) -> bytes:
         self.request_count += 1
         if not pdu:
             return _exception(0, 0x03)
         function = pdu[0]
+        if unit not in self.banks:
+            return _exception(function, 0x0B)  # gateway target failed to respond
         if function == 0x2B:
             if len(pdu) != 4 or pdu[1:3] != b"\x0e\x03":
                 return _exception(function, 0x03)
@@ -165,36 +323,56 @@ class EmmaMockDevice:
             address, count = struct.unpack(">HH", pdu[1:5])
             if count < 1 or count > 125:
                 return _exception(function, 0x03)
-            if address == CORE_ADDRESS and count == CORE_COUNT:
+            if unit == 0 and address == CORE_ADDRESS and count == CORE_COUNT:
                 self.core_read_count += 1
-            registers = self._core_registers()
-            registers.update(
-                {TOU_ADDRESS + index: value for index, value in enumerate(self.tou_registers)}
-            )
+            registers = self.bank(unit)
             if any(address + offset not in registers for offset in range(count)):
                 return _exception(function, 0x02)
             data = b"".join(
                 struct.pack(">H", registers[address + offset]) for offset in range(count)
             )
             return bytes((function, len(data))) + data
-        if function == 0x10:
+        if function in _WRITE_FUNCTIONS:
+            return self._handle_write(unit, pdu)
+        return _exception(function, 0x01)
+
+    def _handle_write(self, unit: int, pdu: bytes) -> bytes:
+        function = pdu[0]
+        if function == 0x06:
+            if len(pdu) != 5:
+                return _exception(function, 0x03)
+            address, value = struct.unpack(">HH", pdu[1:5])
+            values = [value]
+            ok_response = pdu
+        else:
             if len(pdu) < 6:
                 return _exception(function, 0x03)
             address, count, byte_count = struct.unpack(">HHB", pdu[1:6])
             if len(pdu) != 6 + byte_count or byte_count != count * 2:
                 return _exception(function, 0x03)
-            if address != TOU_ADDRESS or count != TOU_COUNT:
-                return _exception(function, 0x02)
             values = list(struct.unpack(f">{count}H", pdu[6:]))
+            ok_response = bytes((function,)) + struct.pack(">HH", address, count)
+        self.writes.append((unit, address, values))
+        if self.write_failure == "exception":
+            return _exception(function, 0x04)
+        registers = self.bank(unit)
+        if any(address + offset not in registers for offset in range(len(values))):
+            return _exception(function, 0x02)
+        if unit == 0 and address == TOU_ADDRESS:
+            if len(values) != TOU_COUNT:
+                return _exception(function, 0x02)
             try:
                 periods = decode_tou_periods(values)
             except ValueError as error:
                 LOG.warning("Rejected TOU write: %s", error)
                 return _exception(function, 0x03)
-            self.tou_registers = values
+            if self.write_failure != "ignore":
+                self.tou_registers = values
             LOG.info("Accepted TOU write with %d periods", len(periods))
-            return bytes((function,)) + struct.pack(">HH", address, count)
-        return _exception(function, 0x01)
+            return ok_response
+        if self.write_failure != "ignore":
+            self.banks[unit].update({address + i: v for i, v in enumerate(values)})
+        return ok_response
 
 
 async def read_frame(reader: asyncio.StreamReader) -> ModbusFrame:
@@ -297,7 +475,7 @@ async def run_connection(args: argparse.Namespace, device: EmmaMockDevice) -> No
                 LOG.debug("RX PDU raw=%s", frame.pdu.hex(" ").upper())
             if args.delay_ms:
                 await asyncio.sleep(args.delay_ms / 1000)
-            response = device.handle_pdu(frame.pdu)
+            response = device.handle_pdu(frame.pdu, frame.unit)
             raw = await write_frame(writer, frame.transaction, frame.unit, response)
             LOG.info(
                 "TX mock -> ESP32 transaction=%d unit=%d %s",
@@ -316,7 +494,15 @@ async def run_connection(args: argparse.Namespace, device: EmmaMockDevice) -> No
 
 
 async def run(args: argparse.Namespace) -> None:
-    device = EmmaMockDevice(args.pv_power, args.load_power)
+    device = EmmaMockDevice(
+        args.pv_power,
+        args.load_power,
+        smartguard_phase=args.smartguard_phase,
+        grid_outage=args.grid_outage,
+        scharger=args.scharger,
+        write_failure=args.write_failure,
+        unknown_enum=args.unknown_enum,
+    )
     while True:
         try:
             await run_connection(args, device)
@@ -341,6 +527,16 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--delay-ms", type=int, default=0, help="delay each Modbus response")
     parser.add_argument("--disconnect-after", type=int, default=0, help="disconnect after this many requests")
     parser.add_argument("--reconnect-delay", type=float, default=5.0)
+    parser.add_argument("--smartguard-phase", choices=("single", "three"), default="single")
+    parser.add_argument("--grid-outage", action="store_true", help="SmartGuard reports off-grid backup supply")
+    parser.add_argument("--scharger", action="store_true", help="add an SCharger at unit 4")
+    parser.add_argument(
+        "--write-failure",
+        choices=("none", "exception", "ignore"),
+        default="none",
+        help="reject writes with a Modbus exception, or accept and ignore them (readback mismatch)",
+    )
+    parser.add_argument("--unknown-enum", action="store_true", help="report an undefined SmartGuard status value")
     parser.add_argument("--once", action="store_true", help="do not reconnect after disconnection")
     parser.add_argument("--log-raw", action="store_true", help="log full MBAP/PDU frames at DEBUG")
     parser.add_argument("--debug", action="store_true", help="enable DEBUG logging")
