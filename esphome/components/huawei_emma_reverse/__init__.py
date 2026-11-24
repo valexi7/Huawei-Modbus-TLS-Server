@@ -65,6 +65,10 @@ async def to_code(config):
     cg.add(var.set_tls_material(config[CONF_CERTIFICATE], config[CONF_PRIVATE_KEY]))
     cg.add(var.set_log_raw(config[CONF_LOG_RAW]))
 
+    # ESPHome 2026.11+ compiles the mbedTLS TLS stack out unless a component
+    # asks for it; this connector uses mbedtls_ssl_* directly.
+    if hasattr(esp32, "require_mbedtls_tls"):
+        esp32.require_mbedtls_tls()
     esp32.include_builtin_idf_component("esp_http_server")
     esp32.include_builtin_idf_component("json")
     esp32.add_idf_sdkconfig_option("CONFIG_MBEDTLS_SSL_PROTO_TLS1_2", True)
