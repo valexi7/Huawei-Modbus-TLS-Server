@@ -637,6 +637,18 @@ class HomeAssistantPublisher:
 RT = TypeVar("RT")
 
 
+def _modbus_response_error(exception_code: int, function_code: int) -> Exception:
+    """Build the tmodbus exception for a Modbus exception response.
+
+    tmodbus 1.x exception classes take only the function code (the error code
+    is a class attribute); only UnknownModbusResponseError takes both.
+    """
+    error_class = error_code_to_exception_map.get(exception_code)
+    if error_class is None:
+        return UnknownModbusResponseError(exception_code, function_code)
+    return error_class(function_code)
+
+
 class ReverseConnectionTransport(AsyncBaseTransport):
     """tmodbus transport over the TLS socket that EMMA opened toward us."""
 
@@ -659,12 +671,9 @@ class ReverseConnectionTransport(AsyncBaseTransport):
         try:
             response = await self.session.request(unit_id, pdu.encode_request())
         except ModbusExceptionResponse as error:
-            function_code = error.function_code & 0x7F
-            error_class = error_code_to_exception_map.get(
-                error.exception_code,
-                UnknownModbusResponseError,
-            )
-            raise error_class(error.exception_code, function_code) from error
+            raise _modbus_response_error(
+                error.exception_code, error.function_code & 0x7F
+            ) from error
         except ConnectionError as error:
             raise ModbusConnectionError(str(error)) from error
         except ModbusProtocolError as error:
@@ -1904,12 +1913,14 @@ class ReverseModbusTlsServer:
         self._server = None
         if server is not None:
             server.close()
-            await server.wait_closed()
+        # Close the EMMA session before awaiting the listener: since Python
+        # 3.12.1 Server.wait_closed() waits for every open connection, so
+        # awaiting it first would block unloading while EMMA is connected.
         session = self.state.active_session
         if session is not None and not session.closed:
             session.writer.close()
             with contextlib.suppress(Exception):
-                await session.writer.wait_closed()
+                await asyncio.wait_for(session.writer.wait_closed(), timeout=5)
         current = asyncio.current_task()
         handlers = [task for task in self._handlers if task is not current]
         if handlers:
@@ -1919,6 +1930,9 @@ class ReverseModbusTlsServer:
             if pending:
                 await asyncio.gather(*pending, return_exceptions=True)
         self._handlers.clear()
+        if server is not None:
+            with contextlib.suppress(TimeoutError):
+                await asyncio.wait_for(server.wait_closed(), timeout=5)
         log.info("Huawei reverse Modbus/TLS listener stopped")
 
 
