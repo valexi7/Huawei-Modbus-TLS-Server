@@ -20,6 +20,11 @@ ESPHome:
   Devices on older firmware need sockets freed for this one upload; see
   [the OTA note](docs/esphome-t-eth-elite.md#ota-upload-fails-with-device-closed-connection-without-responding).
 - IP Address (Wi-Fi) and EMMA Network IP Address diagnostic entities.
+- Fix every EMMA TLS handshake failing with `-0x7100` on firmware built with
+  ESPHome 2026.11: ESPHome now builds mbedTLS client-only unless a component asks
+  for the server role. The connector now requests it and keeps the static RSA/ECDH
+  key exchanges and AES-CCM that ESPHome 2026.11 also trims. CI fails if the build
+  is client-only.
 
 ## 0.15.0
 

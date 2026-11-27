@@ -138,6 +138,22 @@ async def to_code(config):
     # asks for it; this connector uses mbedtls_ssl_* directly.
     if hasattr(esp32, "require_mbedtls_tls"):
         esp32.require_mbedtls_tls()
+    # ESPHome 2026.11 also trims TLS to the client role unless a component
+    # accepts TLS connections. Without the server role every EMMA handshake
+    # fails with -0x7100 (MBEDTLS_ERR_SSL_BAD_INPUT_DATA).
+    if hasattr(esp32, "require_mbedtls_tls_server"):
+        esp32.require_mbedtls_tls_server()
+    # Keep the cipher suites the connector accepted before the 2026.11 trim:
+    # EMMA's TLS client is not under our control.
+    if hasattr(esp32, "require_mbedtls_tls_extras"):
+        esp32.require_mbedtls_tls_extras(
+            [
+                "CONFIG_MBEDTLS_KEY_EXCHANGE_RSA",
+                "CONFIG_MBEDTLS_KEY_EXCHANGE_ECDH_ECDSA",
+                "CONFIG_MBEDTLS_KEY_EXCHANGE_ECDH_RSA",
+                "CONFIG_MBEDTLS_CCM_C",
+            ]
+        )
     esp32.include_builtin_idf_component("esp_http_server")
     esp32.include_builtin_idf_component("json")
     esp32.add_idf_sdkconfig_option("CONFIG_MBEDTLS_SSL_PROTO_TLS1_2", True)

@@ -122,6 +122,15 @@ jobs:
       - name: Compile
         working-directory: esphome
         run: esphome -s read_only ${{ matrix.read-only }} compile ci-build.yaml
+      - name: mbedTLS keeps the TLS server role
+        working-directory: esphome
+        # The EMMA listener is a TLS server; a client-only mbedTLS build
+        # compiles fine but fails every handshake with -0x7100.
+        run: |
+          if grep -rq '^CONFIG_MBEDTLS_TLS_CLIENT_ONLY=y' .esphome/build/emma-ci-build/sdkconfig*; then
+            echo "::error::mbedTLS was built client-only; EMMA TLS handshakes would fail"
+            exit 1
+          fi
       - name: Firmware size
         working-directory: esphome
         run: |
