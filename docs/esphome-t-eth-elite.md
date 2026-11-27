@@ -165,10 +165,26 @@ outage:
 | Reset Reason | Why the chip restarted: power-on, brownout, watchdog, software/OTA, panic. |
 | Boot Count | Boots stored in flash, so it also counts reboots while Home Assistant was down. |
 | EMMA TLS Disconnects | EMMA sessions that ended since this boot. |
+| EMMA Link Status | Where the EMMA session is right now, see below. |
 | EMMA Last Error | Most recent session error, for example `TLS read failed (-0x6800, EMMA silent for 5 s)`. |
 | Restart | Button to restart the ESP32 and test recovery. |
 | IP Address | Wi-Fi address used by Home Assistant, the connector API and OTA. |
 | EMMA Network IP Address | W5500 address on the EMMA network. |
+
+EMMA Link Status moves through these states (EMMA connects to the ESP32, then the
+ESP32 polls EMMA as Modbus master):
+
+| State | Meaning |
+| --- | --- |
+| Waiting for the EMMA network address | The W5500 has no address yet. |
+| TLS setup failed, check the certificate and key | The certificate or key could not be loaded. |
+| Listening for EMMA on port 16100 | Ready; no EMMA connection open. |
+| Connection from 192.168.88.x, TLS handshake in progress | EMMA opened a TCP connection. |
+| TLS handshake with 192.168.88.x failed (-0xNNNN) | The handshake was rejected; the code is the mbedTLS error. |
+| TLS session with 192.168.88.x established, waiting for EMMA startup message | Encrypted session is up. |
+| Reading the EMMA device list | Topology discovery. |
+| Polling EMMA as Modbus master | Normal operation. |
+| Session ended, waiting for EMMA to reconnect | The session dropped; see EMMA Last Error. |
 
 How to read an outage in the history:
 

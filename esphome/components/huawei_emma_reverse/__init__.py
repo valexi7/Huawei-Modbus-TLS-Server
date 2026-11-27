@@ -23,6 +23,7 @@ CONF_ACTIVITY_OUTPUT_ID = "activity_output_id"
 CONF_CONNECTED = "connected"
 CONF_DISCONNECTS = "disconnects"
 CONF_LAST_ERROR = "last_error"
+CONF_LINK_STATUS = "link_status"
 CONF_LOG_RAW = "log_raw"
 CONF_READ_ONLY = "read_only"
 
@@ -97,6 +98,15 @@ CONFIG_SCHEMA = cv.All(
                 state_class=STATE_CLASS_TOTAL_INCREASING,
                 entity_category=ENTITY_CATEGORY_DIAGNOSTIC,
             ),
+            # Where the EMMA session is: listening, TLS handshake, startup
+            # message, device discovery, polling as Modbus master, or why the
+            # last attempt failed.
+            cv.Optional(
+                CONF_LINK_STATUS, default={"name": "EMMA Link Status"}
+            ): text_sensor.text_sensor_schema(
+                icon="mdi:lan-pending",
+                entity_category=ENTITY_CATEGORY_DIAGNOSTIC,
+            ),
             cv.Optional(
                 CONF_LAST_ERROR, default={"name": "EMMA Last Error"}
             ): text_sensor.text_sensor_schema(
@@ -127,6 +137,8 @@ async def to_code(config):
     cg.add(var.set_disconnects_sensor(disconnects))
     last_error = await text_sensor.new_text_sensor(config[CONF_LAST_ERROR])
     cg.add(var.set_last_error_sensor(last_error))
+    link_status = await text_sensor.new_text_sensor(config[CONF_LINK_STATUS])
+    cg.add(var.set_link_status_sensor(link_status))
     cg.add(var.set_ports(config[CONF_TLS_PORT], config[CONF_API_PORT]))
     cg.add_define("HUAWEI_EMMA_HTTPD_MAX_OPEN_SOCKETS", HTTPD_MAX_OPEN_SOCKETS)
     cg.add(var.set_api_token(config[CONF_API_TOKEN]))

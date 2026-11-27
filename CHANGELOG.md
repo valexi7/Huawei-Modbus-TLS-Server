@@ -25,6 +25,9 @@ ESPHome:
   for the server role. The connector now requests it and keeps the static RSA/ECDH
   key exchanges and AES-CCM that ESPHome 2026.11 also trims. CI fails if the build
   is client-only.
+- EMMA Link Status diagnostic entity: listening, TLS handshake (with the peer
+  address), handshake failure code, startup message, device discovery, polling as
+  Modbus master, session ended. Handshake failures also update EMMA Last Error.
 
 ## 0.15.0
 
