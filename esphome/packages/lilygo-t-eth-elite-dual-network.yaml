@@ -18,6 +18,9 @@ esphome:
     then:
       - lambda: |-
           id(emma_boot_count) += 1;
+          // Queue the save now (the global otherwise does it on its next
+          // 1 s update), then flush it to flash.
+          emma_boot_count->update();
           global_preferences->sync();
           ESP_LOGI("emma_diagnostics", "Boot number %u", static_cast<unsigned>(id(emma_boot_count)));
 
