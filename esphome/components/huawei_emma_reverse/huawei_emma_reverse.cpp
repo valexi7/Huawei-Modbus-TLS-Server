@@ -42,6 +42,13 @@ void HuaweiEmmaReverse::setup() {
   }
   this->activity_output_->turn_off();
   this->connected_sensor_->publish_initial_state(false);
+  this->published_connected_ = 0;
+  if (this->disconnects_sensor_ != nullptr) {
+    this->disconnects_sensor_->publish_state(0);
+    this->published_disconnects_ = 0;
+  }
+  if (this->last_error_sensor_ != nullptr)
+    this->last_error_sensor_->publish_state("");
   this->initialize_subscriptions_();
   if (!this->start_http_server_()) {
     this->mark_failed();
@@ -56,7 +63,35 @@ void HuaweiEmmaReverse::setup() {
   }
 }
 
-void HuaweiEmmaReverse::loop() { this->update_activity_led_(); }
+void HuaweiEmmaReverse::loop() {
+  this->update_activity_led_();
+  this->publish_diagnostics_();
+}
+
+void HuaweiEmmaReverse::publish_diagnostics_() {
+  // The TLS task changes these from another FreeRTOS task. ESPHome entities
+  // are not thread-safe, so publishing happens here on the main loop.
+  const int8_t connected = this->connected_.load() ? 1 : 0;
+  if (connected != this->published_connected_) {
+    this->published_connected_ = connected;
+    this->connected_sensor_->publish_state(connected != 0);
+  }
+  const uint32_t disconnects = this->disconnect_count_.load();
+  if (this->disconnects_sensor_ != nullptr && static_cast<int64_t>(disconnects) != this->published_disconnects_) {
+    this->published_disconnects_ = disconnects;
+    this->disconnects_sensor_->publish_state(disconnects);
+  }
+  const uint32_t sequence = this->error_sequence_.load();
+  if (this->last_error_sensor_ != nullptr && sequence != this->published_error_sequence_) {
+    // Never block the main loop; try again next iteration if busy.
+    if (xSemaphoreTake(this->data_mutex_, 0) != pdTRUE)
+      return;
+    const std::string fault = this->last_fault_;
+    xSemaphoreGive(this->data_mutex_);
+    this->published_error_sequence_ = sequence;
+    this->last_error_sensor_->publish_state(fault);
+  }
+}
 
 void HuaweiEmmaReverse::dump_config() {
   ESP_LOGCONFIG(TAG, "Huawei EMMA reverse Modbus/TLS connector:");
@@ -154,10 +189,11 @@ bool HuaweiEmmaReverse::accept_tls_client_() {
     this->close_tls_client_();
     return false;
   }
-  this->set_connected_(true);
   this->connected_at_ms_ = millis();
+  this->set_connected_(true);
   this->reconnect_count_++;
-  ESP_LOGI(TAG, "EMMA TLS client connected; ESP32 is now Modbus master");
+  ESP_LOGI(TAG, "EMMA TLS client connected %us after boot (session %u); ESP32 is now Modbus master",
+           static_cast<unsigned>(this->connected_at_ms_ / 1000), static_cast<unsigned>(this->reconnect_count_));
   return true;
 }
 
@@ -188,6 +224,10 @@ void HuaweiEmmaReverse::tls_task_() {
     if (startup_ok)
       this->handle_unsolicited_(startup);
     this->discover_topology_();
+    // The full poll below already covers every subscription, including ones
+    // Home Assistant re-sent while EMMA was still reconnecting after a reboot,
+    // so a pending change must not trigger a second full poll right after it.
+    this->subscriptions_changed_.store(false);
     this->poll_group_("slow");
     this->poll_group_("medium");
     this->poll_group_("fast");
@@ -234,7 +274,14 @@ bool HuaweiEmmaReverse::read_exact_(uint8_t *data, size_t length) {
     }
     if (result == MBEDTLS_ERR_SSL_WANT_READ || result == MBEDTLS_ERR_SSL_WANT_WRITE)
       continue;
-    this->set_last_error_("TLS read failed");
+    const char *detail = "";
+    if (result == MBEDTLS_ERR_SSL_TIMEOUT)
+      detail = ", EMMA silent for 5 s";
+    else if (result == 0 || result == MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY)
+      detail = ", closed by EMMA";
+    char error[64];
+    std::snprintf(error, sizeof(error), "TLS read failed (-0x%04X%s)", static_cast<unsigned>(-result), detail);
+    this->set_last_error_(error);
     this->set_connected_(false);
     return false;
   }
@@ -251,7 +298,9 @@ bool HuaweiEmmaReverse::write_all_(const uint8_t *data, size_t length) {
     }
     if (result == MBEDTLS_ERR_SSL_WANT_READ || result == MBEDTLS_ERR_SSL_WANT_WRITE)
       continue;
-    this->set_last_error_("TLS write failed");
+    char error[48];
+    std::snprintf(error, sizeof(error), "TLS write failed (-0x%04X)", static_cast<unsigned>(-result));
+    this->set_last_error_(error);
     this->set_connected_(false);
     return false;
   }
@@ -267,6 +316,7 @@ bool HuaweiEmmaReverse::read_frame_(ModbusFrame &frame) {
   uint16_t length = static_cast<uint16_t>(header[4] << 8 | header[5]);
   if (length < 2 || length > GENERATED_MAX_MBAP_LENGTH) {
     ESP_LOGW(TAG, "Rejected MBAP length %u", length);
+    this->set_last_error_("Rejected MBAP length " + std::to_string(length));
     this->set_connected_(false);
     return false;
   }
@@ -1095,7 +1145,10 @@ esp_err_t HuaweiEmmaReverse::handle_http_(httpd_req_t *request) {
       }
     }
     xSemaphoreGive(this->data_mutex_);
-    this->subscriptions_changed_.store(true);
+    // Only newly added registers need an immediate poll. After a reboot Home
+    // Assistant re-sends its set; removed registers just stop being polled.
+    if (!added.empty())
+      this->subscriptions_changed_.store(true);
     std::ostringstream out;
     out << "{\"register_names\":[";
     for (size_t position = 0; position < accepted.size(); position++) {
@@ -1613,14 +1666,20 @@ void HuaweiEmmaReverse::update_activity_led_() {
 
 void HuaweiEmmaReverse::set_connected_(bool connected) {
   bool previous = this->connected_.exchange(connected);
-  if (previous != connected)
-    this->connected_sensor_->publish_state(connected);
+  if (previous && !connected) {
+    const uint32_t count = ++this->disconnect_count_;
+    ESP_LOGW(TAG, "EMMA TLS session ended after %us (disconnects since boot: %u, ESP uptime %us)",
+             static_cast<unsigned>((millis() - this->connected_at_ms_) / 1000), static_cast<unsigned>(count),
+             static_cast<unsigned>(millis() / 1000));
+  }
 }
 
 void HuaweiEmmaReverse::set_last_error_(const std::string &error) {
   xSemaphoreTake(this->data_mutex_, portMAX_DELAY);
   this->last_error_ = error;
+  this->last_fault_ = error;
   xSemaphoreGive(this->data_mutex_);
+  this->error_sequence_++;
 }
 
 std::string HuaweiEmmaReverse::json_escape_(const std::string &value) {
