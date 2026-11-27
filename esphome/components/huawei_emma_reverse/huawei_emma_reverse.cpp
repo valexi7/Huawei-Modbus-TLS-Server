@@ -81,6 +81,11 @@ void HuaweiEmmaReverse::publish_diagnostics_() {
     this->published_disconnects_ = disconnects;
     this->disconnects_sensor_->publish_state(disconnects);
   }
+  const uint32_t link_sequence = this->link_sequence_.load();
+  if (this->link_status_sensor_ != nullptr && link_sequence != this->published_link_sequence_) {
+    this->published_link_sequence_ = link_sequence;
+    this->link_status_sensor_->publish_state(this->link_status_text_());
+  }
   const uint32_t sequence = this->error_sequence_.load();
   if (this->last_error_sensor_ != nullptr && sequence != this->published_error_sequence_) {
     // Never block the main loop; try again next iteration if busy.
@@ -176,9 +181,16 @@ bool HuaweiEmmaReverse::configure_tls_() {
 bool HuaweiEmmaReverse::accept_tls_client_() {
   mbedtls_net_free(&this->client_fd_);
   mbedtls_net_init(&this->client_fd_);
-  int error = mbedtls_net_accept(&this->listen_fd_, &this->client_fd_, nullptr, 0, nullptr);
+  this->set_link_stage_(LinkStage::LISTENING);
+  unsigned char peer[16] = {0};
+  size_t peer_length = 0;
+  int error = mbedtls_net_accept(&this->listen_fd_, &this->client_fd_, peer, sizeof(peer), &peer_length);
   if (error != 0)
     return false;
+  this->peer_address_.store(peer_length == 4 ? (static_cast<uint32_t>(peer[0]) << 24 | peer[1] << 16 | peer[2] << 8 |
+                                                peer[3])
+                                             : 0);
+  this->set_link_stage_(LinkStage::HANDSHAKE);
   mbedtls_ssl_session_reset(&this->ssl_);
   mbedtls_ssl_set_bio(&this->ssl_, &this->client_fd_, mbedtls_net_send, mbedtls_net_recv, mbedtls_net_recv_timeout);
   do {
@@ -186,7 +198,12 @@ bool HuaweiEmmaReverse::accept_tls_client_() {
   } while (error == MBEDTLS_ERR_SSL_WANT_READ || error == MBEDTLS_ERR_SSL_WANT_WRITE);
   if (error != 0) {
     ESP_LOGW(TAG, "EMMA TLS handshake failed: -0x%04X", -error);
+    this->handshake_error_.store(error);
+    char message[48];
+    std::snprintf(message, sizeof(message), "TLS handshake failed (-0x%04X)", static_cast<unsigned>(-error));
+    this->set_last_error_(message);
     this->close_tls_client_();
+    this->set_link_stage_(LinkStage::HANDSHAKE_FAILED);
     return false;
   }
   this->connected_at_ms_ = millis();
@@ -205,9 +222,11 @@ void HuaweiEmmaReverse::close_tls_client_() {
 }
 
 void HuaweiEmmaReverse::tls_task_() {
+  this->set_link_stage_(LinkStage::WAITING_FOR_ADDRESS);
   while (!this->ethernet_->has_ip())
     vTaskDelay(pdMS_TO_TICKS(250));
   if (!this->configure_tls_()) {
+    this->set_link_stage_(LinkStage::TLS_SETUP_FAILED);
     this->set_last_error_("TLS initialization failed");
     return;
   }
@@ -217,12 +236,14 @@ void HuaweiEmmaReverse::tls_task_() {
       continue;
     }
 
+    this->set_link_stage_(LinkStage::WAITING_FOR_STARTUP);
     ModbusFrame startup;
     xSemaphoreTake(this->tls_mutex_, portMAX_DELAY);
     const bool startup_ok = this->read_frame_(startup);
     xSemaphoreGive(this->tls_mutex_);
     if (startup_ok)
       this->handle_unsolicited_(startup);
+    this->set_link_stage_(LinkStage::DISCOVERING);
     this->discover_topology_();
     // The full poll below already covers every subscription, including ones
     // Home Assistant re-sent while EMMA was still reconnecting after a reboot,
@@ -231,6 +252,8 @@ void HuaweiEmmaReverse::tls_task_() {
     this->poll_group_("slow");
     this->poll_group_("medium");
     this->poll_group_("fast");
+    if (this->connected_.load())
+      this->set_link_stage_(LinkStage::POLLING);
     uint32_t next_fast = millis() + GENERATED_FAST_POLL_MS;
     uint32_t next_medium = millis() + GENERATED_MEDIUM_POLL_MS;
     uint32_t next_slow = millis() + GENERATED_SLOW_POLL_MS;
@@ -260,6 +283,7 @@ void HuaweiEmmaReverse::tls_task_() {
       vTaskDelay(pdMS_TO_TICKS(100));
     }
     this->close_tls_client_();
+    this->set_link_stage_(LinkStage::SESSION_ENDED);
     vTaskDelay(pdMS_TO_TICKS(500));
   }
 }
@@ -1677,6 +1701,51 @@ void HuaweiEmmaReverse::set_connected_(bool connected) {
              static_cast<unsigned>((millis() - this->connected_at_ms_) / 1000), static_cast<unsigned>(count),
              static_cast<unsigned>(millis() / 1000));
   }
+}
+
+void HuaweiEmmaReverse::set_link_stage_(LinkStage stage) {
+  this->link_stage_.store(static_cast<uint8_t>(stage));
+  this->link_sequence_++;
+}
+
+std::string HuaweiEmmaReverse::link_status_text_() const {
+  const uint32_t address = this->peer_address_.load();
+  char peer[20];
+  if (address != 0)
+    std::snprintf(peer, sizeof(peer), "%u.%u.%u.%u", static_cast<unsigned>(address >> 24),
+                  static_cast<unsigned>((address >> 16) & 0xFF), static_cast<unsigned>((address >> 8) & 0xFF),
+                  static_cast<unsigned>(address & 0xFF));
+  else
+    std::snprintf(peer, sizeof(peer), "EMMA");
+  char text[96];
+  switch (static_cast<LinkStage>(this->link_stage_.load())) {
+    case LinkStage::STARTING:
+      return "Starting";
+    case LinkStage::WAITING_FOR_ADDRESS:
+      return "Waiting for the EMMA network address";
+    case LinkStage::TLS_SETUP_FAILED:
+      return "TLS setup failed, check the certificate and key";
+    case LinkStage::LISTENING:
+      std::snprintf(text, sizeof(text), "Listening for EMMA on port %u", static_cast<unsigned>(this->tls_port_));
+      return text;
+    case LinkStage::HANDSHAKE:
+      std::snprintf(text, sizeof(text), "Connection from %s, TLS handshake in progress", peer);
+      return text;
+    case LinkStage::HANDSHAKE_FAILED:
+      std::snprintf(text, sizeof(text), "TLS handshake with %s failed (-0x%04X)", peer,
+                    static_cast<unsigned>(-this->handshake_error_.load()));
+      return text;
+    case LinkStage::WAITING_FOR_STARTUP:
+      std::snprintf(text, sizeof(text), "TLS session with %s established, waiting for EMMA startup message", peer);
+      return text;
+    case LinkStage::DISCOVERING:
+      return "Reading the EMMA device list";
+    case LinkStage::POLLING:
+      return "Polling EMMA as Modbus master";
+    case LinkStage::SESSION_ENDED:
+      return "Session ended, waiting for EMMA to reconnect";
+  }
+  return "Unknown";
 }
 
 void HuaweiEmmaReverse::set_last_error_(const std::string &error) {

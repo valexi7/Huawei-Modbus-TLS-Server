@@ -32,6 +32,20 @@ namespace esphome::huawei_emma_reverse {
 
 enum class ActivityKind : uint8_t { MODBUS_RX, MODBUS_TX, API_RX, API_TX };
 
+// Stages of the EMMA session, reported by the EMMA Link Status entity.
+enum class LinkStage : uint8_t {
+  STARTING,
+  WAITING_FOR_ADDRESS,
+  TLS_SETUP_FAILED,
+  LISTENING,
+  HANDSHAKE,
+  HANDSHAKE_FAILED,
+  WAITING_FOR_STARTUP,
+  DISCOVERING,
+  POLLING,
+  SESSION_ENDED,
+};
+
 struct ModbusFrame {
   uint16_t transaction{0};
   uint16_t protocol{0};
@@ -73,6 +87,7 @@ class HuaweiEmmaReverse : public Component {
   void set_connected_sensor(binary_sensor::BinarySensor *sensor) { this->connected_sensor_ = sensor; }
   void set_disconnects_sensor(sensor::Sensor *sensor) { this->disconnects_sensor_ = sensor; }
   void set_last_error_sensor(text_sensor::TextSensor *sensor) { this->last_error_sensor_ = sensor; }
+  void set_link_status_sensor(text_sensor::TextSensor *sensor) { this->link_status_sensor_ = sensor; }
   void set_ports(uint16_t tls_port, uint16_t api_port) {
     this->tls_port_ = tls_port;
     this->api_port_ = api_port;
@@ -146,6 +161,8 @@ class HuaweiEmmaReverse : public Component {
   void set_connected_(bool connected);
   void set_last_error_(const std::string &error);
   void publish_diagnostics_();
+  void set_link_stage_(LinkStage stage);
+  std::string link_status_text_() const;
   static std::string json_escape_(const std::string &value);
   static std::string role_for_(const std::string &model, const std::string &product);
   static uint32_t u32_(uint16_t high, uint16_t low);
@@ -159,6 +176,7 @@ class HuaweiEmmaReverse : public Component {
   binary_sensor::BinarySensor *connected_sensor_{nullptr};
   sensor::Sensor *disconnects_sensor_{nullptr};
   text_sensor::TextSensor *last_error_sensor_{nullptr};
+  text_sensor::TextSensor *link_status_sensor_{nullptr};
   uint16_t tls_port_{GENERATED_DEFAULT_TLS_PORT};
   uint16_t api_port_{GENERATED_DEFAULT_API_PORT};
   std::string api_token_;
@@ -179,6 +197,11 @@ class HuaweiEmmaReverse : public Component {
   // and HTTP handlers just update these.
   std::atomic<uint32_t> disconnect_count_{0};
   std::atomic<uint32_t> error_sequence_{0};
+  std::atomic<uint8_t> link_stage_{static_cast<uint8_t>(LinkStage::STARTING)};
+  std::atomic<uint32_t> link_sequence_{0};
+  std::atomic<uint32_t> peer_address_{0};
+  std::atomic<int32_t> handshake_error_{0};
+  uint32_t published_link_sequence_{UINT32_MAX};
   int8_t published_connected_{-1};
   int64_t published_disconnects_{-1};
   uint32_t published_error_sequence_{0};
