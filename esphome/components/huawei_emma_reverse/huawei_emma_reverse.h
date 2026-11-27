@@ -2,6 +2,8 @@
 
 #include "esphome/components/binary_sensor/binary_sensor.h"
 #include "esphome/components/output/binary_output.h"
+#include "esphome/components/sensor/sensor.h"
+#include "esphome/components/text_sensor/text_sensor.h"
 #include "esphome/core/component.h"
 #include "esphome/components/emma_w5500/emma_w5500.h"
 #include "generated_register_catalog.h"
@@ -69,6 +71,8 @@ class HuaweiEmmaReverse : public Component {
   void set_ethernet(emma_w5500::EmmaW5500 *ethernet) { this->ethernet_ = ethernet; }
   void set_activity_output(output::BinaryOutput *output) { this->activity_output_ = output; }
   void set_connected_sensor(binary_sensor::BinarySensor *sensor) { this->connected_sensor_ = sensor; }
+  void set_disconnects_sensor(sensor::Sensor *sensor) { this->disconnects_sensor_ = sensor; }
+  void set_last_error_sensor(text_sensor::TextSensor *sensor) { this->last_error_sensor_ = sensor; }
   void set_ports(uint16_t tls_port, uint16_t api_port) {
     this->tls_port_ = tls_port;
     this->api_port_ = api_port;
@@ -141,6 +145,7 @@ class HuaweiEmmaReverse : public Component {
   void update_activity_led_();
   void set_connected_(bool connected);
   void set_last_error_(const std::string &error);
+  void publish_diagnostics_();
   static std::string json_escape_(const std::string &value);
   static std::string role_for_(const std::string &model, const std::string &product);
   static uint32_t u32_(uint16_t high, uint16_t low);
@@ -152,6 +157,8 @@ class HuaweiEmmaReverse : public Component {
   emma_w5500::EmmaW5500 *ethernet_{nullptr};
   output::BinaryOutput *activity_output_{nullptr};
   binary_sensor::BinarySensor *connected_sensor_{nullptr};
+  sensor::Sensor *disconnects_sensor_{nullptr};
+  text_sensor::TextSensor *last_error_sensor_{nullptr};
   uint16_t tls_port_{GENERATED_DEFAULT_TLS_PORT};
   uint16_t api_port_{GENERATED_DEFAULT_API_PORT};
   std::string api_token_;
@@ -168,6 +175,14 @@ class HuaweiEmmaReverse : public Component {
   std::atomic<bool> connected_{false};
   std::atomic<bool> subscriptions_changed_{false};
   std::atomic<uint8_t> pending_activity_{0};
+  // Entity state is published from loop() on the main task only; the TLS task
+  // and HTTP handlers just update these.
+  std::atomic<uint32_t> disconnect_count_{0};
+  std::atomic<uint32_t> error_sequence_{0};
+  int8_t published_connected_{-1};
+  int64_t published_disconnects_{-1};
+  uint32_t published_error_sequence_{0};
+  std::string last_fault_;
   uint32_t led_until_{0};
   uint8_t led_pulses_left_{0};
   bool led_on_{false};

@@ -145,11 +145,46 @@ The connector provides:
 - strict shared MBAP/body/register/TOU limits, request serialization, reconnect handling,
   unsupported-register isolation, streamed catalog output, and optional raw-frame
   summaries;
-- a native ESPHome **EMMA TLS Connected** diagnostic binary sensor.
+- native ESPHome **EMMA TLS Connected**, **EMMA TLS Disconnects** (since boot) and
+  **EMMA Last Error** diagnostic entities.
 
 The firmware and Linux connector expose the same authenticated API contract. A new
 firmware release should still pass the mock suite and at least a 24-hour real-device soak
 test before unattended control is enabled.
+
+## Reboot and outage diagnostics
+
+The board package adds ESPHome diagnostic entities that show whether the ESP32 itself
+restarted, for example a brownout during the grid to battery switchover of a power
+outage:
+
+| Entity | What it shows |
+| --- | --- |
+| Uptime | Seconds since boot; drops to 0 on every restart. |
+| Last Boot | Boot time as a timestamp (needs Home Assistant time after boot). |
+| Reset Reason | Why the chip restarted: power-on, brownout, watchdog, software/OTA, panic. |
+| Boot Count | Boots stored in flash, so it also counts reboots while Home Assistant was down. |
+| EMMA TLS Disconnects | EMMA sessions that ended since this boot. |
+| EMMA Last Error | Most recent session error, for example `TLS read failed (-0x6800, EMMA silent for 5 s)`. |
+| Restart | Button to restart the ESP32 and test recovery. |
+
+How to read an outage in the history:
+
+- Boot Count went up and Reset Reason says brownout or power-on: the ESP32 lost
+  power. Feed it from the backed-up circuit or add a small buffer (capacitor/UPS).
+- Boot Count went up with a software reset and no OTA: check `wifi`/`api`
+  `reboot_timeout`. ESPHome restarts after 15 minutes without Wi-Fi or without a
+  Home Assistant API client, which can happen when the router or Home Assistant is
+  not on backup power. Set `reboot_timeout: 0s` under `wifi:` and `api:` in your
+  device YAML if the EMMA link should keep running in that case.
+- Boot Count unchanged but EMMA TLS Disconnects went up: EMMA dropped or stalled
+  the session; EMMA Last Error says how.
+
+After a reboot the firmware listens again as soon as the W5500 has its address. EMMA
+decides when it reconnects; the log line `EMMA TLS client connected Ns after boot`
+shows the delay. On connect the firmware polls every subscribed register once, and
+Home Assistant re-sends its subscriptions when it sees the new connector instance,
+so entities return within one Home Assistant update (10 s) of that poll finishing.
 
 ## Entity IDs and generated mapping
 

@@ -2,8 +2,12 @@
 
 import esphome.codegen as cg
 import esphome.config_validation as cv
-from esphome.components import binary_sensor, esp32, output
-from esphome.const import CONF_ID
+from esphome.components import binary_sensor, esp32, output, sensor, text_sensor
+from esphome.const import (
+    CONF_ID,
+    ENTITY_CATEGORY_DIAGNOSTIC,
+    STATE_CLASS_TOTAL_INCREASING,
+)
 from esphome.core import CORE
 
 from esphome.components.emma_w5500 import EmmaW5500
@@ -17,11 +21,13 @@ CONF_CERTIFICATE = "certificate"
 CONF_PRIVATE_KEY = "private_key"
 CONF_ACTIVITY_OUTPUT_ID = "activity_output_id"
 CONF_CONNECTED = "connected"
+CONF_DISCONNECTS = "disconnects"
+CONF_LAST_ERROR = "last_error"
 CONF_LOG_RAW = "log_raw"
 CONF_READ_ONLY = "read_only"
 
 DEPENDENCIES = ["esp32", "emma_w5500"]
-AUTO_LOAD = ["binary_sensor"]
+AUTO_LOAD = ["binary_sensor", "sensor", "text_sensor"]
 CODEOWNERS = ["@valexi7"]
 
 emma_reverse_ns = cg.esphome_ns.namespace("huawei_emma_reverse")
@@ -46,6 +52,23 @@ CONFIG_SCHEMA = cv.All(
                 CONF_CONNECTED,
                 default={"name": "EMMA TLS Connected", "device_class": "connectivity"},
             ): binary_sensor.binary_sensor_schema(),
+            # Number of times the EMMA TLS session dropped since this boot.
+            # Together with the board package's Uptime/Reset Reason it tells
+            # an EMMA-side disconnect apart from an ESP32 reboot.
+            cv.Optional(
+                CONF_DISCONNECTS, default={"name": "EMMA TLS Disconnects"}
+            ): sensor.sensor_schema(
+                icon="mdi:lan-disconnect",
+                accuracy_decimals=0,
+                state_class=STATE_CLASS_TOTAL_INCREASING,
+                entity_category=ENTITY_CATEGORY_DIAGNOSTIC,
+            ),
+            cv.Optional(
+                CONF_LAST_ERROR, default={"name": "EMMA Last Error"}
+            ): text_sensor.text_sensor_schema(
+                icon="mdi:alert-circle-outline",
+                entity_category=ENTITY_CATEGORY_DIAGNOSTIC,
+            ),
         }
     ).extend(cv.COMPONENT_SCHEMA),
     cv.only_on_esp32,
@@ -64,6 +87,10 @@ async def to_code(config):
     cg.add(var.set_ethernet(ethernet))
     cg.add(var.set_activity_output(activity_output))
     cg.add(var.set_connected_sensor(connected))
+    disconnects = await sensor.new_sensor(config[CONF_DISCONNECTS])
+    cg.add(var.set_disconnects_sensor(disconnects))
+    last_error = await text_sensor.new_text_sensor(config[CONF_LAST_ERROR])
+    cg.add(var.set_last_error_sensor(last_error))
     cg.add(var.set_ports(config[CONF_TLS_PORT], config[CONF_API_PORT]))
     cg.add(var.set_api_token(config[CONF_API_TOKEN]))
     cg.add(var.set_tls_material(config[CONF_CERTIFICATE], config[CONF_PRIVATE_KEY]))

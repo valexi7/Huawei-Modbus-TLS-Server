@@ -11,6 +11,15 @@ substitutions:
 
 esphome:
   min_version: 2026.4.0
+  # Counts boots for the Boot Count diagnostic below.
+  on_boot:
+    # Run early so the count is stored even if the device reboots again soon.
+    priority: 600
+    then:
+      - lambda: |-
+          id(emma_boot_count) += 1;
+          global_preferences->sync();
+          ESP_LOGI("emma_diagnostics", "Boot number %u", static_cast<unsigned>(id(emma_boot_count)));
 
 esp32:
   board: esp32-s3-devkitc-1
@@ -42,3 +51,56 @@ output:
   - platform: gpio
     pin: GPIO38
     id: led_output
+
+# --- Reboot and connection diagnostics -------------------------------------
+# These entities make ESP32 restarts visible in Home Assistant, for example a
+# brownout during the grid -> battery switchover of a power outage:
+#   - Uptime drops back to zero on every boot.
+#   - Last Boot is the boot time (set once Home Assistant time is available).
+#   - Reset Reason says why the chip restarted (power-on, brownout, watchdog,
+#     software/OTA restart, panic, ...).
+#   - Boot Count is kept in flash, so it also reveals reboots that happened
+#     while Home Assistant itself was offline.
+# The EMMA TLS Disconnects and EMMA Last Error entities come from the
+# huawei_emma_reverse component itself.
+
+globals:
+  - id: emma_boot_count
+    type: uint32_t
+    restore_value: true
+    initial_value: "0"
+
+debug:
+  update_interval: 60s
+
+time:
+  - platform: homeassistant
+    id: emma_ha_time
+
+sensor:
+  - platform: uptime
+    name: Uptime
+    id: emma_uptime
+    update_interval: 15s
+  - platform: uptime
+    type: timestamp
+    name: Last Boot
+    time_id: emma_ha_time
+  - platform: template
+    name: Boot Count
+    icon: mdi:restart
+    accuracy_decimals: 0
+    state_class: total_increasing
+    entity_category: diagnostic
+    update_interval: 60s
+    lambda: return id(emma_boot_count);
+
+text_sensor:
+  - platform: debug
+    reset_reason:
+      name: Reset Reason
+
+button:
+  - platform: restart
+    name: Restart
+    entity_category: config

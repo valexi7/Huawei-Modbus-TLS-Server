@@ -1,5 +1,20 @@
 # Changelog
 
+## Unreleased
+
+ESPHome:
+
+- Reboot diagnostics in the board package: Uptime, Last Boot, Reset Reason, Boot
+  Count (kept in flash) and a Restart button. They show whether an outage made the
+  ESP32 restart. See [ESPHome reboot diagnostics](docs/esphome-t-eth-elite.md#reboot-and-outage-diagnostics).
+- New connector entities EMMA TLS Disconnects and EMMA Last Error. Read errors now
+  carry the mbedTLS code and say whether EMMA closed the session or went silent.
+- Entity states are published from the ESPHome main loop instead of the TLS task.
+- Faster recovery after a reboot: subscriptions that Home Assistant re-sends while
+  EMMA reconnects no longer trigger a second full poll, and an unchanged
+  subscription set no longer re-polls every register.
+- The CI build config declares `api:`, needed by the Home Assistant time source.
+
 ## 0.15.0
 
 Upgrade notes:

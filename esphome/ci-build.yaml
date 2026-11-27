@@ -21,6 +21,10 @@ esphome:
 
 logger:
 
+# Real devices use the native API (the board package's Home Assistant time
+# source for the Last Boot sensor needs it).
+api:
+
 wifi:
   ssid: "ci-build"
   password: "ci-build-password"
