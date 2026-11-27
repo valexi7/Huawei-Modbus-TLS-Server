@@ -1061,6 +1061,11 @@ bool HuaweiEmmaReverse::start_http_server_() {
   config.max_uri_handlers = 10;
   config.stack_size = 10240;
   config.lru_purge_enable = true;
+#ifdef HUAWEI_EMMA_HTTPD_MAX_OPEN_SOCKETS
+  // Matches the sockets reserved in __init__.py so the shared lwIP pool keeps
+  // room for the native API, OTA uploads and the EMMA session.
+  config.max_open_sockets = HUAWEI_EMMA_HTTPD_MAX_OPEN_SOCKETS;
+#endif
   config.uri_match_fn = httpd_uri_match_wildcard;
   if (httpd_start(&this->http_server_, &config) != ESP_OK) {
     ESP_LOGE(TAG, "Could not start connector API on port %u", this->api_port_);

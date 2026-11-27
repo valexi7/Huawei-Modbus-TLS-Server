@@ -14,6 +14,12 @@ ESPHome:
   EMMA reconnects no longer trigger a second full poll, and an unchanged
   subscription set no longer re-polls every register.
 - The CI build config declares `api:`, needed by the Home Assistant time source.
+- Fix OTA uploads failing with "Device closed connection without responding": the
+  connector now reserves its sockets (EMMA listener and session, connector API) in
+  ESPHome's lwIP socket budget, and the connector API keeps at most 3 clients open.
+  Devices on older firmware need sockets freed for this one upload; see
+  [the OTA note](docs/esphome-t-eth-elite.md#ota-upload-fails-with-device-closed-connection-without-responding).
+- IP Address (Wi-Fi) and EMMA Network IP Address diagnostic entities.
 
 ## 0.15.0
 

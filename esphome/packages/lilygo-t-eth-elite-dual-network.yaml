@@ -102,6 +102,17 @@ text_sensor:
   - platform: debug
     reset_reason:
       name: Reset Reason
+  # Wi-Fi address used by Home Assistant, the connector API and OTA.
+  - platform: wifi_info
+    ip_address:
+      name: IP Address
+  # W5500 address on the EMMA network (static from the package substitutions).
+  - platform: template
+    name: EMMA Network IP Address
+    icon: mdi:ip-network
+    entity_category: diagnostic
+    update_interval: 300s
+    lambda: return id(emma_ethernet)->get_ip_address();
 
 button:
   - platform: restart
