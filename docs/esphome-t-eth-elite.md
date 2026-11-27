@@ -167,6 +167,8 @@ outage:
 | EMMA TLS Disconnects | EMMA sessions that ended since this boot. |
 | EMMA Last Error | Most recent session error, for example `TLS read failed (-0x6800, EMMA silent for 5 s)`. |
 | Restart | Button to restart the ESP32 and test recovery. |
+| IP Address | Wi-Fi address used by Home Assistant, the connector API and OTA. |
+| EMMA Network IP Address | W5500 address on the EMMA network. |
 
 How to read an outage in the history:
 
@@ -185,6 +187,26 @@ decides when it reconnects; the log line `EMMA TLS client connected Ns after boo
 shows the delay. On connect the firmware polls every subscribed register once, and
 Home Assistant re-sends its subscriptions when it sees the new connector instance,
 so entities return within one Home Assistant update (10 s) of that poll finishing.
+
+## OTA upload fails with "Device closed connection without responding"
+
+Firmware built before the socket fix declared none of the connector's sockets to
+ESPHome, so the lwIP socket pool stayed at the default 10. With Home Assistant, EMMA
+and the connector API all connected the pool is full, and a new OTA connection is
+accepted and dropped at once. Current firmware reserves the connector's sockets, and
+ESPHome raises the pool to about 15.
+
+To get the fixed firmware onto a device that still runs the old one, free a few
+sockets first:
+
+1. In Home Assistant, disable the Huawei EMMA Management integration entry (Settings >
+   Devices & services > the entry > Disable). This closes its connector API
+   connections. Close any open ESPHome log windows for the device too.
+2. Wait about 30 seconds, then start the OTA upload again.
+3. Re-enable the integration entry after the device is back.
+
+If that is not enough, restart or power-cycle the device and start the upload within
+the first seconds after boot, before EMMA reconnects, or flash it over USB once.
 
 ## Entity IDs and generated mapping
 
